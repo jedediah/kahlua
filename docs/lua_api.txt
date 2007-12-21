@@ -1,0 +1,86 @@
+Here is a complete list of what functions are available to the lua environment.
+If nothing else is specified, they exhibit the same semantics as their lua counterpart.
+
+Implemented in Java
+-------------------
+getfenv(f)
+	returns the environment for function f
+	f must be a lua function
+
+setfenv(f, env)
+	   sets the environment of f to env
+	   f must be a lua function and env must be a lua table
+	   returns f
+
+pcall(f, ...)
+	 calls f with ... as args
+	 if f throws an error, pcall catches it and returns false, error message, stack trace
+	 the stack trace is a concatenation of stack trace lines, where each line is on the form:
+	 "at <sourcefile>:<linenumber>\n"
+	 if f returns cleanly, pcall returns true and f:s return values	 
+
+
+error(msg)
+	throws an error (a RuntimeException) with the error message msg
+
+rawequal
+rawset
+rawget	
+select
+unpack
+next
+type
+getmetatable
+setmetatable
+tostring
+tonumber
+print
+string.char
+string.byte
+string.sub
+string.lower
+string.upper
+math.*
+
+Implemented in Lua
+------------------
+assert
+ipairs
+pairs
+string.len
+string.rep
+table.insert
+table.remove
+table.maxn
+table.getn
+table.setn
+
+Not implemented
+---------------
+collectgarbage
+dofile
+load
+loadfile
+loadstring
+xpcall
+
+module
+require
+package.*
+
+coroutine.*
+
+string.dump
+string.find
+string.format
+string.gmatch
+string.gsub
+string.match
+string.reverse
+
+table.concat
+table.sort
+
+io.*
+os.*
+debug.*
