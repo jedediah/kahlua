@@ -1,10 +1,10 @@
 local ok, ret = pcall(function() return t.a.b end)
-assert(ok)
+assert(not ok)
 
 ok, ret = pcall(error)
 assert(ok)
 
-ok, ret = pcall(error"")
+ok, ret = pcall(error, "")
 assert(not ok)
 
 local ok, msg, stacktrace = pcall(function() assert(false, "errmsg") end)

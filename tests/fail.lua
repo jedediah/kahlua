@@ -7,4 +7,8 @@ function bar()
 	foo()
 end
 
-bar()
+local ok, msg = pcall(bar)
+assert(not ok)
+assert(msg == "test error")
+
+

@@ -282,7 +282,7 @@ public final class BaseLib implements JavaFunction {
 			// Clean up
 			state.cleanup(base);
 			
-			return 2;
+			return 3;
 		}
 	}
 
