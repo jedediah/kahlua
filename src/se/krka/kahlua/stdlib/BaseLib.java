@@ -367,10 +367,11 @@ public final class BaseLib implements JavaFunction {
 		
 		if (to != null) {
 			to.metatable = newMeta;
-			boolean weakKeys = to.weakKeys, weakValues = to.weakValues;
+			boolean weakKeys = false, weakValues = false;
 			if (newMeta != null) {
-				String mode = (String)newMeta.rawget(MODE_KEY);
-				if (mode != null) {
+				Object modeObj = newMeta.rawget(MODE_KEY);
+				if (modeObj != null && modeObj instanceof String) {
+					String mode = (String)modeObj;
 					weakKeys = (mode.indexOf((int)'k') >= 0);
 					weakValues = (mode.indexOf((int)'v') >= 0);
 				}

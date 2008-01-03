@@ -53,9 +53,6 @@ public final class LuaTable {
 		next = new int[capacity];
 
 		freeIndex = capacity;
-		
-		weakKeys = false;
-		weakValues = false;
 	}
 
 	public LuaTable() {
@@ -337,7 +334,7 @@ public final class LuaTable {
 	
 	public void fixWeakRefs(Object[] entries, boolean weak) {
 		if (entries == null) return;
-		for (int i = 0; i < entries.length; i++) {
+		for (int i = entries.length - 1; i >= 0; i--) {
 			Object o = entries[i];
 			if (o == null) continue;
 			if (weak) {
