@@ -44,11 +44,12 @@ public final class BaseLib implements JavaFunction {
 	private static final int RAWEQUAL = 13;
 	private static final int RAWSET = 14;
 	private static final int RAWGET = 15;
+	private static final int COLLECTGARBAGE = 16;
 
-	private static final int NUM_FUNCTIONS = 16;
+	private static final int NUM_FUNCTIONS = 17;
 	
 	private static final String[] names;
-	private static final Object MODE_KEY = "__mode".intern();
+	private static final Object MODE_KEY = "__mode";
 	
 	static {
 		names = new String[NUM_FUNCTIONS];
@@ -68,6 +69,7 @@ public final class BaseLib implements JavaFunction {
 		names[RAWEQUAL] = "rawequal";
 		names[RAWSET] = "rawset";
 		names[RAWGET] = "rawget";
+		names[COLLECTGARBAGE] = "collectgarbage";
 	}
 
 	private int index;
@@ -113,11 +115,17 @@ public final class BaseLib implements JavaFunction {
 		case RAWEQUAL: return rawequal(state, base, nArguments);
 		case RAWSET: return rawset(state, base, nArguments);
 		case RAWGET: return rawget(state, base, nArguments);
+		case COLLECTGARBAGE: return collectgarbage(state, base, nArguments);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
 			return 0;
 		}
+	}
+
+	private int collectgarbage(LuaState state, int base, int arguments) {
+		System.gc();
+		return 0;
 	}
 
 	private int rawget(LuaState state, int base, int nArguments) {
@@ -376,9 +384,7 @@ public final class BaseLib implements JavaFunction {
 					weakValues = (mode.indexOf((int)'v') >= 0);
 				}
 			}
-            if (weakKeys != to.weakKeys || weakValues != to.weakValues) {
-            	to.updateWeakSettings(weakKeys, weakValues);
-            }
+           	to.updateWeakSettings(weakKeys, weakValues);
 		} else {			
 			state.userdataMetatables.rawset(co, newMeta);
 		}

@@ -1,2 +1,0 @@
-#!/bin/bash
-make && java -cp ../bin se.kristofer.karlsson.kahlua.test.Test .

@@ -28,12 +28,12 @@ import se.krka.kahlua.stdlib.BaseLib;
 
 
 public final class LuaTable {
-	Object[] keys;
-	Object[] values;
+	private Object[] keys;
+	private Object[] values;
 	private int[] next;
 
 	private int freeIndex;
-	public boolean weakKeys, weakValues;
+	private boolean weakKeys, weakValues;
 
 	private static int nearestPowerOfTwo(int x) {
 		x--;
@@ -66,14 +66,59 @@ public final class LuaTable {
 	}
 	
 	private final Object unref(Object o) {
-		if (o == null) return null;
-		if (o instanceof WeakReference)
-			return ((WeakReference) o).get();
-		return o;
+		if (!canBeWeakObject(o)) {
+			return o;
+		}
+		
+		// Assertion: o instanceof WeakReference
+		return ((WeakReference) o).get();
+	}
+	
+	private final Object ref(Object o) {
+		if (!canBeWeakObject(o)) {
+			return o;
+		}
+		
+		return new WeakReference(o);
 	}
 
-	public final int hash_primitiveFindKey(Object key, int index) {
-		Object currentKey = unref(keys[index]);
+	private boolean canBeWeakObject(Object o) {
+		return !(o == null || o instanceof String
+				|| o instanceof Double || o instanceof Boolean);
+	}
+	
+	private final Object __getKey(int index) {
+		Object key = keys[index];
+		if (weakKeys) {
+			return unref(key);
+		}
+		return key;
+	}
+
+	private final void __setKey(int index, Object key) {
+		if (weakKeys) {
+			key = ref(key);
+		}
+		keys[index] = key;
+	}
+	
+	private final Object __getValue(int index) {
+		Object value = values[index];
+		if (weakValues) {
+			return unref(value);
+		}
+		return value;
+	}
+
+	private final void __setValue(int index, Object value) {
+		if (weakValues) {
+			value = ref(value);
+		}
+		values[index] = value;
+	}
+	
+	private final int hash_primitiveFindKey(Object key, int index) {
+		Object currentKey = __getKey(index);
 
 		if (currentKey == null) {
 			return -1;
@@ -96,7 +141,7 @@ public final class LuaTable {
 				if (index == -1) {
 					return -1;
 				}
-				currentKey = keys[index];
+				currentKey = __getKey(index);
 			}
 			
 		}
@@ -111,23 +156,19 @@ public final class LuaTable {
 			if (index == -1) {
 				return -1;
 			}
-			currentKey = unref(keys[index]);
+			currentKey = __getKey(index);
 		}		
 	}
 	
-	public final int hash_primitiveNewKey(Object key, int mp) {		
+	private final int hash_primitiveNewKey(Object key, int mp) {		
 		// assert key not in table
 		// Assert key != null
 
-		Object key2 = keys[mp];
+		Object key2 = __getKey(mp);
 
 		// mainPosition is unoccupied
 		if (key2 == null) {
-			if (weakKeys) {
-				keys[mp] = new WeakReference(key);
-			} else {
-				keys[mp] = key;
-			}
+			__setKey(mp, key);
 			next[mp] = -1;
 
 			return mp;
@@ -137,7 +178,7 @@ public final class LuaTable {
 		// since java checks bounds all the time, using try-catch may be faster than manually
 		// checking
 		try {
-			while (keys[--freeIndex] != null);
+			while (__getKey(--freeIndex) != null);
 		} catch (ArrayIndexOutOfBoundsException e) {
 			hash_rehash();
 			// different mp, since it's been rehashed
@@ -148,11 +189,7 @@ public final class LuaTable {
 		int mp2 = getMP(key2);
 		// index is occupied by something with the same main index
 		if (mp2 == mp) {
-			if (weakKeys) {
-				keys[freeIndex] = new WeakReference(key);
-			} else {
-				keys[freeIndex] = key;
-			}
+			__setKey(freeIndex, key);
 			next[freeIndex] = next[mp];
 
 			next[mp] = freeIndex;
@@ -165,7 +202,7 @@ public final class LuaTable {
 		values[freeIndex] = values[mp];
 		next[freeIndex] = next[mp];
 
-		keys[mp] = key;
+		__setKey(mp, key);
 		// unnecessary to set value - the main set method will do this.
 		// values[mp] = null;
 		next[mp] = -1;
@@ -189,14 +226,18 @@ public final class LuaTable {
 		Object[] oldValues = values;
 		int n = oldKeys.length;
 
-		int capacity = 0;
+		int used= 0;
 		int i = n;
 		while (i-- > 0) {
-			if (oldKeys[i] != null && oldValues[i] != null) {
-				capacity++;
+			if (__getKey(i) != null && __getValue(i) != null) {
+				used++;
+			} else {
+				// Wipe nil key/value pairs early, to simplify copying for weak tables
+				keys[i] = null;
+				values[i] = null;
 			}
 		}
-		capacity = 2 * nearestPowerOfTwo(capacity);
+		int capacity = 2 * nearestPowerOfTwo(used);
 
 
 		keys = new Object[capacity];
@@ -211,9 +252,7 @@ public final class LuaTable {
 			if (key != null) {
 				Object value = oldValues[i];
 				if (value != null) {
-					int mp = luaHashcode(key) & (capacity - 1);
-					int index = hash_primitiveNewKey(key, mp);
-					values[index] = value;
+					rawset(key, value);
 				}
 			}
 		}
@@ -229,11 +268,7 @@ public final class LuaTable {
    		if (index < 0) {
 			index = hash_primitiveNewKey(key, mp);
    		}
-    	if (weakValues) {
-    		values[index] = new WeakReference(value);
-    	} else {
-    		values[index] = value;
-    	}
+   		__setValue(index, value);
 	}
 
 	public final Object rawget(Object key) {
@@ -241,14 +276,24 @@ public final class LuaTable {
     	
     	int mp = getMP(key);
   		int index = hash_primitiveFindKey(key, mp);
+  		
+  		/*
+  		System.out.println("rawget mp " + mp);
+  		System.out.println("rawget " + key);
+  		for (int i = 0; i < keys.length; i++) {
+  	  		System.out.println("rawget " + i + " = "+ keys[i] + ", " + next[i]);
+  			
+  		}
+			System.out.println("index: " + index);
+			*/
   		if (index >= 0) {
-  			return unref(values[index]);
+  			return __getValue(index);
   		}
 
   		return null;
 	}
 
-	public static void checkKey(Object key) {
+	static void checkKey(Object key) {
 		BaseLib.luaAssert(key != null, "table index is nil");
 
     	if (key instanceof Double) {
@@ -261,17 +306,15 @@ public final class LuaTable {
 		if (key != null) {
 			int mp = luaHashcode(key) & (keys.length - 1);
 			index = 1 + hash_primitiveFindKey(key, mp);
-			if (index == 0) {
-				return null;
-			}
+			BaseLib.luaAssert(index > 0, "invalid key to 'next'");
 		}
 	
 		while (true) {
 			if (index == keys.length) {
 				return null;
 			}
-			Object next = unref(keys[index]);
-			if (next != null && unref(values[index]) != null) {
+			Object next = __getKey(index);
+			if (next != null && __getValue(index) != null) {
 				return next;
 			}
 			index++;
@@ -331,23 +374,24 @@ public final class LuaTable {
 			weakValues = v;
 		}
 	}
-	
-	public void fixWeakRefs(Object[] entries, boolean weak) {
+
+	private void fixWeakRefs(Object[] entries, boolean weak) {
+		/*
+		 * Assertion: if the entries are already weak,
+		 * the parameter "weak" is false, and vice versa.
+		 * Thus, don't try to fix it to weak if it's already weak.
+		 */
+		
 		if (entries == null) return;
+		
 		for (int i = entries.length - 1; i >= 0; i--) {
 			Object o = entries[i];
-			if (o == null) continue;
 			if (weak) {
-				if (!(o instanceof WeakReference || o instanceof String
-						|| o instanceof Double || o instanceof Boolean)) {
-					entries[i] = new WeakReference(o);
-				}
+				o = ref(o);
 			} else {
-				if ((o instanceof WeakReference)) {
-					entries[i] = ((WeakReference)o).get();
-				}
+				o = unref(o);
 			}
+			entries[i] = o;
 		}
 	}
-	
 }

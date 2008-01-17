@@ -1002,25 +1002,20 @@ public final class LuaState {
 	public final void tableSet(Object table, Object key, Object value) {
 		LuaTable.checkKey(key);
 
-    	int key_hash = LuaTable.luaHashcode(key);
-		
 		Object curObj = table;
     	for (int i = LuaState.MAX_INDEX_RECURSION; i > 0; i--) {
     		Object metaOp;
     		if (curObj instanceof LuaTable) {
 				LuaTable t = (LuaTable) curObj;
-				
-	     		int mp = key_hash & (t.keys.length - 1);
-				int index = t.hash_primitiveFindKey(key, mp);
-				if (index != -1) {
-					t.values[index] = value;
+
+				if (t.rawget(key) != null) {
+					t.rawset(key, value);
 					return;
 				}
 				
 	    		metaOp = getMetaOp(curObj, "__newindex");
 	    		if (metaOp == null) {
-	    			index = t.hash_primitiveNewKey(key, mp);
-	    			t.values[index] = value;
+	    			t.rawset(key, value);
 	    			return;
 	    		}									
     		} else {

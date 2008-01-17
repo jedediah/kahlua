@@ -36,6 +36,7 @@ import se.krka.kahlua.vm.LuaState;
 public class Test {
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 		File f = new File(args[0]);
+		System.out.println("Loading file: stdlib.lbc");
 		File stdlib = new File(f, "stdlib.lbc");
 
 		LuaState state = new LuaState(System.out);
@@ -45,8 +46,18 @@ public class Test {
 		StringLib.register(state);
 		UserdataArray.register(state);
 		
-		LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
-		state.call(closure, null, null, null);
+		LuaClosure closure;
+		try {
+			closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
+			state.call(closure, null, null, null);
+		} catch (RuntimeException e) {
+			System.out.println("Stdlib failed:");
+
+			e.printStackTrace();
+			System.out.println(state.stackTrace);
+			
+			return;
+		}
 				
 		File[] children = f.listFiles();
 		for (int i = 0; i < children.length; i++) {
@@ -54,7 +65,7 @@ public class Test {
 			
 			try {
 				if (child != stdlib && child.getName().endsWith(".lbc")) {
-					
+					System.out.println("Testing file: " + child.getName());
 					closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.environment);
 					state.call(closure, null, null, null);
 
