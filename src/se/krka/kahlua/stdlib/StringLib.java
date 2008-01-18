@@ -162,18 +162,21 @@ public final class StringLib implements JavaFunction {
 			end = LuaState.fromDouble(state.stack[base + 3]);
 		}
 		String res;
-		int istart = (int) start - 1;
+		int istart = (int) start;
 		int iend = (int) end;
 		
-		if (iend == -1) {
-			iend = s.length();
+		if (iend < 0) {
+			iend += s.length() + 1;
+		}
+		if (iend < 0) {
+			iend = 0;
 		}
 		
-		if (istart >= end) {
+		if (istart > iend) {
 			state.stack[base] = "";
 			return 1;
 		}
-		res = s.substring(istart, iend);
+		res = s.substring(istart - 1, iend);
 		res = res.intern();
 		
 		state.stack[base] = res;
