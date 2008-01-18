@@ -1,6 +1,24 @@
 assert(1 < 2, "1 must be less than 2")
 assert(not (2 < 1), "2 must not be less than 1")
 
+do
+	local value1 = 1.234567
+	local value2 = 1.234567
+	local t = {}
+	t[value1] = 1
+	t[value2] = 2
+	assert(t[value1] == 2)
+	assert(t[value2] == 2)
+
+	local zero = 0
+	value1 = 1 * zero
+	value2 = -1 * zero
+	t[value1] = 1
+	t[value2] = 2
+	assert(t[value1] == 2)
+	assert(t[value2] == 2)
+end
+
 function assertEquals(a, b)
    local assert = assert
    local type = type
