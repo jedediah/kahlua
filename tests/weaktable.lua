@@ -8,7 +8,6 @@ end
 
 local t = {}
 
-
 t["a"] = 1
 t["b"] = 1
 t["c"] = 1
@@ -39,6 +38,17 @@ collectgarbage();
 assert(count(t) == 5)
 setmetatable(t, {__mode = "v"})
 t3 = nil
+collectgarbage();
+collectgarbage();
+collectgarbage();
+assert(count(t) == 5)
+local t4 = {}
+t[1] = t4
+assert(count(t) == 6)
+collectgarbage();
+collectgarbage();
+collectgarbage();
+t4 = nil
 collectgarbage();
 collectgarbage();
 collectgarbage();

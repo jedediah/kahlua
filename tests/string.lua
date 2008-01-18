@@ -3,6 +3,7 @@ assert(string.sub)
 
 s = "Hello world"
 
+assert(#s == 11)
 assert(s:sub(1, 5) == "Hello")
 assert(s:sub(1, -1) == "Hello world")
 assert(s:sub(1, -5) == "Hello w")
@@ -21,3 +22,5 @@ assert(s:byte(1) == 72)
 assert(string.char(65) == "A")
 
 assert(s:lower() == "hello world")
+assert(s:upper() == "HELLO WORLD")
+

@@ -153,7 +153,7 @@ public final class BaseLib implements JavaFunction {
         Object o1 = state.stack[base + 1];
         Object o2 = state.stack[base + 2];
         
-        state.stack[base] = toBoolean(LuaTable.luaEquals(o1, o2));
+        state.stack[base] = toBoolean(LuaState.luaEquals(o1, o2));
 		return 1;
 	}
 

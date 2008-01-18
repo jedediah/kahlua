@@ -4,6 +4,12 @@ assert(not (2 < 1), "2 must not be less than 1")
 do
 	local value1 = 1.234567
 	local value2 = 1.234567
+	value2 = value2 * 2
+	value2 = value2 / 2
+
+	assert(value1 == value2)
+	assert(rawequal(value1, value2))
+	
 	local t = {}
 	t[value1] = 1
 	t[value2] = 2

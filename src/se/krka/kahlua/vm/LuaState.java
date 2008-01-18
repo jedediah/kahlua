@@ -628,7 +628,7 @@ public final class LuaState {
 
 								boolean resBool;
 								if (metafun == null && opcode == OP_EQ) {
-									resBool = LuaTable.luaEquals(bo, co); 
+									resBool = LuaState.luaEquals(bo, co); 
 								} else {							
 									Object res = call(metafun, bo, co, null);
 									resBool = boolEval(res);
@@ -662,7 +662,7 @@ public final class LuaState {
 
 
 							Object value = stack[base + b];
-							if (boolEval(value) == (c == 0)) {
+							if (boolEval(value) != (c == 0)) {
 								stack[base +a] = value;
 							} else {
 								pc++;
@@ -1085,6 +1085,18 @@ public final class LuaState {
 		}
 	}
 	
+	public static boolean luaEquals(Object a, Object b) {
+		if (a == null || b == null) {
+			return a == b;
+		}
+		if (a instanceof Double && b instanceof Double) {
+			Double ad = (Double) a;
+			Double bd = (Double) b;
+			return ad.doubleValue() == bd.doubleValue();
+		}
+		return a == b;
+	}
+
 	public static double fromDouble(Object o) {
 		return ((Double) o).doubleValue();
 	}

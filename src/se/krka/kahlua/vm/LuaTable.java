@@ -338,19 +338,6 @@ public final class LuaTable {
 		return low;
 	}
 	
-	public static boolean luaEquals(Object a, Object b) {
-		if (a == null || b == null) {
-			return a == b;
-		}
-		if (a instanceof Double && b instanceof Double) {
-			Double ad = (Double) a;
-			Double bd = (Double) b;
-			return ad.doubleValue() == bd.doubleValue();
-		}
-		return a == b;
-	}
-	
-	
 	public static int luaHashcode(Object a) {
 		if (a instanceof Double) {
 			Double ad = (Double) a;
