@@ -496,8 +496,4 @@ public final class BaseLib implements JavaFunction {
 		}
 		return null;
 	}
-	
-	public static boolean isFunction(Object o) {
-		return o instanceof JavaFunction || o instanceof LuaClosure;
-	}
 }

@@ -74,26 +74,28 @@ public final class LuaPrototype {
 		int constantsLen = toInt(in.readInt(), littleEndian);
 		constants = new Object[constantsLen];
 		for (int i = 0; i < constantsLen; i++) {
+			Object o = null;
 			int type = in.read();
 			switch (type) {
 			case 0:
-			    constants[i] = null;
+				// Do nothing - this constant is null by default
 			    break;
 			case 1:
 			    int b = in.read();
-			    constants[i] = b == 0 ? Boolean.FALSE : Boolean.TRUE;
+			    o = b == 0 ? Boolean.FALSE : Boolean.TRUE;
 			    break;
 			case 3:
 				long bits = in.readLong();
 				if (littleEndian) bits = rev(bits);
-				constants[i] = LuaState.toDouble(Double.longBitsToDouble(bits));
+				o = LuaState.toDouble(Double.longBitsToDouble(bits));
 				break;
 			case 4:
-				constants[i] = readLuaString(in, size_t, littleEndian);
+				o = readLuaString(in, size_t, littleEndian);
 				break;
 			default:
-				// This should never happen
+			    throw new IOException("unknown constant type: " + type);
 			}
+			constants[i] = o;
 		}
 
 		int prototypesLen = toInt(in.readInt(), littleEndian);

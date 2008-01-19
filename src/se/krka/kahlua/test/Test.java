@@ -60,16 +60,20 @@ public class Test {
 		}
 				
 		File[] children = f.listFiles();
+		int successful = 0;
+		int total = 0;
 		for (int i = 0; i < children.length; i++) {
 			File child = children[i];
 			
 			try {
 				if (child != stdlib && child.getName().endsWith(".lbc")) {
+					total++;
 					System.out.println("Testing file: " + child.getName());
 					closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.environment);
 					state.call(closure, null, null, null);
 
 					System.out.println(child + " Ok!");
+					successful++;
 				}
 			} catch (RuntimeException e) {
 				System.out.println(child + " Failed:");
@@ -81,5 +85,6 @@ public class Test {
 				state.setTop(0);
 			}
 		}
+		System.out.println(successful + " of " + total + " tests were ok!");
 	}
 }

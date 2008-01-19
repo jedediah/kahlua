@@ -12,3 +12,21 @@ bar()
 
 assert("hej" == "hej")
 
+do
+	local t = {}
+	t.a = true
+	assert(t.a == true)
+	t.a = false
+	assert(t.a == false)
+	t.a = nil
+	assert(t.a == nil)
+end
+
+
+function f()
+	f()
+end
+
+local ok, errorMsg = pcall(f)
+assert(not ok)
+

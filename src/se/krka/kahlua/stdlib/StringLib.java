@@ -131,7 +131,8 @@ public final class StringLib implements JavaFunction {
 		ii = Math.min(ii, len); 
 		ij = Math.min(ij, len);
 		int nReturns = 1 +ij - ii;
-		
+
+		state.setTop(base + nReturns);
 		int offset = ii - 1;
 		for (int i = 0; i < nReturns; i++) {
 			char c = s.charAt(offset + i);

@@ -169,6 +169,7 @@ public final class LuaState {
 		stackTrace = "";
 	}
 	
+	/*
 	public void inspectStack(int base) {
 		System.out.println("-- Current Stack --");
 		for (int i = 0; i < top; i++) {
@@ -187,7 +188,8 @@ public final class LuaState {
 		System.out.println("-------------------");
 
 	}
-
+	 */
+	
 	public int call(int base) {
 		Object o = stack[base];
 

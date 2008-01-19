@@ -167,6 +167,7 @@ public final class MathLib implements JavaFunction {
 		return 1;
 	}
 
+
 	private static int floor(LuaState state, int base, int nArguments)  {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
 		double x = LuaState.fromDouble(state.stack[base + 1]);
@@ -194,6 +195,7 @@ public final class MathLib implements JavaFunction {
 		state.stack[base] = LuaState.toDouble(res);
 		return 1;
 	}
+
 
 	// Random functions
 
@@ -400,7 +402,7 @@ public final class MathLib implements JavaFunction {
 	
 	
 	
-	public static final double EPS = 1e-10;
+	public static final double EPS = 1e-13;
 	
 	/*
 	 * Simple implementation of the taylor expansion of
@@ -421,21 +423,42 @@ public final class MathLib implements JavaFunction {
     	return res;
     }
 
-    /*
-     * Newtons method:
-     * y = ln(x) -> x = exp(y) -> exp(y) - x = 0
-     */
+	/*
+	 * Simple implementation of the taylor expansion of
+	 * ln(1 - t) = t - t^2/2 -t^3/3 - ... - t^n/n + ...
+	 */
     public static double ln(double x) {
-    	double guess = 1;
-    	while (true) {
-    		double guessExp = exp(guess);
-    		double nextGuess = guess - (guessExp - x) / guessExp;
-    		if (Math.abs(nextGuess - guess) < EPS) {    			
-    			break;
-    		}
-    		guess = nextGuess;
+    	if (x < 0) {
+    		return Double.NaN;
     	}
-    	return guess;
+    	if (x == 0) {
+    		return Double.NEGATIVE_INFINITY;
+    	}
+    	if (Double.isInfinite(x)) {
+    		return Double.POSITIVE_INFINITY;
+    	}
+    	if (x < 1) {
+    		return -ln(1/x);
+    	}
+    	int multiplier = 1;
+    	
+    	 // x must be between 0 and 2 - close to 1 means faster taylor expansion
+    	while (x >= 1.1) { 
+    		multiplier *= 2;
+    		x = Math.sqrt(x);
+    	}
+    	double t = 1 - x;
+    	double tpow = t;
+    	int divisor = 1;
+    	double result = 0;
+    	
+    	double toSubtract;
+    	while (Math.abs((toSubtract = tpow / divisor)) > EPS) {
+    		result -= toSubtract;
+    		tpow *= t;
+    		divisor++;
+    	}
+    	return multiplier * result;
     }
 
     public static double pow(double base, double exponent) {
@@ -488,7 +511,6 @@ public final class MathLib implements JavaFunction {
     static final double q1  = .207933497444540981287275926e4;
     static final double q0  = .89678597403663861962481162e3;
     static final double PIO2 = 1.5707963267948966135E0;
-    static final double nan = (0.0/0.0);
 
     // reduce
     private static double mxatan(double arg)
@@ -552,7 +574,7 @@ public final class MathLib implements JavaFunction {
 		sign++;
 	    }
         if(arg > 1)
-            return nan;
+            return Double.NaN;
         temp = Math.sqrt(1 - arg*arg);
         if(arg > 0.7)
             temp = PIO2 - atan(temp/arg);
@@ -567,7 +589,7 @@ public final class MathLib implements JavaFunction {
     public static double acos(double arg)
     {
         if(arg > 1 || arg < -1)
-            return nan;
+            return Double.NaN;
         return PIO2 - asin(arg);
     }
 	
