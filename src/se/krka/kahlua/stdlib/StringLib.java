@@ -32,8 +32,9 @@ public final class StringLib implements JavaFunction {
 	private static final int BYTE = 2;
 	private static final int LOWER = 3;
 	private static final int UPPER = 4;
+	private static final int REVERSE = 5;
 
-	private static final int NUM_FUNCTIONS = 5;
+	private static final int NUM_FUNCTIONS = 6;
 	
 	
 	private static final String[] names;
@@ -44,6 +45,7 @@ public final class StringLib implements JavaFunction {
 		names[BYTE] = "byte";
 		names[LOWER] = "lower";
 		names[UPPER] = "upper";
+		names[REVERSE] = "reverse";
 	}
 
 	private int index;
@@ -82,6 +84,7 @@ public final class StringLib implements JavaFunction {
 		case BYTE: return stringByte(state, base, nArguments);
 		case LOWER: return lower(state, base, nArguments);
 		case UPPER: return upper(state, base, nArguments);
+		case REVERSE: return reverse(state, base, nArguments);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
@@ -102,6 +105,19 @@ public final class StringLib implements JavaFunction {
 		String s = (String) state.stack[base + 1];
 
 		state.stack[base] = s.toUpperCase().intern();
+		return 1;
+	}
+	
+	private int reverse(LuaState state, int base, int arguments) {
+		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
+		String s = (String) state.stack[base + 1];
+		char[] c = s.toCharArray();
+		int i, j = c.length - 1;
+		char[] r = new char[c.length];
+		for (i = 0; i < c.length; i++) {
+			r[j--] = c[i];
+		}
+		state.stack[base] = new String(r).intern();
 		return 1;
 	}
 	
