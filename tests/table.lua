@@ -1,4 +1,4 @@
-t = {}
+local t = {}
 
 for i = 1, 100 do
    t[i] = i * 3
@@ -25,3 +25,12 @@ t[a * b] = -1
 t[b] = 1
 
 assert(t[a * b] == 1)
+
+
+rawset(t, "hello", "world")
+assert(rawget(t, "hello") == "world")
+setmetatable(t, {__index = function() return nil end, __newindex = function() end})
+assert(rawget(t, "hello") == "world")
+rawset(t, "hello", "WORLD")
+assert(rawget(t, "hello") == "WORLD")
+
