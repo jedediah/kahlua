@@ -33,8 +33,9 @@ public final class StringLib implements JavaFunction {
 	private static final int LOWER = 3;
 	private static final int UPPER = 4;
 	private static final int REVERSE = 5;
+	private static final int FORMAT = 6;
 
-	private static final int NUM_FUNCTIONS = 6;
+	private static final int NUM_FUNCTIONS = 7;
 	
 	
 	private static final String[] names;
@@ -46,6 +47,7 @@ public final class StringLib implements JavaFunction {
 		names[LOWER] = "lower";
 		names[UPPER] = "upper";
 		names[REVERSE] = "reverse";
+		names[FORMAT] = "format";
 	}
 
 	private int index;
@@ -89,6 +91,90 @@ public final class StringLib implements JavaFunction {
 			// Should never happen
 			// throw new Error("Illegal function object");
 			return 0;
+		}
+	}
+	
+	private static void formatCheckType(Object o, int n) {
+		BaseLib.luaAssert(o instanceof String, 
+				"bad argument #" + n + " to 'format' (string expected, got "
+				+ BaseLib.type(o) + ")");		
+	}
+	
+	private Object formatGetArg(LuaState state, int base, int n, String expect) {
+		Object o = state.stack[base + n];
+		if (o == null) {
+			throw new RuntimeException("bad argument #" + n + "to 'format' (" +
+					expect + " expected, got no value)");
+		}
+		BaseLib.luaAssert(o instanceof String || o instanceof Double,
+				"bad argument #" + n + " to 'format' (" + expect + 
+				" expected, got " + BaseLib.type(o) + ")");
+		return o;
+	}
+	
+	private int format(LuaState state, int base, int arguments) {
+		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
+		Object o = formatGetArg(state, base, 1, "string");
+		if (o instanceof Double) {
+			// standard Lua coerces numbers to a string
+			state.stack[base + 1] = ((Double) o).toString().intern();
+			return 1;
+		}
+		String f = (String) o;
+		int len = f.length();
+		int argc = 2;
+		StringBuffer result = new StringBuffer();
+		for (int i = 0; i < len; i++) {
+			char c = f.charAt(i);
+			if (c == '%') {
+				i++;
+				BaseLib.luaAssert(i < len, "invalid option '%' to 'format'");
+				c = f.charAt(i);
+				switch (c) {
+				case '%': 
+					result.append(c);
+					break;
+				case 'i':
+					o = formatGetArg(state, base, argc, "number");
+					if (o instanceof String) {
+						try {
+							result.append(Integer.parseInt((String)o));
+						} catch (NumberFormatException) {
+							throw new RuntimeException("bad argument #" + argc +
+									" to 'format' (number expected, got string)");						}
+					} else {
+						result.append(((Double)o).intValue());
+					}
+					break;
+				case 's':
+					o = formatGetArg(state, base, argc, "string");
+					result.append(BaseLib.rawToString(o));
+					argc++;
+					break;
+				case 'q':
+					String q = BaseLib.rawToString(
+							formatGetArg(state, base, argc, "string"));
+					result.append('"');
+					for (int j = 0; j < q.length(); j++) {
+						char d = q.charAt(j);
+						switch (d) {
+						case '\\': result.append("\\"); break;
+						case '\n': result.append("\\\n"); break;
+						case '\r': result.append("\\r"); break;
+						case '"': result.append("\""); break;
+						default: result.append(d);
+						}
+					}
+					result.append('"');
+					argc++;
+					break;
+				default:
+					throw new RuntimeException("invalid option '%" + c + 
+							"' " to 'format'");
+				}
+			} else {
+				result.append(c);
+			}
 		}
 	}
 	
