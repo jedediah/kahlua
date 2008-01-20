@@ -1,3 +1,4 @@
+./compile.sh
 touch in.jar
 rm -f in.jar
 cd bin

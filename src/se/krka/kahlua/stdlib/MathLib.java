@@ -179,10 +179,24 @@ public final class MathLib implements JavaFunction {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
 		double x = LuaState.fromDouble(state.stack[base + 1]);
 		
+		boolean negate = false;
+		if (x < 0) {
+			negate = true;
+			x = -x;
+		}
 		double intPart = Math.floor(x);
-		
+		double fracPart;
+		if (Double.isInfinite(intPart)) {
+			fracPart = 0;
+		} else {
+			fracPart = x - intPart;
+		}
+		if (negate) {
+			intPart = -intPart;
+			fracPart = -fracPart;
+		}
 		state.stack[base] = LuaState.toDouble(intPart);
-		state.stack[base + 1] = LuaState.toDouble(x - intPart);
+		state.stack[base + 1] = LuaState.toDouble(fracPart);
 		return 2;
 	}
 
@@ -191,7 +205,23 @@ public final class MathLib implements JavaFunction {
 		double v1 = LuaState.fromDouble(state.stack[base + 1]);
 		double v2 = LuaState.fromDouble(state.stack[base + 2]);
 		
-		double res = v1 - ((int) v1/v2) * v2;
+		double res;
+		if (Double.isInfinite(v1) || Double.isNaN(v1)) {
+			res = Double.NaN;
+		} else if (Double.isInfinite(v2)) {
+			res = v1;
+		} else {
+			v2 = Math.abs(v2);
+			boolean negate = false;
+			if (v1 < 0) {
+				negate = true;
+				v1 = -v1;
+			}
+			res = v1 - Math.floor(v1/v2) * v2;
+			if (negate) {
+				res = -res;
+			}
+		}
 		state.stack[base] = LuaState.toDouble(res);
 		return 1;
 	}
@@ -303,8 +333,8 @@ public final class MathLib implements JavaFunction {
 
 	private static int atan2(LuaState state, int base, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		double y = LuaState.fromDouble(state.stack[base + 2]);
+		double y = LuaState.fromDouble(state.stack[base + 1]);
+		double x = LuaState.fromDouble(state.stack[base + 2]);
 		state.stack[base] = LuaState.toDouble(atan2(y, x));
 		return 1;
 	}
@@ -377,10 +407,15 @@ public final class MathLib implements JavaFunction {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
 		double x = LuaState.fromDouble(state.stack[base + 1]);
 
-		int e = (int) Math.ceil(ln(x) * LN2_INV);
-		int div = 1 << e;
-		double m = x / div;
-		
+		double e, m;
+		if (Double.isInfinite(x) || Double.isNaN(x)) {
+			e = 0;
+			m = x;
+		} else {
+			e = Math.ceil(ln(x) * LN2_INV);
+			int div = 1 << ((int) e);
+			m = x / div;
+		}
 		state.stack[base] = LuaState.toDouble(m);
 		state.stack[base + 1] = LuaState.toDouble(e);
 		return 2;
@@ -389,11 +424,17 @@ public final class MathLib implements JavaFunction {
 	private static int ldexp(LuaState state, int base, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
 		double m = LuaState.fromDouble(state.stack[base + 1]);
-		double tmp = LuaState.fromDouble(state.stack[base + 2]);
+		double dE = LuaState.fromDouble(state.stack[base + 2]);
 
-		int e = (int) tmp; 
-		double ret = m * (1 << e);
-
+		double ret;
+		double tmp = m + dE;
+		if (Double.isInfinite(tmp) || Double.isNaN(tmp)) {
+			ret = m;
+		} else {
+			int e = (int) dE; 
+			ret = m * (1 << e);
+		}
+		
 		state.stack[base] = LuaState.toDouble(ret);
 		return 1;
 	}
@@ -428,7 +469,9 @@ public final class MathLib implements JavaFunction {
 	 * ln(1 - t) = t - t^2/2 -t^3/3 - ... - t^n/n + ...
 	 */
     public static double ln(double x) {
-    	if (x < 0) {
+		boolean negative = false;
+
+		if (x < 0) {
     		return Double.NaN;
     	}
     	if (x == 0) {
@@ -438,7 +481,8 @@ public final class MathLib implements JavaFunction {
     		return Double.POSITIVE_INFINITY;
     	}
     	if (x < 1) {
-    		return -ln(1/x);
+    		negative = true;
+    		x = 1 / x;
     	}
     	int multiplier = 1;
     	
@@ -458,7 +502,11 @@ public final class MathLib implements JavaFunction {
     		tpow *= t;
     		divisor++;
     	}
-    	return multiplier * result;
+    	double res = multiplier * result;
+    	if (negative) {
+    		return -res;
+    	}
+    	return res;
     }
 
     public static double pow(double base, double exponent) {
@@ -544,21 +592,18 @@ public final class MathLib implements JavaFunction {
     // implementation of atan2
     public static double atan2(double arg1, double arg2)
     {
-        if(arg1+arg2 == arg1)
-	    {
-		if(arg1 >= 0)
-		    return PIO2;
-                return -PIO2;
-	    }
-        arg1 = atan(arg1/arg2);
-        if(arg2 < 0)
-	    {
-		if(arg1 <= 0)
-		    return arg1 + Math.PI;
-		return arg1 - Math.PI;
-	    }
-        return arg1;
-    
+    	// both are 0 or arg1 is +/- inf
+    	if(arg1+arg2 == arg1) {
+    		if(arg1 > 0) return PIO2;
+    		if(arg1 < 0) return -PIO2;
+    		return 0;
+    	}
+    	arg1 = atan(arg1/arg2);
+    	if(arg2 < 0) {
+    		if(arg1 <= 0) return arg1 + Math.PI;
+    		return arg1 - Math.PI;
+    	}
+    	return arg1;
     }
 
     // implementation of asin

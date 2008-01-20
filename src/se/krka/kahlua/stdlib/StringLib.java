@@ -111,13 +111,8 @@ public final class StringLib implements JavaFunction {
 	private int reverse(LuaState state, int base, int arguments) {
 		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
 		String s = (String) state.stack[base + 1];
-		char[] c = s.toCharArray();
-		int i, j = c.length - 1;
-		char[] r = new char[c.length];
-		for (i = 0; i < c.length; i++) {
-			r[j--] = c[i];
-		}
-		state.stack[base] = new String(r).intern();
+		s = new StringBuffer(s).reverse().toString();
+		state.stack[base] = s.intern();
 		return 1;
 	}
 	

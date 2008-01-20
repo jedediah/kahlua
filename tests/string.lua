@@ -7,6 +7,7 @@ do
 	assert(type(string.char) == "function")
 	assert(type(string.lower) == "function")
 	assert(type(string.upper) == "function")
+	assert(type(string.reverse) == "function")
 
 	-- testing handling of not enough parameters
 	assert(not pcall(string.sub))
@@ -14,6 +15,7 @@ do
 	assert(not pcall(string.len))
 	assert(not pcall(string.lower))
 	assert(not pcall(string.upper))
+	assert(not pcall(string.reverse))
 end
 
 
@@ -26,6 +28,18 @@ do
 	assert(e == string.byte("o"))
 	assert(f == nil)
 	assert(g == nil)
+end
+
+do
+	local function testReverse(s)
+		assert(#s == #(s:reverse()))
+		assert(s:reverse():reverse() == s)
+	end 
+	testReverse"hello world"
+	testReverse""
+	testReverse"a"
+	testReverse"ÅÄÖ"
+	testReverse"adolf i paris rapar sirap i floda"
 end
 
 s = "Hello world"

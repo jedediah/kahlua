@@ -28,6 +28,7 @@ import se.krka.kahlua.vm.LuaTable;
 
 public final class BaseLib implements JavaFunction {
 
+	private static final Runtime RUNTIME = Runtime.getRuntime();
 	private static final int PCALL = 0;
 	private static final int PRINT = 1;
 	private static final int SELECT = 2;
@@ -121,11 +122,6 @@ public final class BaseLib implements JavaFunction {
 			// throw new Error("Illegal function object");
 			return 0;
 		}
-	}
-
-	private int collectgarbage(LuaState state, int base, int arguments) {
-		System.gc();
-		return 0;
 	}
 
 	private int rawget(LuaState state, int base, int nArguments) {
@@ -478,27 +474,40 @@ public final class BaseLib implements JavaFunction {
 	}
 
 	public static int collectgarbage(LuaState state, int base, int nArguments) {
-		if (nArguments == 0) {
+		Object option = null;
+		if (nArguments > 0) {
+			option = state.stack[base + 1];
+		}
+		
+		if (option == null || option == "step" || option == "collect") {
 			System.gc();
+			if (option == "step") {
+				state.setTop(base + 1);
+				state.stack[base] = Boolean.TRUE;
+				return 1;
+			}
 			return 0;
 		}
-		Object o = state.stack[base];
-		luaAssert((o instanceof String), 
-				"bad argument #1 to 'collectgarbage' (invalid option) '" +
-				(o == null?"null":o.toString()) + "')");
-		String opt = (String)o;
-		if (opt == "count") {
-			Runtime runtime = Runtime.getRuntime();
-			state.stack[base] = new Double(
-					runtime.totalMemory() - runtime.freeMemory());
+
+		long freeMemory = RUNTIME.freeMemory();
+		long totalMemory = RUNTIME.totalMemory();
+		if (option == "count") {
+			state.stack[base] = toKiloBytes(totalMemory - freeMemory);
 			return 1;
 		}
-		if (opt == "step" || opt == "collect") {
-			System.gc();
-			return 0;
+		if (option == "free") {
+			state.stack[base] = toKiloBytes(freeMemory);
+			return 1;
 		}
-		// otherwise just return - this is not implemented.
-		return 0;
+		if (option == "total") {
+			state.stack[base] = toKiloBytes(totalMemory);
+			return 1;
+		}
+		throw new RuntimeException("invalid option: " + option);
+	}
+
+	private static Double toKiloBytes(long freeMemory) {
+		return LuaState.toDouble((double) (freeMemory) / 1024.0);
 	}
 	
 	public static String rawTostring(Object o) {
