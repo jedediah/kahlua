@@ -477,6 +477,30 @@ public final class BaseLib implements JavaFunction {
 		}
 	}
 
+	public static int collectgarbage(LuaState state, int base, int nArguments) {
+		if (nArguments == 0) {
+			System.gc();
+			return 0;
+		}
+		Object o = state.stack[base];
+		luaAssert((o instanceof String), 
+				"bad argument #1 to 'collectgarbage' (invalid option) '" +
+				(o == null?"null":o.toString()) + "')");
+		String opt = (String)o;
+		if (opt == "count") {
+			Runtime runtime = Runtime.getRuntime();
+			state.stack[base] = new Double(
+					runtime.totalMemory() - runtime.freeMemory());
+			return 1;
+		}
+		if (opt == "step" || opt == "collect") {
+			System.gc();
+			return 0;
+		}
+		// otherwise just return - this is not implemented.
+		return 0;
+	}
+	
 	public static String rawTostring(Object o) {
 		if (o instanceof String) {
 			return (String) o;
