@@ -481,27 +481,17 @@ public final class BaseLib implements JavaFunction {
 		
 		if (option == null || option == "step" || option == "collect") {
 			System.gc();
-			if (option == "step") {
-				state.setTop(base + 1);
-				state.stack[base] = Boolean.TRUE;
-				return 1;
-			}
 			return 0;
 		}
 
-		long freeMemory = RUNTIME.freeMemory();
-		long totalMemory = RUNTIME.totalMemory();
 		if (option == "count") {
+			long freeMemory = RUNTIME.freeMemory();
+			long totalMemory = RUNTIME.totalMemory();
+			state.setTop(base + 3);
 			state.stack[base] = toKiloBytes(totalMemory - freeMemory);
-			return 1;
-		}
-		if (option == "free") {
-			state.stack[base] = toKiloBytes(freeMemory);
-			return 1;
-		}
-		if (option == "total") {
-			state.stack[base] = toKiloBytes(totalMemory);
-			return 1;
+			state.stack[base + 1] = toKiloBytes(freeMemory);
+			state.stack[base + 2] = toKiloBytes(totalMemory);
+			return 3;
 		}
 		throw new RuntimeException("invalid option: " + option);
 	}

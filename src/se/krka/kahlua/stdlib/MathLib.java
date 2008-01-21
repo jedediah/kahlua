@@ -443,7 +443,7 @@ public final class MathLib implements JavaFunction {
 	
 	
 	
-	public static final double EPS = 1e-13;
+	public static final double EPS = 1e-15;
 	
 	/*
 	 * Simple implementation of the taylor expansion of

@@ -44,17 +44,16 @@ end
 
 function assertEquals(a, b)
 	local errMsg = "expected " .. tostring(a) .. " = " .. tostring(b)
-   local assert = assert
-   local type = type
-   assert(type(a) == type(b), "not same type")
-   if (type(a) == "number") then
-      local f = math.abs
-      local v = a - b;
-      local v2 = math.abs(v)
-      assert(v2 < 1e-6, errMsg)
-   else
-      assert(a == b, errMsg)
-   end
+	local assert = assert
+	local type = type
+	assert(type(a) == type(b), "not same type")
+	if (type(a) == "number") then
+		local diff = math.abs(a - b)
+		local max = math.max(a, b)
+		assert((diff / max < 1e-8) or (diff < 1e-7), errMsg)
+	else
+		assert(a == b, errMsg)
+	end
 end
 
 assertEquals(1, 1)
@@ -219,6 +218,15 @@ do
 	for i = 1, 20 do
 		assertEquals(v, math.atan2(i, 0))
 		assert(math.atan2(i, 2) == math.atan(i / 2))
+	end
+end
+
+do
+	for i = -10, 10, 0.1 do
+		assertEquals(math.cosh(i)^2 - math.sinh(i)^2, 1)
+		assertEquals(math.sinh(-i), -math.sinh(i))
+		assertEquals(math.cosh(-i), math.cosh(i))
+		assertEquals(math.tanh(i), math.sinh(i) / math.cosh(i))
 	end
 end
 
