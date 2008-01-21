@@ -139,7 +139,7 @@ public final class StringLib implements JavaFunction {
 					if (o instanceof String) {
 						try {
 							result.append(Integer.parseInt((String)o));
-						} catch (NumberFormatException) {
+						} catch (NumberFormatException e) {
 							throw new RuntimeException("bad argument #" + argc +
 									" to 'format' (number expected, got string)");						}
 					} else {
@@ -148,11 +148,11 @@ public final class StringLib implements JavaFunction {
 					break;
 				case 's':
 					o = formatGetArg(state, base, argc, "string");
-					result.append(BaseLib.rawToString(o));
+					result.append(BaseLib.rawTostring(o));
 					argc++;
 					break;
 				case 'q':
-					String q = BaseLib.rawToString(
+					String q = BaseLib.rawTostring(
 							formatGetArg(state, base, argc, "string"));
 					result.append('"');
 					for (int j = 0; j < q.length(); j++) {
@@ -170,12 +170,14 @@ public final class StringLib implements JavaFunction {
 					break;
 				default:
 					throw new RuntimeException("invalid option '%" + c + 
-							"' " to 'format'");
+							"' to 'format'");
 				}
 			} else {
 				result.append(c);
 			}
 		}
+		state.stack[base + 1] = result.toString();
+		return 1;
 	}
 	
 	private int lower(LuaState state, int base, int arguments) {
