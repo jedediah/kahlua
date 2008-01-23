@@ -94,29 +94,22 @@ public final class StringLib implements JavaFunction {
 		}
 	}
 	
-	private static void formatCheckType(Object o, int n) {
-		BaseLib.luaAssert(o instanceof String, 
-				"bad argument #" + n + " to 'format' (string expected, got "
-				+ BaseLib.type(o) + ")");		
+	private Object formatGetArg(LuaState state, int base, int n, String expect) {
+		return BaseLib.getArg(state, base, n, expect, "format");
 	}
 	
-	private Object formatGetArg(LuaState state, int base, int n, String expect) {
-		Object o = state.stack[base + n];
-		if (o == null) {
-			throw new RuntimeException("bad argument #" + n + "to 'format' (" +
-					expect + " expected, got no value)");
-		}
-		BaseLib.luaAssert(o instanceof String || o instanceof Double,
-				"bad argument #" + n + " to 'format' (" + expect + 
-				" expected, got " + BaseLib.type(o) + ")");
-		return o;
+	private long unsigned(Double o) {
+		if (o == null) return 0;
+		long v = o.longValue();
+		if (v < 0) v += (1 << 32);
+		return v;
 	}
 	
 	private int format(LuaState state, int base, int arguments) {
 		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		Object o = formatGetArg(state, base, 1, "string");
+		Object o = BaseLib.getArg(state, base, 1, "string", "format");
 		if (o instanceof Double) {
-			// standard Lua coerces numbers to a string
+			// coerce number to string
 			state.stack[base + 1] = ((Double) o).toString().intern();
 			return 1;
 		}
@@ -134,26 +127,39 @@ public final class StringLib implements JavaFunction {
 				case '%': 
 					result.append(c);
 					break;
-				case 'i':
-					o = formatGetArg(state, base, argc, "number");
-					if (o instanceof String) {
-						try {
-							result.append(Integer.parseInt((String)o));
-						} catch (NumberFormatException e) {
-							throw new RuntimeException("bad argument #" + argc +
-									" to 'format' (number expected, got string)");						}
-					} else {
-						result.append(((Double)o).intValue());
-					}
+				case 'u':
+					result.append(Long.toString(unsigned(
+						(Double)BaseLib.getArg(state, base, argc, "number", "format"))));
 					break;
+				case 'd':
+				case 'i':
+					Double v = (Double)BaseLib.getArg(state, base, argc, "number", 
+							"format");
+					result.append(Long.toString(v.longValue()));
+					break;
+				case 'e':
+				case 'E':
+				case 'f':
+					result.append(((Double)BaseLib.getArg(state, base, argc, "number", 
+							"format")).toString());
+					break;
+				case 'g':
+					v = (Double)BaseLib.getArg(state, base, argc, "number", 
+							"format");
+					double vv = v.doubleValue();
+					if (Math.floor(vv) == vv) {
+						result.append(v.longValue());
+					} else {
+						result.append(v.toString());
+					}
 				case 's':
-					o = formatGetArg(state, base, argc, "string");
+					o = BaseLib.getArg(state, base, argc, "string", "format");
 					result.append(BaseLib.rawTostring(o));
 					argc++;
 					break;
 				case 'q':
 					String q = BaseLib.rawTostring(
-							formatGetArg(state, base, argc, "string"));
+							BaseLib.getArg(state, base, argc, "string", "format"));
 					result.append('"');
 					for (int j = 0; j < q.length(); j++) {
 						char d = q.charAt(j);

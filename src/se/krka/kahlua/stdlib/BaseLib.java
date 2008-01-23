@@ -328,6 +328,43 @@ public final class BaseLib implements JavaFunction {
 		}
 	}
 
+	public static Object getArg(LuaState state, int base, int n, String type,
+				String function) {
+		Object o = state.stack[base + n];
+		if (o == null) {
+			throw new RuntimeException("bad argument #" + n + "to '" + function + 
+				"' (" + type + " expected, got no value)");
+		}
+		// type coercion
+		if (type == "string") {
+			if (o instanceof Double) {
+				return ((Double)o).toString().intern();
+			}
+			if (o instanceof String) {
+				return o;
+			}
+		} else if (type == "number") {
+			if (o instanceof Double) {
+				return o;
+			}
+			if (o instanceof String) {
+				try {
+					return new Double(Double.parseDouble((String)o));
+				} catch (NumberFormatException nfe) {
+					throw new RuntimeException("bad argument #" + n + " to '" + function +
+						"' (number expected, got string)");
+				}
+			}
+		}
+		// type checking
+		String isType = type(o);
+		luaAssert(type == isType,
+				"bad argument #" + n + " to '" + function +"' (" + type + 
+				" expected, got " + isType + ")");
+		return o;
+
+	}
+	
 	private static int getmetatable(LuaState state, int base, int nArguments) {
 		luaAssert(nArguments >= 1, "Not enough arguments");
 		Object o = state.stack[base + 1];
