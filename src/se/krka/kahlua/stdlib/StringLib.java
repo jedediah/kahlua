@@ -87,6 +87,7 @@ public final class StringLib implements JavaFunction {
 		case LOWER: return lower(state, base, nArguments);
 		case UPPER: return upper(state, base, nArguments);
 		case REVERSE: return reverse(state, base, nArguments);
+		case FORMAT: return format(state, base, nArguments);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
@@ -94,19 +95,15 @@ public final class StringLib implements JavaFunction {
 		}
 	}
 	
-	private Object formatGetArg(LuaState state, int base, int n, String expect) {
-		return BaseLib.getArg(state, base, n, expect, "format");
-	}
-	
 	private long unsigned(Double o) {
 		if (o == null) return 0;
 		long v = o.longValue();
-		if (v < 0) v += (1 << 32);
+		if (v < 0L) v += (1L << 32);
 		return v;
 	}
 	
 	private int format(LuaState state, int base, int arguments) {
-		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
+		//BaseLib.luaAssert(arguments >= 1, "not enough arguments");
 		Object o = BaseLib.getArg(state, base, 1, "string", "format");
 		if (o instanceof Double) {
 			// coerce number to string
@@ -143,18 +140,15 @@ public final class StringLib implements JavaFunction {
 					result.append(((Double)BaseLib.getArg(state, base, argc, "number", 
 							"format")).toString());
 					break;
+				case 'G':
 				case 'g':
 					v = (Double)BaseLib.getArg(state, base, argc, "number", 
 							"format");
-					double vv = v.doubleValue();
-					if (Math.floor(vv) == vv) {
-						result.append(v.longValue());
-					} else {
-						result.append(v.toString());
-					}
+					result.append(BaseLib.numberToString(v));
+					break;
 				case 's':
 					o = BaseLib.getArg(state, base, argc, "string", "format");
-					result.append(BaseLib.rawTostring(o));
+					result.append((String)o);
 					argc++;
 					break;
 				case 'q':
@@ -167,7 +161,7 @@ public final class StringLib implements JavaFunction {
 						case '\\': result.append("\\"); break;
 						case '\n': result.append("\\\n"); break;
 						case '\r': result.append("\\r"); break;
-						case '"': result.append("\""); break;
+						case '"': result.append("\\\""); break;
 						default: result.append(d);
 						}
 					}
@@ -182,7 +176,7 @@ public final class StringLib implements JavaFunction {
 				result.append(c);
 			}
 		}
-		state.stack[base + 1] = result.toString();
+		state.stack[base] = result.toString().intern();
 		return 1;
 	}
 	

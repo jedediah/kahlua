@@ -259,6 +259,7 @@ public final class BaseLib implements JavaFunction {
 	private int error(LuaState state, int base, int nArguments) {
 		if (nArguments >= 1) {
 			String msg = rawTostring((String) state.stack[base + 1]);
+			System.out.println(msg);
 			throw new RuntimeException(msg);
 		}
 		return 0;
@@ -328,6 +329,14 @@ public final class BaseLib implements JavaFunction {
 		}
 	}
 
+	public static String numberToString(Double num) {
+		double n = num.doubleValue();
+		if (Math.floor(n) == n) {
+			return Long.toString(num.longValue()).intern();
+		}
+		return num.toString();
+	}
+	
 	public static Object getArg(LuaState state, int base, int n, String type,
 				String function) {
 		Object o = state.stack[base + n];
@@ -338,7 +347,7 @@ public final class BaseLib implements JavaFunction {
 		// type coercion
 		if (type == "string") {
 			if (o instanceof Double) {
-				return ((Double)o).toString().intern();
+				return numberToString((Double)o);
 			}
 			if (o instanceof String) {
 				return o;

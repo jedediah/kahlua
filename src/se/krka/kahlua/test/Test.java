@@ -51,8 +51,7 @@ public class Test {
 			closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
 			state.call(closure, null, null, null);
 		} catch (RuntimeException e) {
-			System.out.println("Stdlib failed:");
-
+			System.out.println("Stdlib failed: " + e.getMessage());
 			e.printStackTrace();
 			System.out.println(state.stackTrace);
 			
@@ -76,7 +75,7 @@ public class Test {
 					successful++;
 				}
 			} catch (RuntimeException e) {
-				System.out.println(child + " Failed:");
+				System.out.println(child + " Failed:" + e.getMessage());
 
 				e.printStackTrace();
 				System.out.println(state.stackTrace);
