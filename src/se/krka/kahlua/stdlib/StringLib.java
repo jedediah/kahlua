@@ -102,7 +102,19 @@ public final class StringLib implements JavaFunction {
 		return v;
 	}
 	
+	private String formatNumberByBase(Double num, int base, String digits) {
+		long number = unsigned(num);
+		StringBuffer result = new StringBuffer();
+		while (number > 0) {
+			result.append(digits.charAt((int)(number % base)));
+			number /= base;
+		}
+		return result.reverse().toString(); // intern not needed here.
+	}
+	
 	private int format(LuaState state, int base, int arguments) {
+		final String lowerHex = "0123456789abcdef";
+		final String upperHex = "0123456789ABCDEF";
 		//BaseLib.luaAssert(arguments >= 1, "not enough arguments");
 		Object o = BaseLib.getArg(state, base, 1, "string", "format");
 		if (o instanceof Double) {
@@ -123,6 +135,21 @@ public final class StringLib implements JavaFunction {
 				switch (c) {
 				case '%': 
 					result.append(c);
+					break;
+				case 'o':
+					result.append(formatNumberByBase(
+						(Double)BaseLib.getArg(state, base, argc, "number", "format"), 8,
+							lowerHex));
+					break;
+				case 'x':
+					result.append(formatNumberByBase(
+						(Double)BaseLib.getArg(state, base, argc, "number", "format"), 16,
+							lowerHex));
+					break;
+				case 'X':
+					result.append(formatNumberByBase(
+						(Double)BaseLib.getArg(state, base, argc, "number", "format"), 16,
+							upperHex));
 					break;
 				case 'u':
 					result.append(Long.toString(unsigned(
