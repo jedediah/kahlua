@@ -134,7 +134,11 @@ public final class StringLib implements JavaFunction {
 				c = f.charAt(i);
 				switch (c) {
 				case '%': 
-					result.append(c);
+					result.append('%');
+					break;
+				case 'c':
+					result.append((char)((Double)BaseLib.getArg(state, base, 
+						argc, "number", "format")).intValue());
 					break;
 				case 'o':
 					result.append(formatNumberByBase(
