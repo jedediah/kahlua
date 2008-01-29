@@ -273,7 +273,7 @@ public final class BaseLib implements JavaFunction {
 			state.stack[base] = Boolean.TRUE;
 
 			return 1 + nValues;
-		} catch (RuntimeException e) {
+		} catch (Throwable e) {
 			state.setTop(base + 3);
 			state.stack[base] = Boolean.FALSE;
 			String s = e.getMessage();
