@@ -57,8 +57,14 @@ public class Test {
 			
 			return;
 		}
-				
-		File[] children = f.listFiles();
+
+		File[] children; 
+		if (args.length < 2) {
+			children = f.listFiles();
+		} else {
+			children = new File[1];
+			children[0] = new File(args[0], args[1]);
+		}
 		int successful = 0;
 		int total = 0;
 		for (int i = 0; i < children.length; i++) {
