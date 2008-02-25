@@ -65,3 +65,6 @@ assert(string.char(65) == "A")
 assert(s:lower() == "hello world")
 assert(s:upper() == "HELLO WORLD")
 
+assert(string.match(s, "Hello") == "Hello")
+assert(string.match(s, "H.l%D%w") == "Hello")
+

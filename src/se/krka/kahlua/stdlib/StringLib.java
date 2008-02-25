@@ -34,8 +34,10 @@ public final class StringLib implements JavaFunction {
 	private static final int UPPER = 4;
 	private static final int REVERSE = 5;
 	private static final int FORMAT = 6;
+	private static final int FIND = 7;
+	private static final int MATCH = 8;
 
-	private static final int NUM_FUNCTIONS = 7;
+	private static final int NUM_FUNCTIONS = 9;
 	
 	
 	private static final String[] names;
@@ -48,6 +50,8 @@ public final class StringLib implements JavaFunction {
 		names[UPPER] = "upper";
 		names[REVERSE] = "reverse";
 		names[FORMAT] = "format";
+		names[FIND] = "find";
+		names[MATCH] = "match";
 	}
 
 	private int index;
@@ -88,6 +92,8 @@ public final class StringLib implements JavaFunction {
 		case UPPER: return upper(state, base, nArguments);
 		case REVERSE: return reverse(state, base, nArguments);
 		case FORMAT: return format(state, base, nArguments);
+		case FIND: return findAux(state, base, nArguments, true);
+		case MATCH: return findAux(state, base, nArguments, false);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
@@ -312,5 +318,174 @@ public final class StringLib implements JavaFunction {
 		
 		state.stack[base] = res;
 		return 1;
+	}
+	
+	private boolean matchClass(char classIdentifier, char c) {
+		boolean res;
+		switch (Character.toLowerCase(classIdentifier)) {
+	    case 'a': res = Character.isLowerCase(c) || Character.isUpperCase(c); break;
+	    case 'c': res = (int)(c) < 32; break;
+	    case 'd': res = Character.isDigit(c); break;
+	    case 'l': res = Character.isLowerCase(c); break;
+	    case 'p': res = ("!\"§$%&'()*+,-./:;<=>?@[\\]^_`{|}~".indexOf(c) > -1); break;
+	    case 's': res = (c == 32 || (c > 8 && c < 14)); break;
+	    case 'u': res = Character.isUpperCase(c); break;
+	    case 'w': res = Character.isDigit(c) || Character.isLowerCase(c) ||
+				Character.isUpperCase(c); break;
+	    case 'x': res = ("0123456789abcdefABCDEF".indexOf(c) > -1); break;
+	    case 'z': res = (c == 0); break;
+	    default: return (classIdentifier == c);
+		}
+		return Character.isLowerCase(classIdentifier) ? res : !res;
+	}
+
+	private int matchBracketClass(char c, String p, int index) { 
+		boolean sig = true;
+		int len = p.length();
+		if (p.charAt(index) == '^') { // index *after* opening bracket
+			sig = false;
+			index++; // skip the '^'
+		}
+		while (index < len) {
+			char pc = p.charAt(index);
+			if (pc == '%') {
+				index++;
+				if (index < len && matchClass(p.charAt(index), c)) {
+					return sig ? p.indexOf(']', index) : -1;
+				}
+			} else if (pc == ']') {
+				return -1;
+			} else if (index + 2 < len && p.charAt(index + 1) == '-') {
+				if (c >= pc && c <= p.charAt(index + 2)) {
+					return sig ? p.indexOf(']', index) : -1;
+				}
+			} else if (c == pc) {
+					return sig ? p.indexOf(']', index) : -1;
+			}
+			index++;
+		}
+		return sig ? -1 : p.indexOf(']', index);
+	}
+
+	private int singleMatch(char sc, String pattern, int pIndex) {
+		char pc = pattern.charAt(pIndex);
+		switch (pc) {
+			case '.': return pIndex + 1;
+			case '%': 
+				if (matchClass(pattern.charAt(pIndex + 1), sc)) {
+					return pIndex + 2;
+				} else {
+					return -1;
+				}
+			case '[': return matchBracketClass(sc, pattern, pIndex);
+			default: return (pc == sc) ? (pIndex + 1) : -1;
+		}
+	}
+	
+	private int match(String source, String pattern,
+			int sIndex, int pIndex, int[] captures, int level) {
+		int sLen = source.length();
+		int pLen = pattern.length();
+		int si = sIndex;
+		while (pIndex < pLen && si < sLen) {
+			//TODO: captures, etc.
+			pIndex = singleMatch(source.charAt(si), pattern, pIndex);
+			if (pIndex < 0) return -1;
+			si++;
+		}
+		captures[0] = sIndex + 1;
+		captures[1] = si;
+		return level;
+	}
+	
+	private int findAux(LuaState state, int base, int args, boolean find) {
+		String f = find?"find":"match";
+		String source = (String) BaseLib.getArg(state, base, 1, "string", f);
+		String pattern = (String) BaseLib.getArg(state, base, 2, "string", f);
+		Double i = (Double) BaseLib.getOptArg(state, base, 3, "number");
+		Object o = BaseLib.getOptArg(state, base, 4, "boolean");
+		boolean noRegex = false;
+		if (o instanceof Boolean) {
+			noRegex = ((Boolean)o).booleanValue();
+		}
+		int index;
+		if (i != null) {
+			index = Math.max(0, i.intValue());
+		} else {
+			index = 0;
+		}
+		if (find && (noRegex || noSpecialChars(pattern))) {
+			// do a plain search
+			int pos = source.indexOf(pattern, index);
+			if (pos > -1) {
+				state.stack[base] = new Double(pos + 1);
+				state.stack[base + 1] = new Double(pos + pattern.length());
+				return 2;
+			}
+		} else {
+			state.stack[base] = null; // push nil if no result;
+			boolean anchor = false;
+			int pIndex;
+			int sIndex = 0;
+			if (pattern.charAt(0) == '^') {
+				anchor = true;
+				pIndex = 1;
+			} else {
+				pIndex = 0;
+			}
+			do {
+				int[] captures = createCaptures();
+				int level = match(source, pattern, sIndex, pIndex, captures, 1);
+				if (level > -1) {
+					if (find) {
+						state.stack[base] = new Double(captures[0] + 1);
+						state.stack[base + 1] = new Double(captures[0] + 
+								captures[1]);
+						// shift base right by 2, add the 2 later
+						pushCaptures(state, base + 2, source, captures,	level);
+						return level + 2;
+					}
+					pushCaptures(state, base, source, captures, level);
+					return level;
+				}
+				if (anchor) { break; }
+				sIndex++;
+			} while (source.length() > sIndex);
+		}
+		return 1;
+	}
+
+	private int[] createCaptures() {
+		final int MAXCAPTURES = 32;
+		int[] result = new int[MAXCAPTURES * 2];
+		for (int i = 0; i < MAXCAPTURES * 2; i += 2) {
+			result[i] = 0;
+			result[i + 1] = -1;
+		}
+		return result;
+	}
+	
+	private void pushCaptures(LuaState s, int base, String source, int[] caps, 
+			int level) {
+		int i = 0;
+		for (int j = base; j < base + level; j ++) {
+			int from = caps[i++];
+			int to = caps[i++];
+			if (from == to) {
+				s.stack[j] = new Double(from); // location capture
+			} else {
+				s.stack[j] = source.substring(from - 1, to).intern();
+			}
+		}
+	}
+	
+	private boolean noSpecialChars(String pattern) {
+		final String SPECIALS = "^$*+?.([%-";
+		for (int i = 0; i < SPECIALS.length(); i++) {
+			if (pattern.indexOf(SPECIALS.charAt(i)) > -1) {
+				return false;
+			}
+		}
+		return true;
 	}
 }
