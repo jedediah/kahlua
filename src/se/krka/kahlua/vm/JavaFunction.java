@@ -28,18 +28,15 @@ public interface JavaFunction {
 	 * General contract
 	 * 
 	 *  Input:
-	 *  stack[base] will be "this", and
-	 *  stack[base + 1] .. stack[top - 1] will be the arguments
+	 *  callFrame = the frame that contains all the arguments, and where all the results should be put. 
+	 *  nArgs = number of function arguments
+	 *  callFrame.get(i) = an argument (0 <= i < nArgs) 
 	 *  
 	 *  Output:
-	 *  stack[base] .. stack[base + nReturnValues - 1]
 	 *  
-	 *  If you use stack slots above top - 1, i.e. having more outputs than inputs
-	 *  you will have set the top manually. 
-	 *  
-	 * @param state - the lua state to call on.
-	 * @param base  - the base index. 
-	 * @return nReturnValues - the number of return values from the function
+	 * @param callFrame - the current callframe for the function 
+	 * @param nArguments - number of function arguments 
+	 * @return N - number of return values. The N top objects on the stack is considered the return values 
 	 */
-	public abstract int call(LuaState state, int base);
+	public abstract int call(LuaCallFrame callFrame, int nArguments);
 }

@@ -23,7 +23,6 @@ package se.krka.kahlua.vm;
 
 import java.io.PrintStream;
 import java.util.Random;
-import java.util.Vector;
 
 import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.stdlib.MathLib;
@@ -70,30 +69,22 @@ public final class LuaState {
 	private static final int OP_VARARG = 37;
 	
 	public LuaTable environment;
-
-	public Vector liveUpvalues;
-
-
-	/*
-	 * Stack operations follow
-	 */
-	public static final int MAX_STACK_SIZE = 1000;
-	public static final int INITIAL_STACK_SIZE = 100;
-	public Object[] stack;
-	public int top;
+	public LuaThread currentThread;
 
 	// Needed for Math lib - every state needs its own random
 	public Random random = new Random();
 
 	public LuaTable userdataMetatables;
 
-	public String stackTrace;
-
 	public PrintStream out;
 
 	static final int MAX_INDEX_RECURSION = 100;
 
 	private static final String meta_ops[];
+	
+	public static final int RETURN_YIELD = -1;
+	public static final int RETURN_RESUME = -2;
+	
 	static {
 		meta_ops = new String[38];
 		meta_ops[OP_ADD] = "__add";
@@ -107,43 +98,6 @@ public final class LuaState {
 		meta_ops[OP_LT] = "__lt";
 		meta_ops[OP_LE] = "__le";
 	}
-
-	private final void ensureStacksize(int index) {
-		if (index > MAX_STACK_SIZE) {
-			throw new RuntimeException("Stack overflow");			
-		}
-		int oldSize = stack.length;
-		int newSize = Math.min(MAX_STACK_SIZE, 2 * oldSize);
-		Object[] newStack = new Object[newSize];
-		System.arraycopy(stack, 0, newStack, 0, oldSize);
-		stack = newStack;
-	}
-
-	public final void setTop(int newTop) {
-		if (top < newTop) {
-			ensureStacksize(newTop);
-		} else {
-			stackClear(newTop, top - 1);
-		}
-		top = newTop;
-	}
-
-	public final void stackCopy(int startIndex, int destIndex, int len) {
-		if (len > 0) {
-			System.arraycopy(stack, startIndex, stack, destIndex, len);
-		}
-	}
-
-	public final void stackClear(int startIndex, int endIndex) {
-		for (; startIndex <= endIndex; startIndex++) {
-			stack[startIndex] = null;
-		}
-	}    
-
-	/*
-	 * End of stack code
-	 */
-
 	public LuaState(PrintStream stream) {
 		out = stream;
 		setup();
@@ -155,718 +109,738 @@ public final class LuaState {
 		userdataMetatables = new LuaTable();
 		environment.rawset("_G", environment);
 		environment.rawset("_VERSION", "Lua 5.1 for CLDC 1.1");
+		currentThread = new LuaThread(this);
 	}
 
 	private final void setup() {
-		stack = new Object[INITIAL_STACK_SIZE];
-		liveUpvalues = new Vector();
-		top = 0;
-		stackTrace = "";
 	}
 
-	public final void cleanup(int top) {
-		closeUpvalues(top);
-		stackTrace = "";
-	}
-	
-	/*
-	public void inspectStack(int base) {
+	public void inspectStack(LuaCallFrame callFrame) {
 		System.out.println("-- Current Stack --");
-		for (int i = 0; i < top; i++) {
-			Object o = stack[i];
-
-			if (i == base) {
-				System.out.print("base: ");
-			}
+		for (int i = 0; i < callFrame.getTop(); i++) {
+			Object o = callFrame.get(i);
+			
 			System.out.println(i + ": " + BaseLib.type(o) + ": " + o);
 		}
+		/*
 		System.out.println("-- Live upvalues --");
 		for (int i = 0; i < liveUpvalues.size(); i++) {
 			UpValue uv = (UpValue) liveUpvalues.elementAt(i);
 			System.out.println(uv.index + ": " + uv.getValue());
 		}
+		*/
 		System.out.println("-------------------");
 
 	}
-	 */
 	
-	public int call(int base) {
-		Object o = stack[base];
+	public int call(int nArguments) {
+		int top = currentThread.getTop();
+		int base = top - nArguments - 1;
+		Object o = currentThread.objectStack[base];
 
+		/*
 		if (!(o instanceof LuaClosure) && !(o instanceof JavaFunction)) {
 			o = prepareMetatableCall(base, o);
 		}
+		*/
+		
+		if (o == null) {
+			throw new RuntimeException("tried to call nil");
+		}
 		
 		if (o instanceof JavaFunction) {
-			int nReturnValues = ((JavaFunction) o).call(this, base);
-			setTop(base + nReturnValues);
-
-			return nReturnValues;
+			return callJava((JavaFunction) o, base, nArguments);
 		}
 		
 		if (!(o instanceof LuaClosure)) {
 			throw new RuntimeException("tried to call a non-function");
 		}
-		int nReturnValues = runLuaClosure(base);
+
+		LuaCallFrame callFrame = currentThread.pushNewCallFrame(base + 1, base, nArguments, false, false);
+		callFrame.init((LuaClosure) o);
+		
+		luaMainloop();
+
+		int nReturnValues = currentThread.getTop() - base;
+		
+		currentThread.stackTrace = "";
+		
 		return nReturnValues;
 	}
 
-	private final Object prepareMetatableCall(int base, Object o) {
-		Object f = getMetaOp(o, "__call");
+	private int callJava(JavaFunction f, int base, int nArguments) {
+		LuaCallFrame callFrame = currentThread.pushNewCallFrame(base + 1, base, nArguments, false, false);
 
-		int nArguments = top - base - 1; 
+		//System.out.println("Pre: " + f);
+		//inspectStack(callFrame);
+		
+		int nReturnValues = f.call(callFrame, nArguments); 
+		
+		//System.out.println("Post: " + f);
+		//System.out.println("return values: " + nReturnValues);
+		//inspectStack(callFrame);
+		
+		// Clean up return values
+		int top = callFrame.getTop();
+		int actualReturnBase = top - nReturnValues; 
 
-		setTop(top + 1);
-		stackCopy(base, base + 1, nArguments);
-		stack[base] = f;
-
-		o = f;
-		return o;
+		//System.out.println("Copy " + actualReturnBase + " to " + -1 + " [" + nReturnValues);
+		callFrame.stackCopy(actualReturnBase, -1, nReturnValues);
+		callFrame.setTop(nReturnValues - 1);
+		
+		//System.out.println("Post2: " + f + ", " + actualReturnBase);
+		//inspectStack(callFrame);
+		
+		currentThread.popCallFrame();
+		
+		return nReturnValues;
 	}
 
-	private final int runLuaClosure(int base) {
-		LuaClosure closure;
-		LuaTable env;
-		LuaPrototype prototype = null;
-		int[] opcodes;
-		Object[] constants;
-		int pc = 0;
-		int numParams;
-		int numVarargs;
+	private final Object prepareMetatableCall(Object o) {
+		if (o instanceof JavaFunction || o instanceof LuaClosure) {
+			return o;
+		}
+		
+		Object f = getMetaOp(o, "__call");
 
-		int nArguments;
+		return f;
+	}
 
+	public final void luaMainloop() {
+		LuaCallFrame callFrame = currentThread.currentCallFrame();
+		LuaClosure closure = callFrame.closure;
+		LuaPrototype prototype = closure.prototype;
+		int[] opcodes = prototype.opcodes;
+		
 		try {
 			while (true) {
-				// assert stack[base] instanceof LuaClosure
-				closure = (LuaClosure) stack[base];
+				int a, b, c;
 
-				// Remember to let OP_RETURN and OP_TAILCALL reverse this
-				base++;
-
-				nArguments = top - base;
-
-				env = closure.env;
-				prototype = closure.prototype;
-				opcodes = prototype.opcodes;
-				constants = prototype.constants;
-				numParams = prototype.numParams;
-
-				numVarargs = 0;
-				if (prototype.isVararg && nArguments > numParams) {
-					numVarargs = nArguments - numParams;
-
-					// Since there are vararg arguments,
-					// move the base and copy params
-
-					int newBase = base + nArguments;
-
-					setTop(newBase + prototype.maxStacksize);
-
-					stackCopy(base, newBase, numParams);
-					base = newBase;
+				int op = opcodes[callFrame.pc++];
+				int opcode = op & 63;
+				
+				//inspectStack(callFrame);
+				//System.out.println(opcode);
+				
+				int returnBase = callFrame.returnBase;
+				switch (opcode) {
+				case OP_MOVE: {
+					a = getA8(op);
+					b = getB9(op);
+					callFrame.set(a, callFrame.get(b));
+					break;
 				}
-				setTop(base + prototype.maxStacksize);
+				case OP_LOADK: {
+					a = getA8(op);
+					b = getBx(op);
+					callFrame.set(a, prototype.constants[b]);
+					break;
+				}
+				case OP_LOADBOOL: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+					Boolean bool = b == 0 ? Boolean.FALSE : Boolean.TRUE;
+					callFrame.set(a, bool);
+					if (c != 0) {
+						callFrame.pc++;
+					}
+					break;
+				}
+				case OP_LOADNIL: {
+					a = getA8(op);
+					b = getB9(op);
+					callFrame.stackClear(a, b);
+					break;
+				}
+				case OP_GETUPVAL: {
+					a = getA8(op);
+					b = getB9(op);
+					UpValue uv = closure.upvalues[b];
+					callFrame.set(a, uv.getValue());
+					break;
+				}
+				case OP_GETGLOBAL: {
+					a = getA8(op);
+					b = getBx(op);
+					Object res = tableGet(closure.env, prototype.constants[b]);
+					callFrame.set(a, res);
+					break;
+				}
+				case OP_GETTABLE: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
 
-				stackClear(base + Math.min(nArguments, numParams) + 1, base + prototype.maxStacksize - 1);
+					Object bObj = callFrame.get(b);
+
+					Object key = getRegisterOrConstant(callFrame, c);
+
+					Object res = tableGet(bObj, key);
+					callFrame.set(a, res);
+					break;
+				}
+				case OP_SETGLOBAL: {
+					a = getA8(op);
+					b = getBx(op);
+					Object value = callFrame.get(a);
+					Object key = prototype.constants[b];
+
+					tableSet(closure.env, key, value);
+
+					break;
+				}
+				case OP_SETUPVAL: {
+					a = getA8(op);
+					b = getB9(op);
+
+					UpValue uv = closure.upvalues[b];
+					uv.setValue(callFrame.get(a));
+
+					break;
+				}
+				case OP_SETTABLE: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+
+					Object aObj = callFrame.get(a);
+
+					Object key = getRegisterOrConstant(callFrame, b);
+					Object value = getRegisterOrConstant(callFrame, c);
+
+					tableSet(aObj, key, value);
+
+					break;
+				}
+				case OP_NEWTABLE: {
+					a = getA8(op);
+
+					// Used to set up initial array and hash size - not implemented
+					// b = getB9(op);
+					// c = getC9(op);
+
+					LuaTable t = new LuaTable();
+					callFrame.set(a, t);
+					break;
+				}
+				case OP_SELF: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+
+					Object key = getRegisterOrConstant(callFrame, c);
+					Object bObj = callFrame.get(b);
+
+					Object fun = tableGet(bObj, key);
+
+					callFrame.set(a, fun);
+					callFrame.set(a + 1, bObj);
+					break;
+				}
+				case OP_ADD:
+				case OP_SUB:
+				case OP_MUL:
+				case OP_DIV:
+				case OP_MOD:
+				case OP_POW: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+
+					Object bo = getRegisterOrConstant(callFrame, b);
+					Object co = getRegisterOrConstant(callFrame, c);
+
+					Double bd = null, cd = null;
+					Object res = null;
+					if ((bd = BaseLib.rawTonumber(bo)) == null || (cd = BaseLib.rawTonumber(co)) == null) {
+						String meta_op = meta_ops[opcode];
+
+						Object metafun = null;
+						if (bd == null) {
+							metafun = getMetaOp(bo, meta_op);
+						}
+						if (metafun == null && cd == null) {
+							metafun = getMetaOp(co, meta_op);
+						}
+						BaseLib.luaAssert(metafun != null, "no meta function was found for " + meta_op);
+						res = call(metafun, bo, co, null);
+					} else {
+						res = primitiveMath(bo, co, opcode);
+					}
+					callFrame.set(a, res);
+					break;
+				}
+				case OP_UNM: {
+					a = getA8(op);
+					b = getB9(op);
+					Object aObj = callFrame.get(b);
+
+					Double aDouble = BaseLib.rawTonumber(aObj);
+					Object res;
+					if (aDouble != null) {
+						res = toDouble(-fromDouble(aDouble));
+					} else {
+						Object metafun = getMetaOp(aObj, "__unm");
+						res = call(metafun, aObj, null, null);
+					}
+					callFrame.set(a, res);
+					break;
+				}
+				case OP_NOT: {
+					a = getA8(op);
+					b = getB9(op);
+					Object aObj = callFrame.get(b);
+					callFrame.set(a, toBoolean(!boolEval(aObj)));
+					break;					
+				}
+				case OP_LEN: {
+					a = getA8(op);
+					b = getB9(op);
+
+					Object o = callFrame.get(b);
+					Object res;
+					if (o instanceof LuaTable) {
+						LuaTable t = (LuaTable) o;
+						res = toDouble(t.len());
+					} else if (o instanceof String) {
+						String s = (String) o;
+						res = toDouble(s.length());
+					} else {
+						Object f = getMetaOp(o, "__len");
+						
+						res = call(f, o, null, null);
+					}
+					callFrame.set(a, res);
+					break;
+				}
+				case OP_CONCAT: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+
+					int first = b;
+					int last = c;
+
+					Object res = currentThread.objectStack[last];
+					last--;
+
+					while (first <= last) {
+						// Optimize for multi string concats
+						{
+							String resStr = BaseLib.rawTostring(res);
+							if (res != null) {
+
+								int nStrings = 0;
+								int pos = last;
+								while (first <= pos) {
+									Object o = callFrame.get(pos);
+									pos--;
+									if (BaseLib.rawTostring(o) == null) {
+										break;
+									}
+									nStrings++;
+								}
+								if (nStrings > 0) {
+									StringBuffer concatBuffer = new StringBuffer();
+
+									int firstString = last - nStrings + 1;
+									while (firstString <= last) {
+										concatBuffer.append(BaseLib.rawTostring(callFrame.get(firstString)));
+										firstString++;
+									}
+									concatBuffer.append(resStr);
+
+									res = concatBuffer.toString().intern();
+
+									last = last - nStrings;
+								}
+							}
+						}
+						if (first <= last) {
+							Object leftConcat = callFrame.get(last);
+
+							Object metafun = getMetaOp(leftConcat, "__concat");
+							if (metafun == null) {
+								metafun = getMetaOp(res, "__concat");
+							}
+							
+							res = call(metafun, leftConcat, res, null);
+							last--;
+						}
+					}
+					callFrame.set(a,  res);
+					break;
+				}
+				case OP_JMP: {
+					callFrame.pc += getSBx(op);
+					break;
+				}
+				case OP_EQ:
+				case OP_LT:
+				case OP_LE: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+
+					Object bo = getRegisterOrConstant(callFrame, b);
+					Object co = getRegisterOrConstant(callFrame, c);
 
 
-				pc = 0;
+					if (bo instanceof Double && co instanceof Double) {
+						double bd_primitive = fromDouble(bo);
+						double cd_primitive = fromDouble(co);
 
-				tailcall_escape_label:
-					while (true) {
-						int a, b, c;
+						if (opcode == OP_EQ) {
+							if ((bd_primitive == cd_primitive) == (a == 0)) {
+								callFrame.pc++;
+							}
+						} else {
+							if (opcode == OP_LT) {
+								if ((bd_primitive < cd_primitive) == (a == 0)) {
+									callFrame.pc++;
+								}
+							} else { // opcode must be OP_LE
+								if ((bd_primitive <= cd_primitive) == (a == 0)) {
+									callFrame.pc++;
+								}									
+							}
+						}
+					} else if (bo instanceof String && co instanceof String) {
+						if (opcode == OP_EQ) {
+							if ((bo == co) == (a == 0)) {
+								callFrame.pc++;
+							}
+						} else {
+							String bs = (String) bo;
+							String cs = (String) co;
+							int cmp = bs.compareTo(cs);
 
-						int op = opcodes[pc++];
-						int opcode = op & 63;
-/*
-						System.out.println("\n\nStack before operation:");
-						inspectStack(base);
-						System.out.println("Line: " + prototype.lines[pc - 1]);
-						System.out.println("opcode: " + opcode);
-						System.out.println("a: " + getA8(op));
-						System.out.println("b: " + getB9(op));
-						System.out.println("c: " + getC9(op));
-*/
+							if (opcode == OP_LT) {
+								if ((cmp < 0) == (a == 0)) {
+									callFrame.pc++;
+								}
+							} else { // opcode must be OP_LE
+								if ((cmp <= 0) == (a == 0)) {
+									callFrame.pc++;
+								}									
+							}
+						}
+					} else {
+						boolean invert = false;
+
+						String meta_op = meta_ops[opcode];
+
+						Object metafun = null;
+						if (bo == null) {
+							metafun = getMetaOp(bo, meta_op);
+						}
+						if (metafun == null && co == null) {
+							metafun = getMetaOp(co, meta_op);
+						}
+
+						/* Special case:
+						 * OP_LE uses OP_LT if __le is not defined.
+						 * if a <= b is then translated to not (b < a)
+						 */
+						if (metafun == null && opcode == OP_LE) {
+							if (bo == null) {
+								metafun = getMetaOp(bo, "__lt");
+							}
+							if (metafun == null && co == null) {
+								metafun = getMetaOp(co, "__lt");
+							}								
+							// Swap the objects
+							Object tmp = bo;
+							bo = co;
+							co = tmp;
+
+							// Invert a (i.e. add the "not"
+							invert = true;
+						}
+
+						boolean resBool;
+						if (metafun == null && opcode == OP_EQ) {
+							resBool = LuaState.luaEquals(bo, co); 
+						} else {	
+							Object res = call(metafun, bo, co, null);
+							resBool = boolEval(res);
+						}
+
+						if (invert) {
+							resBool = !resBool; 
+						}
+						if (resBool == (a == 0)) {
+							callFrame.pc++;
+						}
+					}
+					break;
+				}
+				case OP_TEST: {
+					a = getA8(op);
+					// b = getB9(op);
+					c = getC9(op);
+
+					Object value = callFrame.get(a);
+					if (boolEval(value) == (c == 0)) {
+						callFrame.pc++;
+					}
+
+					break;
+				}
+				case OP_TESTSET: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+
+
+					Object value = callFrame.get(b);
+					if (boolEval(value) != (c == 0)) {
+						callFrame.set(a, value);
+					} else {
+						callFrame.pc++;
+					}
+
+					break;
+				}
+				case OP_CALL:
+				{
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+					int nArguments2 = b - 1;
+					if (nArguments2 != -1) {
+						callFrame.setTop(a + nArguments2 + 1);
+					} else {
+						nArguments2 = callFrame.getTop() - a - 1;
+					}
+					
+					Object fun = prepareMetatableCall(callFrame.get(a));
+
+					int base = callFrame.localBase;
+
+					if (fun instanceof LuaClosure) {
+						LuaCallFrame newCallFrame = currentThread.pushNewCallFrame(base + a + 1, base + a, nArguments2, true, callFrame.insideCoroutine);
+						newCallFrame.init((LuaClosure) fun);
+						
+						callFrame = newCallFrame;
+						closure = newCallFrame.closure;
+						prototype = closure.prototype;
+						opcodes = prototype.opcodes;
+					} else if (fun instanceof JavaFunction) {
+						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
+						
+						// The call might have changed something...
+						callFrame = currentThread.currentCallFrame();
+						closure = callFrame.closure;
+						prototype = closure.prototype;
+						opcodes = prototype.opcodes;
+						
+						if (c != 0) {
+							callFrame.setTop(prototype.maxStacksize);
+						}
+					} else {
+						throw new RuntimeException("Tried to call a non-function: " + fun);
+					}
+
+					break;
+				}
+				case OP_TAILCALL: {
+					int base = callFrame.localBase;
+					
+					currentThread.closeUpvalues(base);
+
+					a = getA8(op);
+					b = getB9(op);
+					int nArguments2 = b - 1;
+					if (nArguments2 == -1) {
+						nArguments2 = callFrame.getTop() - a - 1;
+					}
+
+					Object fun = prepareMetatableCall(callFrame.get(a));
+					
+					currentThread.stackCopy(base + a, returnBase, nArguments2 + 1);
+					currentThread.setTop(returnBase + nArguments2 + 1);
+					
+					if (fun instanceof LuaClosure) {
+						callFrame.localBase = returnBase + 1;
+						callFrame.nArguments = nArguments2;
+						callFrame.init((LuaClosure) fun);
+						
+					} else if (fun instanceof JavaFunction) {
+						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
+
+
+						// TODO: handle yield
+						currentThread.popCallFrame();
+						if (callFrame.fromLua) {
+							callFrame = currentThread.currentCallFrame();
+							closure = callFrame.closure;
+							prototype = closure.prototype;
+							opcodes = prototype.opcodes;
+							
+							if (callFrame.topBackup != -1) {
+								currentThread.setTop(callFrame.topBackup);
+							}
+						} else {
+							return;
+						}
+						
+					} else {
+						throw new RuntimeException("Tried to call a non-function: " + fun);
+					}
+					
+					break;
+				}
+				case OP_RETURN: {
+					// TODO: Set up return to recreate top according to prototype
+					
+					a = getA8(op);
+					b = getB9(op) - 1;
+
+					int base = callFrame.localBase;
+					currentThread.closeUpvalues(base);
+
+					if (b == -1) {
+						b = callFrame.getTop() - a;
+					}
+
+					currentThread.stackCopy(callFrame.localBase + a, returnBase, b);
+					currentThread.setTop(returnBase + b);
+
+					// TODO: handle yield
+					currentThread.popCallFrame();
+					if (callFrame.fromLua) {
+						callFrame = currentThread.currentCallFrame();
+						closure = callFrame.closure;
+						prototype = closure.prototype;
+						opcodes = prototype.opcodes;
+						
+						if (callFrame.topBackup != -1) {
+							currentThread.setTop(callFrame.topBackup);
+						}
+					} else {
+						return;
+					}
+					break;
+				}
+				case OP_FORPREP: {
+					a = getA8(op);
+					b = getSBx(op);
+
+					double iter = fromDouble(callFrame.get(a));
+					double step = fromDouble(callFrame.get(a + 2));
+					callFrame.set(a, toDouble(iter - step));
+					callFrame.pc += b;
+					break;
+				}
+				case OP_FORLOOP: {
+					a = getA8(op);
+
+					double iter = fromDouble(callFrame.get(a));
+					double end = fromDouble(callFrame.get(a + 1));
+					double step = fromDouble(callFrame.get(a + 2));
+					iter += step;
+					Double iterDouble = toDouble(iter);
+					callFrame.set(a,  iterDouble);
+
+					if ((step > 0) ? iter <= end : iter >= end) {
+						b = getSBx(op);
+						callFrame.pc += b;
+						callFrame.set(a + 3, iterDouble);
+					} else {
+						callFrame.setTop(a);
+					}
+					break;
+				}
+				case OP_TFORLOOP: {
+					a = getA8(op);
+					c = getC9(op);
+
+					callFrame.setTop(a + 6);
+					callFrame.stackCopy(a, a + 3, 3);
+					call(2);
+					callFrame.setTop(a + 3 + c);
+
+					Object aObj3 = callFrame.get(a + 3);
+					if (aObj3 != null) {
+						callFrame.set(a + 2, aObj3);
+					} else {
+						callFrame.pc++;
+					}
+					break;
+				}
+				case OP_SETLIST: {
+					a = getA8(op);
+					b = getB9(op);
+					c = getC9(op);
+
+					if (c == 0) {
+						c = opcodes[callFrame.pc++];						
+					}
+
+					int offset = (c - 1) * FIELDS_PER_FLUSH;
+
+					LuaTable t = (LuaTable) callFrame.get(a);
+					for (int i = 1; i <= b; i++) {
+						Object key = toDouble(offset + i);
+						Object value = callFrame.get(a + i);
+						t.rawset(key, value);
+					}
+					break;
+				}
+				case OP_CLOSE: {
+					a = getA8(op);
+					callFrame.closeUpvalues(a);
+					break;
+				}
+				case OP_CLOSURE: {
+					a = getA8(op);
+					b = getBx(op);
+					LuaPrototype newPrototype = prototype.prototypes[b];
+					LuaClosure newClosure = new LuaClosure(newPrototype, closure.env);
+					callFrame.set(a, newClosure);
+					int numUpvalues = newPrototype.numUpvalues;
+					for (int i = 0; i < numUpvalues; i++) {
+						op = opcodes[callFrame.pc++];
+						opcode = op & 63;
+						b = getB9(op);
 						switch (opcode) {
 						case OP_MOVE: {
-							a = getA8(op);
-							b = getB9(op);
-							stack[base + a] = stack[base + b];
-							break;
-						}
-						case OP_LOADK: {
-							a = getA8(op);
-							b = getBx(op);
-							Object o2 = constants[b];
-							stack[base + a] = o2;
-							break;
-						}
-						case OP_LOADBOOL: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-							Boolean bool = b == 0 ? Boolean.FALSE : Boolean.TRUE;
-							stack[base + a] = bool;
-							if (c != 0) {
-								pc++;
-							}
-							break;
-						}
-						case OP_LOADNIL: {
-							a = getA8(op);
-							b = getB9(op);
-							stackClear(base + a, base + b);
+							newClosure.upvalues[i] = callFrame.findUpvalue(b);
 							break;
 						}
 						case OP_GETUPVAL: {
-							a = getA8(op);
-							b = getB9(op);
-							UpValue uv = closure.upvalues[b];
-							stack[base + a] = uv.getValue();
+							newClosure.upvalues[i] = closure.upvalues[b];
 							break;
 						}
-						case OP_GETGLOBAL: {
-							a = getA8(op);
-							b = getBx(op);
-							Object res = tableGet(env, constants[b]);
-							stack[base + a] = res;
-							break;
+						default:
+							// should never happen
 						}
-						case OP_GETTABLE: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-							Object bObj = stack[base + b];
-							
-							Object key = getRegisterOrConstant(constants, base, c);
-
-							Object res = tableGet(bObj, key);
-				    		stack[base + a] = res;
-				    		
-				    		
-				    		//System.out.println("Stack after GETTABLE: " + res + " base = " + base + ", a = " + a);
-				    		//inspectStack(base);
-							break;
-						}
-						case OP_SETGLOBAL: {
-							a = getA8(op);
-							b = getBx(op);
-							Object value = stack[base + a];
-							Object key = constants[b];
-							
-							tableSet(env, key, value);
-							
-							break;
-						}
-						case OP_SETUPVAL: {
-							a = getA8(op);
-							b = getB9(op);
-
-							UpValue uv = closure.upvalues[b];
-							uv.setValue(stack[base + a]);
-
-							break;
-						}
-						case OP_SETTABLE: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-							Object aObj = stack[base + a];
-							
-							Object key = getRegisterOrConstant(constants, base, b);
-							Object value = getRegisterOrConstant(constants, base, c);
-
-							tableSet(aObj, key, value);
-							
-							break;
-						}
-						case OP_NEWTABLE: {
-							a = getA8(op);
-
-							// Used to set up initial array and hash size - not implemented
-							// b = getB9(op);
-							// c = getC9(op);
-
-							LuaTable t = new LuaTable();
-							stack[base + a] = t;
-							break;
-						}
-						case OP_SELF: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-							Object key = getRegisterOrConstant(constants, base, c);
-							Object bObj = stack[base + b];
-
-							Object fun = tableGet(bObj, key);
-
-							stack[base + a] = fun;
-							stack[base + a + 1] = bObj;
-							break;
-						}
-						case OP_ADD:
-						case OP_SUB:
-						case OP_MUL:
-						case OP_DIV:
-						case OP_MOD:
-						case OP_POW: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-							Object bo = getRegisterOrConstant(constants, base, b);
-							Object co = getRegisterOrConstant(constants, base, c);
-
-							Double bd = null, cd = null;
-							Object res = null;
-							if ((bd = BaseLib.rawTonumber(bo)) == null || (cd = BaseLib.rawTonumber(co)) == null) {
-								String meta_op = meta_ops[opcode];
-
-								Object metafun = null;
-								if (bd == null) {
-									metafun = getMetaOp(bo, meta_op);
-								}
-								if (metafun == null && cd == null) {
-									metafun = getMetaOp(co, meta_op);
-								}
-								BaseLib.luaAssert(metafun != null, "no meta function was found for " + meta_op);
-								res = call(metafun, bo, co, null);
-							} else {
-								res = primitiveMath(bo, co, opcode);
-							}
-							stack[base + a] = res;
-							break;
-						}
-						case OP_UNM: {
-							a = getA8(op);
-							b = getB9(op);
-							Object aObj = stack[base + b];
-
-							Double aDouble = BaseLib.rawTonumber(aObj);
-							Object res;
-							if (aDouble != null) {
-								res = toDouble(-fromDouble(aDouble));
-							} else {
-								Object metafun = getMetaOp(aObj, "__unm");
-								res = call(metafun, aObj, null, null);
-							}
-							stack[base + a] = res;
-							break;
-						}
-						case OP_NOT: {
-							a = getA8(op);
-							b = getB9(op);
-							Object aObj = stack[base + b];
-							stack[base + a] = toBoolean(!boolEval(aObj));
-							break;					
-						}
-						case OP_LEN: {
-							a = getA8(op);
-							b = getB9(op);
-
-							Object o = stack[base + b];
-							Object res;
-							if (o instanceof LuaTable) {
-								LuaTable t = (LuaTable) o;
-								res = toDouble(t.len());
-							} else if (o instanceof String) {
-								String s = (String) o;
-								res = toDouble(s.length());
-							} else {
-								Object f = getMetaOp(o, "__len");
-
-								res = call(f, o, null, null);
-							}
-							stack[base + a] = res;
-							break;
-						}
-						case OP_CONCAT: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-							int first = base + b;
-							int last = base + c;
-
-							Object res = stack[last];
-							last--;
-
-							while (first <= last) {
-								// Optimize for multi string concats
-								{
-									String resStr = BaseLib.rawTostring(res);
-									if (res != null) {
-
-										int nStrings = 0;
-										int pos = last;
-										while (first <= pos) {
-											Object o = stack[pos];
-											pos--;
-											if (BaseLib.rawTostring(o) == null) {
-												break;
-											}
-											nStrings++;
-										}
-										if (nStrings > 0) {
-											StringBuffer concatBuffer = new StringBuffer();
-
-											int firstString = last - nStrings + 1;
-											while (firstString <= last) {
-												concatBuffer.append(BaseLib.rawTostring(stack[firstString]));
-												firstString++;
-											}
-											concatBuffer.append(resStr);
-
-											res = concatBuffer.toString().intern();
-
-											last = last - nStrings;
-										}
-									}
-								}
-								if (first <= last) {
-									Object leftConcat = stack[last];
-
-									Object metafun = getMetaOp(leftConcat, "__concat");
-									if (metafun == null) {
-										metafun = getMetaOp(res, "__concat");
-									}
-									res = call(metafun, leftConcat, res, null);
-									last--;
-								}
-							}
-							stack[base + a] = res;
-							break;					
-						}
-						case OP_JMP: {
-							pc += getSBx(op);
-							break;
-						}
-						case OP_EQ:
-						case OP_LT:
-						case OP_LE: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-							Object bo = getRegisterOrConstant(constants, base, b);
-							Object co = getRegisterOrConstant(constants, base, c);
-
-
-							if (bo instanceof Double && co instanceof Double) {
-								double bd_primitive = fromDouble(bo);
-								double cd_primitive = fromDouble(co);
-
-								if (opcode == OP_EQ) {
-									if ((bd_primitive == cd_primitive) == (a == 0)) {
-										pc++;
-									}
-								} else {
-									if (opcode == OP_LT) {
-										if ((bd_primitive < cd_primitive) == (a == 0)) {
-											pc++;
-										}
-									} else { // opcode must be OP_LE
-										if ((bd_primitive <= cd_primitive) == (a == 0)) {
-											pc++;
-										}									
-									}
-								}
-							} else if (bo instanceof String && co instanceof String) {
-								if (opcode == OP_EQ) {
-									if ((bo == co) == (a == 0)) {
-										pc++;
-									}
-								} else {
-									String bs = (String) bo;
-									String cs = (String) co;
-									int cmp = bs.compareTo(cs);
-																		
-									if (opcode == OP_LT) {
-										if ((cmp < 0) == (a == 0)) {
-											pc++;
-										}
-									} else { // opcode must be OP_LE
-										if ((cmp <= 0) == (a == 0)) {
-											pc++;
-										}									
-									}
-								}
-							} else {
-								boolean invert = false;
-
-								String meta_op = meta_ops[opcode];
-
-								Object metafun = null;
-								if (bo == null) {
-									metafun = getMetaOp(bo, meta_op);
-								}
-								if (metafun == null && co == null) {
-									metafun = getMetaOp(co, meta_op);
-								}
-
-								/* Special case:
-								 * OP_LE uses OP_LT if __le is not defined.
-								 * if a <= b is then translated to not (b < a)
-								 */
-								if (metafun == null && opcode == OP_LE) {
-									if (bo == null) {
-										metafun = getMetaOp(bo, "__lt");
-									}
-									if (metafun == null && co == null) {
-										metafun = getMetaOp(co, "__lt");
-									}								
-									// Swap the objects
-									Object tmp = bo;
-									bo = co;
-									co = tmp;
-
-									// Invert a (i.e. add the "not"
-									invert = true;
-								}
-
-								boolean resBool;
-								if (metafun == null && opcode == OP_EQ) {
-									resBool = LuaState.luaEquals(bo, co); 
-								} else {							
-									Object res = call(metafun, bo, co, null);
-									resBool = boolEval(res);
-								}
-
-								if (invert) {
-									resBool = !resBool; 
-								}
-								if (resBool == (a == 0)) {
-									pc++;
-								}
-							}
-							break;
-						}
-						case OP_TEST: {
-							a = getA8(op);
-							// b = getB9(op);
-							c = getC9(op);
-
-							Object value = stack[base + a];
-							if (boolEval(value) == (c == 0)) {
-								pc++;
-							}
-
-							break;
-						}
-						case OP_TESTSET: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-
-							Object value = stack[base + b];
-							if (boolEval(value) != (c == 0)) {
-								stack[base +a] = value;
-							} else {
-								pc++;
-							}
-
-							break;
-						}
-						case OP_CALL: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-							int nArguments2 = b - 1;
-							if (nArguments2 != -1) {
-								setTop(base + a + nArguments2 + 1);
-							}
-
-							call(base + a);
-							if (c != 0) {
-								setTop(base + prototype.maxStacksize);
-							}
-							break;
-						}
-						case OP_TAILCALL: {
-							closeUpvalues(base);
-
-							a = getA8(op);
-							b = getB9(op);
-							int nArguments2 = b - 1;
-							if (nArguments2 == -1) {
-								nArguments2 = top - (base + a);
-							}
-
-							Object funcObj = stack[base + a];
-
-							int realBase = base - 1;
-							if (numVarargs > 0) {
-								realBase -= nArguments;
-							}
-
-							stackCopy(base + a, realBase, nArguments2 + 1);
-							base = realBase;
-							setTop(realBase + nArguments2 + 1);
-
-							if (funcObj instanceof LuaTable) {
-								funcObj = prepareMetatableCall(base, funcObj);
-							}
-
-							if (funcObj instanceof LuaClosure) {
-								break tailcall_escape_label;
-							} else {
-								return call(realBase);
-							}
-						}
-						case OP_RETURN: {
-							a = getA8(op);
-							b = getB9(op);
-
-							closeUpvalues(base);
-
-							b--;
-							if (b == -1) {
-								b = top - (base + a);
-							}
-
-							int realBase = base - 1;
-							if (numVarargs > 0) {
-								realBase -= nArguments;
-							}
-
-							stackCopy(base + a, realBase, b + 1);
-							setTop(realBase + b);
-
-							return b;
-						}
-						case OP_FORPREP: {
-							a = getA8(op);
-							b = getSBx(op);
-
-							double iter = fromDouble(stack[base + a]);
-							double step = fromDouble(stack[base + a + 2]);
-							stack[base + a] = toDouble(iter - step);
-							pc += b;
-							break;
-						}
-						case OP_FORLOOP: {
-							a = getA8(op);
-
-							double iter = fromDouble(stack[base + a]);
-							double end = fromDouble(stack[base + a + 1]);
-							double step = fromDouble(stack[base + a + 2]);
-							iter += step;
-							Double iterDouble = toDouble(iter);
-							stack[base + a] = iterDouble;
-
-							if ((step > 0) ? iter <= end : iter >= end) {
-								b = getSBx(op);
-								pc += b;
-								stack[base + a + 3] = iterDouble;
-							} else {
-								setTop(base + a);
-							}
-							break;
-						}
-						case OP_TFORLOOP: {
-							a = getA8(op);
-							c = getC9(op);
-
-							// Prepare for call					
-							setTop(base + a + 6);
-							stackCopy(base + a, base + a + 3, 3);
-
-							call(base + a + 3);
-							setTop(base + a + 3 + c);
-
-							Object aObj3 = stack[base + a + 3];
-							if (aObj3 != null) {
-								stack[base + a + 2] = aObj3;
-							} else {
-								pc++;
-							}
-							break;
-						}
-						case OP_SETLIST: {
-							a = getA8(op);
-							b = getB9(op);
-							c = getC9(op);
-
-							if (c == 0) {
-								c = opcodes[pc++];						
-							}
-
-							int offset = (c - 1) * FIELDS_PER_FLUSH;
-
-							LuaTable t = (LuaTable) stack[base + a];
-							for (int i = 1; i <= b; i++) {
-								Object key = toDouble(offset + i);
-								Object value = stack[base + a + i];
-								t.rawset(key, value);
-							}
-							break;
-						}
-						case OP_CLOSE: {
-							a = getA8(op);
-							closeUpvalues(base + a);
-							break;
-						}
-						case OP_CLOSURE: {
-							a = getA8(op);
-							b = getBx(op);
-							LuaPrototype newPrototype = prototype.prototypes[b];
-							LuaClosure newClosure = new LuaClosure(newPrototype, env);
-							stack[base + a] = newClosure;
-							int numUpvalues = newPrototype.numUpvalues;
-							for (int i = 0; i < numUpvalues; i++) {
-								op = opcodes[pc++];
-								opcode = op & 63;
-								b = getB9(op);
-								switch (opcode) {
-								case OP_MOVE: {
-									newClosure.upvalues[i] = findUpvalue(base + b);
-									break;
-								}
-								case OP_GETUPVAL: {
-									newClosure.upvalues[i] = closure.upvalues[b];
-									break;
-								}
-								default:
-									// should never happen
-								}
-							}
-							break;
-						}
-						case OP_VARARG: {
-							a = getA8(op);
-							b = getB9(op) - 1;
-							if (b == -1) {
-								b = numVarargs;
-								setTop(base + a + b);
-							}
-							int nCopy = Math.min(numVarargs, b);
-							if (nCopy > 0) {
-								stackCopy(base - numVarargs, base + a, nCopy);
-							}
-							int firstNil = base + a + b;
-							int numNils = b - nCopy;
-							int afterLastNil = firstNil + numNils;
-
-							stackClear(firstNil, afterLastNil - 1);
-
-							break;
-						}
-						default: {
-							// unreachable for proper bytecode
-						}
-						} // switch
 					}
+					break;
+				}
+				case OP_VARARG: {
+					a = getA8(op);
+					b = getB9(op) - 1;
+					
+					callFrame.pushVarargs(a, b);
+					break;
+				}
+				default: {
+					// unreachable for proper bytecode
+				}
+				} // switch
 			}
 		} catch (RuntimeException e) {
-			int[] lines = prototype.lines;
-			pc--;
-			if (pc < lines.length) {
-				stackTrace = stackTrace + "at " + prototype + ": " + lines[pc] + "\n";
+			while (true) {
+				callFrame = currentThread.currentCallFrame();
+				if (callFrame == null || !callFrame.fromLua) {
+					break;
+				}
+				currentThread.cleanCallFrames(callFrame);
+				currentThread.addStackTrace(callFrame);
+				currentThread.popCallFrame();
 			}
 			throw e;
 		}
@@ -887,14 +861,13 @@ public final class LuaState {
 		userdataMetatables.rawset(type, metatable);
 	}
 
-	private final Object getRegisterOrConstant(Object[] constants, int base,
-			int index) {
+	private final Object getRegisterOrConstant(LuaCallFrame callFrame, int index) {
 		Object o;
 		int cindex = index - 256;
 		if (cindex < 0) {
-			o = stack[base + index];
+			o = callFrame.get(index);
 		} else {
-			o = constants[cindex];
+			o = callFrame.closure.prototype.constants[cindex];
 		}
 		return o;
 	}
@@ -942,6 +915,7 @@ public final class LuaState {
 			res = v1 / v2;
 			break;
 		case OP_MOD:
+			// TODO: consider using math.fmod?
 			if (v2 == 0) {
 				res = Double.NaN;
 			} else {
@@ -959,17 +933,19 @@ public final class LuaState {
 	}
 
 	public final Object call(Object fun, Object arg1, Object arg2, Object arg3) {
-		int oldTop = top;
-		setTop(top + 4);
-		stack[oldTop] = fun;
-		stack[oldTop + 1] = arg1;
-		stack[oldTop + 2] = arg2;
-		stack[oldTop + 3] = arg3;
-		call(oldTop);
+		int oldTop = currentThread.getTop();
+		currentThread.setTop(oldTop + 4);
+		currentThread.objectStack[oldTop] = fun;
+		currentThread.objectStack[oldTop + 1] = arg1;
+		currentThread.objectStack[oldTop + 2] = arg2;
+		currentThread.objectStack[oldTop + 3] = arg3;
+		int nReturnValues = call(3);
 
-		Object ret = stack[oldTop];
-
-		setTop(oldTop);
+		Object ret = null;
+		if (nReturnValues >= 1) {
+			ret = currentThread.objectStack[oldTop];
+		}
+		currentThread.setTop(oldTop);
 		return ret;		
 	}
 	
@@ -1052,41 +1028,6 @@ public final class LuaState {
 		return metatable;
 	}
 
-	public final UpValue findUpvalue(int scanIndex) {
-		// TODO: use binary search instead?
-		int loopIndex = liveUpvalues.size();
-		while (--loopIndex >= 0) {
-			UpValue uv = (UpValue) liveUpvalues.elementAt(loopIndex);
-			if (uv.index == scanIndex) {
-				return uv;
-			}
-			if (uv.index < scanIndex) {
-				break;
-			}
-		}
-		UpValue uv = new UpValue();
-		uv.state = this;
-		uv.index = scanIndex;
-		
-		liveUpvalues.insertElementAt(uv, loopIndex + 1);
-		return uv;				
-	}
-
-	public final void closeUpvalues(int closeIndex) {
-		// close all open upvalues
-		
-		int loopIndex = liveUpvalues.size();
-		while (--loopIndex >= 0) {
-			UpValue uv = (UpValue) liveUpvalues.elementAt(loopIndex);
-			if (uv.index < closeIndex) {
-				return;
-			}
-			uv.value = stack[uv.index];
-			uv.state = null;
-			liveUpvalues.removeElementAt(loopIndex);
-		}
-	}
-	
 	public static boolean luaEquals(Object a, Object b) {
 		if (a == null || b == null) {
 			return a == b;
@@ -1112,9 +1053,7 @@ public final class LuaState {
 	}
 
 	public static Boolean toBoolean(boolean b) {
-		if (b) {
-			return Boolean.TRUE;
-		}
-		return Boolean.FALSE;
+		return b ? Boolean.TRUE : Boolean.FALSE;
 	}
+
 }

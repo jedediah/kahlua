@@ -25,6 +25,7 @@ import java.util.Vector;
 
 import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.vm.JavaFunction;
+import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
 
@@ -60,62 +61,62 @@ public class UserdataArray implements JavaFunction {
 		this.index = index;
 	}
 	
-	public int call(LuaState state, int base) {
-		int nArguments = state.top - base;
+	public int call(LuaCallFrame callFrame, int nArguments) {
 		switch (index) {
-		case LENGTH: return length(state, base, nArguments);
-		case INDEX: return index(state, base, nArguments);
-		case NEWINDEX: return newindex(state, base, nArguments);
-		case NEW: return newVector(state, base, nArguments);
-		case PUSH: return push(state, base, nArguments);
+		case LENGTH: return length(callFrame, nArguments);
+		case INDEX: return index(callFrame, nArguments);
+		case NEWINDEX: return newindex(callFrame, nArguments);
+		case NEW: return newVector(callFrame, nArguments);
+		case PUSH: return push(callFrame, nArguments);
 		}
 		return 0;
 	}
 
-	private int push(LuaState state, int base, int nArguments) {
+	private int push(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "not enough parameters");		
-		Vector v = (Vector) state.stack[base + 1];
-		Object value = state.stack[base + 2];
+		Vector v = (Vector) callFrame.get(0);
+		Object value = callFrame.get(1);
 		
 		v.addElement(value);
-		state.stack[base] = v;
+		callFrame.push(v);
 		return 1;
 	}
 
-	private int newVector(LuaState state, int base, int nArguments) {
-		state.stack[base] = new Vector();
+	private int newVector(LuaCallFrame callFrame, int nArguments) {
+		callFrame.push(new Vector());
 		return 1;
 	}
 
-	private int newindex(LuaState state, int base, int nArguments) {
+	private int newindex(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 3, "not enough parameters");
-		Vector v = (Vector) state.stack[base + 1];
-		Object value = state.stack[base + 3];
+		Vector v = (Vector) callFrame.get(0);
+		Object key = callFrame.get(1);
+		Object value = callFrame.get(2);
 		
-		v.setElementAt(value, (int) LuaState.fromDouble(state.stack[base + 2]));
+		v.setElementAt(value, (int) LuaState.fromDouble(key));
 		return 0;
 	}
 
-	private int index(LuaState state, int base, int nArguments) {
+	private int index(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "not enough parameters");
-		Vector v = (Vector) state.stack[base + 1];
+		Vector v = (Vector) callFrame.get(0);
 		
-		Object key = state.stack[base + 2];
+		Object key = callFrame.get(1);
 		Object res;
 		if (key instanceof Double) {
 			res = v.elementAt((int) LuaState.fromDouble(key));
 		} else {
 			res = metatable.rawget(key);
 		}
-		state.stack[base] = res;
+		callFrame.push(res);
 		return 1;
 	}
 
-	private int length(LuaState state, int base, int nArguments) {
+	private int length(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "not enough parameters");
-		Vector v = (Vector) state.stack[base + 1];
+		Vector v = (Vector) callFrame.get(0);
 		double size = v.size();
-		state.stack[base] = LuaState.toDouble(size);
+		callFrame.push(LuaState.toDouble(size));
 		return 1;
 	}
 }

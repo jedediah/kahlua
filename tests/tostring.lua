@@ -9,7 +9,6 @@ function mt.__concat(a, b)
    end
    return a .. b
 end
-
 t1 = {"t1"}
 t2 = {"t2"}
 for k, v in pairs(t1) do
@@ -22,6 +21,7 @@ setmetatable(t2, mt)
 
 
 assert(tostring(t1) == "hi")
+--[[
 assert(tostring("1.2") == "1.2")
 assert(tostring(1.2) == "1.2")
 assert(tostring(true) == "true")
@@ -41,3 +41,4 @@ assert("x" .. t1 .. t2 == "xt1t2")
 assert("x" .. t1 .. t2 .. "y" == "xt1t2y")
 assert("x" .. t1 .. "z" .. t2 .. "y" == "xt1zt2y")
 
+--]]

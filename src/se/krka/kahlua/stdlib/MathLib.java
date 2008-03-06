@@ -24,6 +24,7 @@ package se.krka.kahlua.stdlib;
 import java.util.Random;
 
 import se.krka.kahlua.vm.JavaFunction;
+import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
 
@@ -119,65 +120,64 @@ public final class MathLib implements JavaFunction {
 		return "math." + names[index];
 	}
 	
-	public int call(LuaState state, int base) {
-		int nArguments = state.top - base - 1;
+	public int call(LuaCallFrame callFrame, int nArguments) {
 		switch (index) {
-		case ABS: return abs(state, base, nArguments);
-		case ACOS: return acos(state, base, nArguments);
-		case ASIN: return asin(state, base, nArguments);
-		case ATAN: return atan(state, base, nArguments);
-		case ATAN2: return atan2(state, base, nArguments);
-		case CEIL: return ceil(state, base, nArguments);
-		case COS: return cos(state, base, nArguments);
-		case COSH: return cosh(state, base, nArguments);
-		case DEG: return deg(state, base, nArguments);
-		case EXP: return exp(state, base, nArguments);
-		case FLOOR: return floor(state, base, nArguments);
-		case FMOD: return fmod(state, base, nArguments);
-		case FREXP: return frexp(state, base, nArguments);
-		case LDEXP: return ldexp(state, base, nArguments);
-		case LOG: return log(state, base, nArguments);
-		case LOG10: return log10(state, base, nArguments);
-		case MODF: return modf(state, base, nArguments);
-		case POW: return pow(state, base, nArguments);
-		case RAD: return rad(state, base, nArguments);
-		case RANDOM: return random(state, base, nArguments);
-		case RANDOMSEED: return randomseed(state, base, nArguments);
-		case SIN: return sin(state, base, nArguments);
-		case SINH: return sinh(state, base, nArguments);
-		case SQRT: return sqrt(state, base, nArguments);
-		case TAN: return tan(state, base, nArguments);
-		case TANH: return tanh(state, base, nArguments);
+		case ABS: return abs(callFrame, nArguments);
+		case ACOS: return acos(callFrame, nArguments);
+		case ASIN: return asin(callFrame, nArguments);
+		case ATAN: return atan(callFrame, nArguments);
+		case ATAN2: return atan2(callFrame, nArguments);
+		case CEIL: return ceil(callFrame, nArguments);
+		case COS: return cos(callFrame, nArguments);
+		case COSH: return cosh(callFrame, nArguments);
+		case DEG: return deg(callFrame, nArguments);
+		case EXP: return exp(callFrame, nArguments);
+		case FLOOR: return floor(callFrame, nArguments);
+		case FMOD: return fmod(callFrame, nArguments);
+		case FREXP: return frexp(callFrame, nArguments);
+		case LDEXP: return ldexp(callFrame, nArguments);
+		case LOG: return log(callFrame, nArguments);
+		case LOG10: return log10(callFrame, nArguments);
+		case MODF: return modf(callFrame, nArguments);
+		case POW: return pow(callFrame, nArguments);
+		case RAD: return rad(callFrame, nArguments);
+		case RANDOM: return random(callFrame, nArguments);
+		case RANDOMSEED: return randomseed(callFrame, nArguments);
+		case SIN: return sin(callFrame, nArguments);
+		case SINH: return sinh(callFrame, nArguments);
+		case SQRT: return sqrt(callFrame, nArguments);
+		case TAN: return tan(callFrame, nArguments);
+		case TANH: return tanh(callFrame, nArguments);
 		default: return 0;
 		}
 	}
 
 	// Generic math functions
-	private static int abs(LuaState state, int base, int nArguments) {
+	private static int abs(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.abs(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.abs(x)));
 		return 1;
 	}
 
-	private static int ceil(LuaState state, int base, int nArguments) {
+	private static int ceil(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.ceil(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.ceil(x)));
 		return 1;
 	}
 
 
-	private static int floor(LuaState state, int base, int nArguments)  {
+	private static int floor(LuaCallFrame callFrame, int nArguments)  {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.floor(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.floor(x)));
 		return 1;
 	}
 
-	private static int modf(LuaState state, int base, int nArguments) {
+	private static int modf(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
+		double x = LuaState.fromDouble(callFrame.get(0));
 		
 		boolean negate = false;
 		if (x < 0) {
@@ -195,15 +195,14 @@ public final class MathLib implements JavaFunction {
 			intPart = -intPart;
 			fracPart = -fracPart;
 		}
-		state.stack[base] = LuaState.toDouble(intPart);
-		state.stack[base + 1] = LuaState.toDouble(fracPart);
+		callFrame.push(LuaState.toDouble(intPart), LuaState.toDouble(fracPart));
 		return 2;
 	}
 
-	private static int fmod(LuaState state, int base, int nArguments) {
+	private static int fmod(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double v1 = LuaState.fromDouble(state.stack[base + 1]);
-		double v2 = LuaState.fromDouble(state.stack[base + 2]);
+		double v1 = LuaState.fromDouble(callFrame.get(0));
+		double v2 = LuaState.fromDouble(callFrame.get(1));
 		
 		double res;
 		if (Double.isInfinite(v1) || Double.isNaN(v1)) {
@@ -222,190 +221,190 @@ public final class MathLib implements JavaFunction {
 				res = -res;
 			}
 		}
-		state.stack[base] = LuaState.toDouble(res);
+		callFrame.push(LuaState.toDouble(res));
 		return 1;
 	}
 
 
 	// Random functions
 
-	private int random(LuaState state, int base, int nArguments) {
-		Random random = state.random;
+	private int random(LuaCallFrame callFrame, int nArguments) {
+		Random random = callFrame.thread.state.random;
 		if (nArguments == 0) {
-			state.stack[base] = LuaState.toDouble(random.nextDouble());
+			callFrame.push(LuaState.toDouble(random.nextDouble()));
 			return 1;
 		}
 
-		double tmp = LuaState.fromDouble(state.stack[base + 1]);
+		double tmp = LuaState.fromDouble(callFrame.get(0));
 		int m = (int) tmp;
 		int n;
 		if (nArguments == 1) {
 			n = m;
 			m = 1;
 		} else {
-			tmp = LuaState.fromDouble(state.stack[base + 2]);
+			tmp = LuaState.fromDouble(callFrame.get(1));
 			n = (int) tmp;
 		}
-		state.stack[base] = LuaState.toDouble(m + random.nextInt(n - m + 1));
+		callFrame.push(LuaState.toDouble(m + random.nextInt(n - m + 1)));
 
 		return 1;
 	}
 
-	private int randomseed(LuaState state, int base, int nArguments) {
+	private int randomseed(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		Object o = state.stack[base + 1];
+		Object o = callFrame.get(0);
 		if (o != null) {
-			state.random.setSeed(o.hashCode());
+			callFrame.thread.state.random.setSeed(o.hashCode());
 		}
 		return 0;
 	}
 
 	// Hyperbolic functions
 
-	private static int cosh(LuaState state, int base, int nArguments) {
+	private static int cosh(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
+		double x = LuaState.fromDouble(callFrame.get(0));
 
 		double exp_x = exp(x);
 		double res = (exp_x + 1 / exp_x) * 0.5;
 
-		state.stack[base] = LuaState.toDouble(res);
+		callFrame.push(LuaState.toDouble(res));
 		return 1;
 	}
 
-	private static int sinh(LuaState state, int base, int nArguments) {
+	private static int sinh(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
+		double x = LuaState.fromDouble(callFrame.get(0));
 
 		double exp_x = exp(x);
 		double res = (exp_x - 1 / exp_x) * 0.5;
 
-		state.stack[base] = LuaState.toDouble(res);
+		callFrame.push(LuaState.toDouble(res));
 		return 1;
 	}
 
-	private static int tanh(LuaState state, int base, int nArguments) {
+	private static int tanh(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
+		double x = LuaState.fromDouble(callFrame.get(0));
 
 		double exp_x = exp(2 * x);
 		double res = (exp_x - 1) / (exp_x + 1);
 
-		state.stack[base] = LuaState.toDouble(res);
+		callFrame.push(LuaState.toDouble(res));
 		return 1;
 	}
 
 	// Trig functions
-	private static int deg(LuaState state, int base, int nArguments) {
+	private static int deg(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.toDegrees(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.toDegrees(x)));
 		return 1;
 	}
 
-	private static int rad(LuaState state, int base, int nArguments) {
+	private static int rad(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.toRadians(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.toRadians(x)));
 		return 1;
 	}
 
-	private static int acos(LuaState state, int base, int nArguments) {
+	private static int acos(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(acos(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(acos(x)));
 		return 1;
 	}
 
-	private static int asin(LuaState state, int base, int nArguments) {
+	private static int asin(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(asin(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(asin(x)));
 		return 1;
 	}
 
-	private static int atan(LuaState state, int base, int nArguments) {
+	private static int atan(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(atan(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(atan(x)));
 		return 1;
 	}
 
-	private static int atan2(LuaState state, int base, int nArguments) {
+	private static int atan2(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double y = LuaState.fromDouble(state.stack[base + 1]);
-		double x = LuaState.fromDouble(state.stack[base + 2]);
-		state.stack[base] = LuaState.toDouble(atan2(y, x));
+		double y = LuaState.fromDouble(callFrame.get(0));
+		double x = LuaState.fromDouble(callFrame.get(1));
+		callFrame.push(LuaState.toDouble(atan2(y, x)));
 		return 1;
 	}
 
 
-	private static int cos(LuaState state, int base, int nArguments) {
+	private static int cos(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.cos(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.cos(x)));
 		return 1;
 	}
 
-	private static int sin(LuaState state, int base, int nArguments) {
+	private static int sin(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.sin(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.sin(x)));
 		return 1;
 	}
 
-	private static int tan(LuaState state, int base, int nArguments) {
+	private static int tan(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.tan(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.tan(x)));
 		return 1;
 	}
 	
 	// Power functions
-	private static int sqrt(LuaState state, int base, int nArguments) {
+	private static int sqrt(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(Math.sqrt(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(Math.sqrt(x)));
 		return 1;
 	}
 
-	private static int exp(LuaState state, int base, int nArguments) {
+	private static int exp(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(exp(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(exp(x)));
 		return 1;
 	}
 
-	private static int pow(LuaState state, int base, int nArguments) {
+	private static int pow(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		double y = LuaState.fromDouble(state.stack[base + 2]);
-		state.stack[base] = LuaState.toDouble(pow(x, y));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		double y = LuaState.fromDouble(callFrame.get(1));
+		callFrame.push(LuaState.toDouble(pow(x, y)));
 		return 1;
 	}
 
-	private static int log(LuaState state, int base, int nArguments) {		
+	private static int log(LuaCallFrame callFrame, int nArguments) {		
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(ln(x));
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(ln(x)));
 		return 1;
 	}
 
 	private static final double LN10_INV = 1 / ln(10);
 
-	private static int log10(LuaState state, int base, int nArguments) {
+	private static int log10(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
-		state.stack[base] = LuaState.toDouble(ln(x) * LN10_INV);
+		double x = LuaState.fromDouble(callFrame.get(0));
+		callFrame.push(LuaState.toDouble(ln(x) * LN10_INV));
 		return 1;
 	}
 
 
 	private static final double LN2_INV = 1 / ln(2);
 
-	private static int frexp(LuaState state, int base, int nArguments) {
+	private static int frexp(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(state.stack[base + 1]);
+		double x = LuaState.fromDouble(callFrame.get(0));
 
 		double e, m;
 		if (Double.isInfinite(x) || Double.isNaN(x)) {
@@ -416,15 +415,14 @@ public final class MathLib implements JavaFunction {
 			int div = 1 << ((int) e);
 			m = x / div;
 		}
-		state.stack[base] = LuaState.toDouble(m);
-		state.stack[base + 1] = LuaState.toDouble(e);
+		callFrame.push(LuaState.toDouble(m), LuaState.toDouble(e));
 		return 2;
 	}
 
-	private static int ldexp(LuaState state, int base, int nArguments) {
+	private static int ldexp(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double m = LuaState.fromDouble(state.stack[base + 1]);
-		double dE = LuaState.fromDouble(state.stack[base + 2]);
+		double m = LuaState.fromDouble(callFrame.get(0));
+		double dE = LuaState.fromDouble(callFrame.get(1));
 
 		double ret;
 		double tmp = m + dE;
@@ -435,7 +433,7 @@ public final class MathLib implements JavaFunction {
 			ret = m * (1 << e);
 		}
 		
-		state.stack[base] = LuaState.toDouble(ret);
+		callFrame.push(LuaState.toDouble(ret));
 		return 1;
 	}
 

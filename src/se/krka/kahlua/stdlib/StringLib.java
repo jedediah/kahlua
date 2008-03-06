@@ -22,6 +22,7 @@ THE SOFTWARE.
 package se.krka.kahlua.stdlib;
 
 import se.krka.kahlua.vm.JavaFunction;
+import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
 
@@ -82,18 +83,17 @@ public final class StringLib implements JavaFunction {
 		return names[index];
 	}
 
-	public int call(LuaState state, int base)  {
-		int nArguments = state.top - base - 1;
+	public int call(LuaCallFrame callFrame, int nArguments)  {
 		switch (index) {
-		case SUB: return sub(state, base, nArguments);
-		case CHAR: return stringChar(state, base, nArguments);
-		case BYTE: return stringByte(state, base, nArguments);
-		case LOWER: return lower(state, base, nArguments);
-		case UPPER: return upper(state, base, nArguments);
-		case REVERSE: return reverse(state, base, nArguments);
-		case FORMAT: return format(state, base, nArguments);
-		case FIND: return findAux(state, base, nArguments, true);
-		case MATCH: return findAux(state, base, nArguments, false);
+		case SUB: return sub(callFrame, nArguments);
+		case CHAR: return stringChar(callFrame, nArguments);
+		case BYTE: return stringByte(callFrame, nArguments);
+		case LOWER: return lower(callFrame, nArguments);
+		case UPPER: return upper(callFrame, nArguments);
+		case REVERSE: return reverse(callFrame, nArguments);
+		case FORMAT: return format(callFrame, nArguments);
+		case FIND: return findAux(callFrame, nArguments, true);
+		case MATCH: return findAux(callFrame, nArguments, false);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
@@ -118,14 +118,16 @@ public final class StringLib implements JavaFunction {
 		return result.reverse().toString(); // intern not needed here.
 	}
 	
-	private int format(LuaState state, int base, int arguments) {
+	private int format(LuaCallFrame callFrame, int nArguments) {
 		final String lowerHex = "0123456789abcdef";
 		final String upperHex = "0123456789ABCDEF";
-		//BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		Object o = BaseLib.getArg(state, base, 1, "string", "format");
+
+		//BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
+		Object o = BaseLib.getArg(callFrame, 1, "string", "format");
+		
 		if (o instanceof Double) {
 			// coerce number to string
-			state.stack[base + 1] = ((Double) o).toString().intern();
+			callFrame.push(((Double) o).toString().intern());
 			return 1;
 		}
 		String f = (String) o;
@@ -143,54 +145,54 @@ public final class StringLib implements JavaFunction {
 					result.append('%');
 					break;
 				case 'c':
-					result.append((char)((Double)BaseLib.getArg(state, base, 
+					result.append((char)((Double)BaseLib.getArg(callFrame, 
 						argc, "number", "format")).intValue());
 					break;
 				case 'o':
 					result.append(formatNumberByBase(
-						(Double)BaseLib.getArg(state, base, argc, "number", "format"), 8,
+						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 8,
 							lowerHex));
 					break;
 				case 'x':
 					result.append(formatNumberByBase(
-						(Double)BaseLib.getArg(state, base, argc, "number", "format"), 16,
+						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 16,
 							lowerHex));
 					break;
 				case 'X':
 					result.append(formatNumberByBase(
-						(Double)BaseLib.getArg(state, base, argc, "number", "format"), 16,
+						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 16,
 							upperHex));
 					break;
 				case 'u':
 					result.append(Long.toString(unsigned(
-						(Double)BaseLib.getArg(state, base, argc, "number", "format"))));
+						(Double)BaseLib.getArg(callFrame, argc, "number", "format"))));
 					break;
 				case 'd':
 				case 'i':
-					Double v = (Double)BaseLib.getArg(state, base, argc, "number", 
+					Double v = (Double)BaseLib.getArg(callFrame, argc, "number", 
 							"format");
 					result.append(Long.toString(v.longValue()));
 					break;
 				case 'e':
 				case 'E':
 				case 'f':
-					result.append(((Double)BaseLib.getArg(state, base, argc, "number", 
+					result.append(((Double)BaseLib.getArg(callFrame, argc, "number", 
 							"format")).toString());
 					break;
 				case 'G':
 				case 'g':
-					v = (Double)BaseLib.getArg(state, base, argc, "number", 
+					v = (Double)BaseLib.getArg(callFrame, argc, "number", 
 							"format");
 					result.append(BaseLib.numberToString(v));
 					break;
 				case 's':
-					o = BaseLib.getArg(state, base, argc, "string", "format");
+					o = BaseLib.getArg(callFrame, argc, "string", "format");
 					result.append((String)o);
 					argc++;
 					break;
 				case 'q':
 					String q = BaseLib.rawTostring(
-							BaseLib.getArg(state, base, argc, "string", "format"));
+							BaseLib.getArg(callFrame, argc, "string", "format"));
 					result.append('"');
 					for (int j = 0; j < q.length(); j++) {
 						char d = q.charAt(j);
@@ -213,44 +215,44 @@ public final class StringLib implements JavaFunction {
 				result.append(c);
 			}
 		}
-		state.stack[base] = result.toString().intern();
+		callFrame.push(result.toString().intern());
 		return 1;
 	}
 	
-	private int lower(LuaState state, int base, int arguments) {
-		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		String s = (String) state.stack[base + 1];
+	private int lower(LuaCallFrame callFrame, int nArguments) {
+		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
+		String s = (String) callFrame.get(0);
 
-		state.stack[base] = s.toLowerCase().intern();
+		callFrame.push(s.toLowerCase().intern());
 		return 1;
 	}
 
-	private int upper(LuaState state, int base, int arguments) {
-		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		String s = (String) state.stack[base + 1];
+	private int upper(LuaCallFrame callFrame, int nArguments) {
+		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
+		String s = (String) callFrame.get(0);
 
-		state.stack[base] = s.toUpperCase().intern();
+		callFrame.push(s.toUpperCase().intern());
 		return 1;
 	}
 	
-	private int reverse(LuaState state, int base, int arguments) {
-		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		String s = (String) state.stack[base + 1];
+	private int reverse(LuaCallFrame callFrame, int nArguments) {
+		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
+		String s = (String) callFrame.get(0);
 		s = new StringBuffer(s).reverse().toString();
-		state.stack[base] = s.intern();
+		callFrame.push(s.intern());
 		return 1;
 	}
 	
-	private int stringByte(LuaState state, int base, int arguments) {
-		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		String s = (String) state.stack[base + 1];
+	private int stringByte(LuaCallFrame callFrame, int nArguments) {
+		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
+		String s = (String) callFrame.get(0);
 		
 		Double di = null;
 		Double dj = null;
-		if (arguments >= 2) {
-			di = (Double) state.stack[base + 2];
-			if (arguments >= 3) {
-				dj = (Double) state.stack[base + 3];
+		if (nArguments >= 2) {
+			di = (Double) callFrame.get(1);
+			if (nArguments >= 3) {
+				dj = (Double) callFrame.get(2);
 			}
 		}
 		double di2 = 1, dj2 = 1;
@@ -268,35 +270,34 @@ public final class StringLib implements JavaFunction {
 		ij = Math.min(ij, len);
 		int nReturns = 1 +ij - ii;
 
-		state.setTop(base + nReturns);
+		callFrame.setTop(nReturns);
 		int offset = ii - 1;
 		for (int i = 0; i < nReturns; i++) {
 			char c = s.charAt(offset + i);
-			
-			state.stack[base + i] = new Double((double) c); 
+
+			callFrame.set(i, new Double((double) c)); 
 				
 		}
 		return nReturns;
 	}
 
-	private int stringChar(LuaState state, int base, int arguments) {
+	private int stringChar(LuaCallFrame callFrame, int nArguments) {
 		StringBuffer sb = new StringBuffer();
-		for (int i = 1; i <= arguments; i++) {
-			double d = LuaState.fromDouble(state.stack[base + i]);
+		for (int i = 0; i < nArguments; i++) {
+			double d = LuaState.fromDouble(callFrame.get(i));
 			int num = (int) d;
 			sb.append((char) num);
 		}
-		state.stack[base] = sb.toString().intern();
+		callFrame.push(sb.toString().intern());
 		return 1;
 	}
 
-	private int sub(LuaState state, int base, int arguments) {
-		BaseLib.luaAssert(arguments >= 2, "not enough arguments");
-		String s = (String) state.stack[base + 1];
-		double start = LuaState.fromDouble(state.stack[base + 2]);
+	private int sub(LuaCallFrame callFrame, int nArguments) {
+		String s = (String) callFrame.get(0);
+		double start = LuaState.fromDouble(callFrame.get(1));
 		double end = -1;
-		if (arguments >= 3) {
-			end = LuaState.fromDouble(state.stack[base + 3]);
+		if (nArguments >= 3) {
+			end = LuaState.fromDouble(callFrame.get(2));
 		}
 		String res;
 		int istart = (int) start;
@@ -310,13 +311,13 @@ public final class StringLib implements JavaFunction {
 		}
 		
 		if (istart > iend) {
-			state.stack[base] = "";
+			callFrame.push("");
 			return 1;
 		}
 		res = s.substring(istart - 1, iend);
 		res = res.intern();
-		
-		state.stack[base] = res;
+
+		callFrame.push(res);
 		return 1;
 	}
 	
@@ -398,12 +399,12 @@ public final class StringLib implements JavaFunction {
 		return level;
 	}
 	
-	private int findAux(LuaState state, int base, int args, boolean find) {
+	private int findAux(LuaCallFrame callFrame, int nArguments, boolean find) {
 		String f = find?"find":"match";
-		String source = (String) BaseLib.getArg(state, base, 1, "string", f);
-		String pattern = (String) BaseLib.getArg(state, base, 2, "string", f);
-		Double i = (Double) BaseLib.getOptArg(state, base, 3, "number");
-		Object o = BaseLib.getOptArg(state, base, 4, "boolean");
+		String source = (String) BaseLib.getArg(callFrame, 1, "string", f);
+		String pattern = (String) BaseLib.getArg(callFrame, 2, "string", f);
+		Double i = (Double) BaseLib.getOptArg(callFrame, 3, "number");
+		Object o = BaseLib.getOptArg(callFrame, 4, "boolean");
 		boolean noRegex = false;
 		if (o instanceof Boolean) {
 			noRegex = ((Boolean)o).booleanValue();
@@ -418,12 +419,10 @@ public final class StringLib implements JavaFunction {
 			// do a plain search
 			int pos = source.indexOf(pattern, index);
 			if (pos > -1) {
-				state.stack[base] = new Double(pos + 1);
-				state.stack[base + 1] = new Double(pos + pattern.length());
+				callFrame.push(new Double(pos + 1), new Double(pos + pattern.length()));
 				return 2;
 			}
 		} else {
-			state.stack[base] = null; // push nil if no result;
 			boolean anchor = false;
 			int pIndex;
 			int sIndex = 0;
@@ -438,21 +437,19 @@ public final class StringLib implements JavaFunction {
 				int level = match(source, pattern, sIndex, pIndex, captures, 1);
 				if (level > -1) {
 					if (find) {
-						state.stack[base] = new Double(captures[0] + 1);
-						state.stack[base + 1] = new Double(captures[0] + 
-								captures[1]);
+						callFrame.push(new Double(captures[0] + 1), new Double(captures[0] + captures[1]));
 						// shift base right by 2, add the 2 later
-						pushCaptures(state, base + 2, source, captures,	level);
+						pushCaptures(callFrame, source, captures, level);
 						return level + 2;
 					}
-					pushCaptures(state, base, source, captures, level);
+					pushCaptures(callFrame, source, captures, level);
 					return level;
 				}
 				if (anchor) { break; }
 				sIndex++;
 			} while (source.length() > sIndex);
 		}
-		return 1;
+		return 0;
 	}
 
 	private int[] createCaptures() {
@@ -465,16 +462,17 @@ public final class StringLib implements JavaFunction {
 		return result;
 	}
 	
-	private void pushCaptures(LuaState s, int base, String source, int[] caps, 
+	private void pushCaptures(LuaCallFrame callFrame, String source, int[] caps, 
 			int level) {
 		int i = 0;
-		for (int j = base; j < base + level; j ++) {
+		for (int j = 0; j < level; j ++) {
 			int from = caps[i++];
 			int to = caps[i++];
 			if (from == to) {
-				s.stack[j] = new Double(from); // location capture
+				// location capture
+				callFrame.push(new Double(from));
 			} else {
-				s.stack[j] = source.substring(from - 1, to).intern();
+				callFrame.push(source.substring(from - 1, to).intern());
 			}
 		}
 	}

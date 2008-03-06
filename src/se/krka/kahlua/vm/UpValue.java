@@ -24,7 +24,7 @@ package se.krka.kahlua.vm;
 
 public final class UpValue {
 	// For open upvalues
-	public LuaState state;
+	public LuaThread thread;
 	public int index;
 
 	// For closed upvalues
@@ -32,18 +32,18 @@ public final class UpValue {
 	
 	
 	public final Object getValue() {
-		if (state == null) {
+		if (thread == null) {
 			return value;
 		}
-		return state.stack[index];
+		return thread.objectStack[index];
 	}
 
 
 	public final void setValue(Object object) {
-		if (state == null) {
+		if (thread == null) {
 			value = object;
 			return;
 		}
-		state.stack[index] = object;
+		thread.objectStack[index] = object;
 	}
 }

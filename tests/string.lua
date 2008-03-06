@@ -1,4 +1,3 @@
-
 do
 	assert(type(string) == "table")
 	assert(type(string.sub) == "function")
@@ -16,6 +15,7 @@ do
 	assert(not pcall(string.lower))
 	assert(not pcall(string.upper))
 	assert(not pcall(string.reverse))
+
 end
 
 
