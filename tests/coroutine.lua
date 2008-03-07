@@ -13,18 +13,33 @@ local function isprime(n)
 end
 
 function getprimes()
-	yield(2)
+	coroutine.yield(2)
 	for i = 3, 1e10, 2 do
 		if isprime(i) then
-			yield(i)
-			break
+			coroutine.yield(i)
 		end
 	end
 end
 
 generator = coroutine.wrap(getprimes)
 
+t = {2,3,5,7,11,13,17,19,23}
+local i = 1
 for p in generator do
-	print(p, "is prime!")
+	local correct = t[i]
+	i = i + 1
+	assert(p == correct, p .. " ~= " .. correct)
+	if p > 10 then
+		break
+	end
+end
+
+for p in generator do
+	local correct = t[i]
+	i = i + 1
+	assert(p == correct, p .. " ~= " .. correct)
+	if p > 20 then
+		break
+	end
 end
 
