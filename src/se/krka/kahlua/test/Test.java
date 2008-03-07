@@ -27,6 +27,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import se.krka.kahlua.stdlib.BaseLib;
+import se.krka.kahlua.stdlib.CoroutineLib;
 import se.krka.kahlua.stdlib.MathLib;
 import se.krka.kahlua.stdlib.StringLib;
 import se.krka.kahlua.vm.LuaClosure;
@@ -44,6 +45,7 @@ public class Test {
 		MathLib.register(state);
 		StringLib.register(state);
 		UserdataArray.register(state);
+		CoroutineLib.register(state);
 		
 		LuaClosure closure;
 		try {

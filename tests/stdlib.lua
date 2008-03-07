@@ -94,3 +94,17 @@ function table.maxn(t)
 	return maxIndex
 end
 
+local function wrap_helper(status, ...)
+	if status then
+		return ...
+	end
+	error(...)
+end
+
+function coroutine.wrap(f)
+	local coro = coroutine.create(f)
+	return function(...)
+		return wrap_helper(coroutine.resume(coro))
+	end
+end
+

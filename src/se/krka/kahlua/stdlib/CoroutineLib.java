@@ -2,19 +2,21 @@ package se.krka.kahlua.stdlib;
 
 import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
+import se.krka.kahlua.vm.LuaClosure;
+import se.krka.kahlua.vm.LuaException;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaThread;
 
 public class CoroutineLib implements JavaFunction {
 
 	private static final int CREATE = 0;
 	private static final int RESUME = 1;
 	private static final int YIELD = 2;
-	private static final int WRAP = 3;
-	private static final int STATUS = 4;
-	private static final int RUNNING = 5;
+	private static final int STATUS = 3;
+	private static final int RUNNING = 4;
 
-	private static final int NUM_FUNCTIONS = 6;
+	private static final int NUM_FUNCTIONS = 5;
 	
 	
 	private static final String[] names;
@@ -23,7 +25,6 @@ public class CoroutineLib implements JavaFunction {
 		names[CREATE] = "create";
 		names[RESUME] = "resume";
 		names[YIELD] = "yield";
-		names[WRAP] = "wrap";
 		names[STATUS] = "status";
 		names[RUNNING] = "running";
 	}
@@ -49,7 +50,7 @@ public class CoroutineLib implements JavaFunction {
 		}
 		
 		coroutine.rawset("__index", coroutine);
-		state.setUserdataMetatable(String.class, coroutine);
+		state.setUserdataMetatable(LuaThread.class, coroutine);
 	}
 	
 	public int call(LuaCallFrame callFrame, int nArguments) {
@@ -59,7 +60,6 @@ public class CoroutineLib implements JavaFunction {
 		case RESUME: return resume(callFrame, nArguments);
 		case STATUS: return status(callFrame, nArguments);
 		case RUNNING: return running(callFrame, nArguments);
-		case WRAP: return wrap(callFrame, nArguments);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
@@ -67,12 +67,8 @@ public class CoroutineLib implements JavaFunction {
 		}
 	}
 
-	private int wrap(LuaCallFrame callFrame, int nArguments) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
 	private int running(LuaCallFrame callFrame, int nArguments) {
+		throw new RuntimeException("NYI: coroutine.running");
 		/*
 		LuaThread t = state.currentThread;
 		
@@ -82,11 +78,12 @@ public class CoroutineLib implements JavaFunction {
 		}
 		
 		state.currentThread.objectStack[base] = t;
-		*/
 		return 1;
+		*/
 	}
 
 	private int status(LuaCallFrame callFrame, int nArguments) {
+		throw new RuntimeException("NYI: coroutine.status");
 		/*
 		LuaThread t = getCoroutine(state, base, arguments);
 		
@@ -102,48 +99,65 @@ public class CoroutineLib implements JavaFunction {
 		}
 		state.currentThread.objectStack[base] = status;
 		*/
-		return 1;
+		//return 1;
 	}
 
 	private int resume(LuaCallFrame callFrame, int nArguments) {
-		//LuaThread t = getCoroutine(state, base, arguments);
+		if (true) {
+			throw new RuntimeException("NYI: coroutine.resume");
+		}
 		
+		LuaThread t = getCoroutine(callFrame, nArguments);
+		
+		if (t.status != LuaThread.THREADSTATUS_SUSPENDED) {
+			throw new LuaException("Can not resume a running thread");
+		}
+		
+		LuaThread parent = callFrame.thread;
+		t.parent = parent;
+		callFrame.thread.state.currentThread = t;
+		
+		// copy arguments
 		return LuaState.RETURN_RESUME;
 	}
 
 	private int yield(LuaCallFrame callFrame, int nArguments) {
+		if (true) {
+			throw new RuntimeException("NYI: coroutine.yield");
+		}
+		// TODO: check if valid to yield here
+		// TODO: copy args, et.c.
 		return LuaState.RETURN_YIELD;
 	}
 
 	private int create(LuaCallFrame callFrame, int nArguments) {
-		/*
-		LuaClosure c = getFunction(state, base, arguments);
-
-		LuaThread thread = new LuaThread(state);
-		// Do more setup here
-		thread.setTop(1);
-		thread.objectStack[0] = c;
+		if (true) {
+			throw new RuntimeException("NYI: coroutine.create");
+		}
 		
-		state.currentThread.objectStack[base] = thread;
-		*/
+		LuaClosure c = getFunction(callFrame, nArguments);
+
+		LuaThread newThread = new LuaThread(callFrame.thread.state);
+		LuaCallFrame newCallFrame = newThread.pushNewCallFrame(1, 0, 0, true, true);
+		newCallFrame.init(c);
+		
+		callFrame.push(newThread);
 		return 1;
 	}
 
-	/*
 	private LuaClosure getFunction(LuaCallFrame callFrame, int nArguments) {
-		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		Object o = state.currentThread.objectStack[base + 1];
+		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
+		Object o = callFrame.get(0);
 		BaseLib.luaAssert(o instanceof LuaClosure, "argument 1 must be a lua function");
 		LuaClosure c = (LuaClosure) o;
 		return c;
 	}
 
 	private LuaThread getCoroutine(LuaCallFrame callFrame, int nArguments) {
-		BaseLib.luaAssert(arguments >= 1, "not enough arguments");
-		Object o = state.currentThread.objectStack[base + 1];
-		BaseLib.luaAssert(o instanceof LuaThread, "argument 1 must be a closure");
+		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
+		Object o = callFrame.get(0);
+		BaseLib.luaAssert(o instanceof LuaThread, "argument 1 must be a coroutine");
 		LuaThread t = (LuaThread) o;
 		return t;
 	}
-*/
 }
