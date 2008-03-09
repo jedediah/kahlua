@@ -68,78 +68,118 @@ public class CoroutineLib implements JavaFunction {
 	}
 
 	private int running(LuaCallFrame callFrame, int nArguments) {
-		throw new RuntimeException("NYI: coroutine.running");
-		/*
-		LuaThread t = state.currentThread;
+		LuaThread t = callFrame.thread;
 		
 		// return nil if the thread is the root thread 
 		if (t.parent == null) {
 			t = null;
 		}
 		
-		state.currentThread.objectStack[base] = t;
+		callFrame.push(t);
 		return 1;
-		*/
 	}
 
 	private int status(LuaCallFrame callFrame, int nArguments) {
-		throw new RuntimeException("NYI: coroutine.status");
-		/*
-		LuaThread t = getCoroutine(state, base, arguments);
+		if (true) {
+			throw new RuntimeException("NYI: coroutine.status");
+		}
+
+		LuaThread t = getCoroutine(callFrame, nArguments);
 		
 		String status = null;
-		if (t == state.currentThread) {
-			status = "running";
-		} else if (t.status == LuaThread.THREADSTATUS_SUSPENDED) {
-			status = "suspended";
-		} else if (t.status == LuaThread.THREADSTATUS_NORMAL) {
-			status = "normal";
-		} else if (t.status == LuaThread.THREADSTATUS_DEAD) {
-			status = "dead";
+		if (t.parent == null) {
+			if (t.callFrameTop > 0) {
+				status = "suspended";
+			} else {
+				status = "dead";
+			}
+		} else {
+			if (callFrame.thread == t) {
+				status = "running";
+			} else {
+				status = "normal";
+			}
+			
 		}
-		state.currentThread.objectStack[base] = status;
-		*/
-		//return 1;
+		callFrame.push(status);
+		return 1;
 	}
 
 	private int resume(LuaCallFrame callFrame, int nArguments) {
 		if (true) {
-			throw new RuntimeException("NYI: coroutine.resume");
+			//throw new RuntimeException("NYI: coroutine.resume");
 		}
 		
 		LuaThread t = getCoroutine(callFrame, nArguments);
 		
-		if (t.status != LuaThread.THREADSTATUS_SUSPENDED) {
+		if (t.parent != null) {
 			throw new LuaException("Can not resume a running thread");
+		}
+		if (t.callFrameTop == 0) {
+			throw new LuaException("Can not resume a dead thread");
 		}
 		
 		LuaThread parent = callFrame.thread;
 		t.parent = parent;
+		
+		LuaCallFrame nextCallFrame = t.currentCallFrame();
+
+		// Is this the first time the coroutine is resumed?
+		if (nextCallFrame.nArguments == -1) {
+			nextCallFrame.setTop(0);
+		}
+
+		// Copy arguments
+		for (int i = 1; i < nArguments; i++) {
+			nextCallFrame.push(callFrame.get(i));
+		}
+		
+		// Is this the first time the coroutine is resumed?
+		if (nextCallFrame.nArguments == -1) {
+			nextCallFrame.nArguments = nArguments - 1;
+			nextCallFrame.init();
+		}
+
 		callFrame.thread.state.currentThread = t;
 		
-		// copy arguments
-		return LuaState.RETURN_RESUME;
+		return 0;
 	}
 
 	private int yield(LuaCallFrame callFrame, int nArguments) {
 		if (true) {
-			throw new RuntimeException("NYI: coroutine.yield");
+			//throw new RuntimeException("NYI: coroutine.yield");
 		}
-		// TODO: check if valid to yield here
-		// TODO: copy args, et.c.
-		return LuaState.RETURN_YIELD;
+		
+		LuaThread t = callFrame.thread;
+		LuaThread parent = t.parent;
+		// assert parent != null;
+
+
+		LuaCallFrame realCallFrame = t.callFrameStack[t.callFrameTop - 2];
+		
+		if (!realCallFrame.insideCoroutine) {
+			throw new LuaException("Can not yield outside of a coroutine");
+		}
+		t.parent = null;
+
+		LuaCallFrame nextCallFrame = parent.currentCallFrame();
+
+		// Copy arguments
+		nextCallFrame.push(Boolean.TRUE);
+		for (int i = 0; i < nArguments; i++) {
+			nextCallFrame.push(callFrame.get(i));
+		}
+		
+		t.state.currentThread = parent;
+		
+		return 0;
 	}
 
 	private int create(LuaCallFrame callFrame, int nArguments) {
-		if (true) {
-			throw new RuntimeException("NYI: coroutine.create");
-		}
-		
 		LuaClosure c = getFunction(callFrame, nArguments);
 
 		LuaThread newThread = new LuaThread(callFrame.thread.state);
-		LuaCallFrame newCallFrame = newThread.pushNewCallFrame(1, 0, 0, true, true);
-		newCallFrame.init(c);
+		newThread.pushNewCallFrame(c, 1, 0, -1, true, true);
 		
 		callFrame.push(newThread);
 		return 1;

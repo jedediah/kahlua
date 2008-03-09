@@ -12,12 +12,12 @@ public class LuaCallFrame {
 
 	public int localBase;
 	int returnBase;
-	int nArguments;
+	public int nArguments;
 
 	boolean fromLua;
-	boolean insideCoroutine;
+	public boolean insideCoroutine;
 	
-	int topBackup;
+	boolean restoreTop;
 	
 	public void set(int index, Object o) {
 		thread.objectStack[localBase + index] = o;
@@ -70,10 +70,8 @@ public class LuaCallFrame {
 		return thread.getState();
 	}
 
-	public void init(LuaClosure closure) {
-		this.closure = closure;
+	public void init() {
 		pc = 0;
-		topBackup = -1;
 		
 		if (closure != null) {
 			if (closure.prototype.isVararg) {

@@ -82,9 +82,6 @@ public final class LuaState {
 
 	private static final String meta_ops[];
 	
-	public static final int RETURN_YIELD = -1;
-	public static final int RETURN_RESUME = -2;
-	
 	static {
 		meta_ops = new String[38];
 		meta_ops[OP_ADD] = "__add";
@@ -156,8 +153,8 @@ public final class LuaState {
 			throw new RuntimeException("tried to call a non-function");
 		}
 
-		LuaCallFrame callFrame = currentThread.pushNewCallFrame(base + 1, base, nArguments, false, false);
-		callFrame.init((LuaClosure) o);
+		LuaCallFrame callFrame = currentThread.pushNewCallFrame((LuaClosure) o, base + 1, base, nArguments, false, false);
+		callFrame.init();
 		
 		luaMainloop();
 
@@ -169,7 +166,9 @@ public final class LuaState {
 	}
 
 	private int callJava(JavaFunction f, int base, int nArguments) {
-		LuaCallFrame callFrame = currentThread.pushNewCallFrame(base + 1, base, nArguments, false, false);
+		LuaThread thread = currentThread;
+		
+		LuaCallFrame callFrame = thread.pushNewCallFrame(null, base + 1, base, nArguments, false, false);
 
 		//System.out.println("Pre: " + f);
 		//inspectStack(callFrame);
@@ -191,7 +190,7 @@ public final class LuaState {
 		//System.out.println("Post2: " + f + ", " + actualReturnBase);
 		//inspectStack(callFrame);
 		
-		currentThread.popCallFrame();
+		thread.popCallFrame();
 		
 		return nReturnValues;
 	}
@@ -614,14 +613,16 @@ public final class LuaState {
 					} else {
 						nArguments2 = callFrame.getTop() - a - 1;
 					}
+
+					callFrame.restoreTop = c != 0;
 					
 					Object fun = prepareMetatableCall(callFrame.get(a));
 
 					int base = callFrame.localBase;
-
+					
 					if (fun instanceof LuaClosure) {
-						LuaCallFrame newCallFrame = currentThread.pushNewCallFrame(base + a + 1, base + a, nArguments2, true, callFrame.insideCoroutine);
-						newCallFrame.init((LuaClosure) fun);
+						LuaCallFrame newCallFrame = currentThread.pushNewCallFrame((LuaClosure) fun, base + a + 1, base + a, nArguments2, true, callFrame.insideCoroutine);
+						newCallFrame.init();
 						
 						callFrame = newCallFrame;
 						closure = newCallFrame.closure;
@@ -629,6 +630,8 @@ public final class LuaState {
 						opcodes = prototype.opcodes;
 					} else if (fun instanceof JavaFunction) {
 						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
+					
+						// TODO: handle correct top after yield / resume
 						
 						// The call might have changed something...
 						callFrame = currentThread.currentCallFrame();
@@ -636,7 +639,8 @@ public final class LuaState {
 						prototype = closure.prototype;
 						opcodes = prototype.opcodes;
 						
-						if (c != 0) {
+
+						if (callFrame.restoreTop) {
 							callFrame.setTop(prototype.maxStacksize);
 						}
 					} else {
@@ -657,6 +661,8 @@ public final class LuaState {
 						nArguments2 = callFrame.getTop() - a - 1;
 					}
 
+					callFrame.restoreTop = false;
+					
 					Object fun = prepareMetatableCall(callFrame.get(a));
 					
 					currentThread.stackCopy(base + a, returnBase, nArguments2 + 1);
@@ -665,11 +671,11 @@ public final class LuaState {
 					if (fun instanceof LuaClosure) {
 						callFrame.localBase = returnBase + 1;
 						callFrame.nArguments = nArguments2;
-						callFrame.init((LuaClosure) fun);
+						callFrame.closure = (LuaClosure) fun; 
+						callFrame.init();
 						
 					} else if (fun instanceof JavaFunction) {
 						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
-
 
 						// TODO: handle yield
 						currentThread.popCallFrame();
@@ -678,9 +684,9 @@ public final class LuaState {
 							closure = callFrame.closure;
 							prototype = closure.prototype;
 							opcodes = prototype.opcodes;
-							
-							if (callFrame.topBackup != -1) {
-								currentThread.setTop(callFrame.topBackup);
+
+							if (callFrame.restoreTop) {
+								callFrame.setTop(prototype.maxStacksize);
 							}
 						} else {
 							return;
@@ -716,8 +722,9 @@ public final class LuaState {
 						prototype = closure.prototype;
 						opcodes = prototype.opcodes;
 						
-						if (callFrame.topBackup != -1) {
-							currentThread.setTop(callFrame.topBackup);
+
+						if (callFrame.restoreTop) {
+							callFrame.setTop(prototype.maxStacksize);
 						}
 					} else {
 						return;

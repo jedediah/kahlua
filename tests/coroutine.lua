@@ -23,6 +23,9 @@ end
 
 generator = coroutine.wrap(getprimes)
 
+print(generator())
+print(generator())
+--[[
 t = {2,3,5,7,11,13,17,19,23}
 local i = 1
 for p in generator do
@@ -42,4 +45,22 @@ for p in generator do
 		break
 	end
 end
+
+local ok, err = pcall(function()
+	local f = coroutine.wrap(function()
+		error("test")
+	end) 
+	f()
+end)
+assert(not ok)
+assert(err:sub(-4, -1) == "test")
+
+local co = coroutine.create(function()
+	error("test")
+end)
+
+local status, error = coroutine.resume(co)
+assert(not status)
+assert(err:sub(-4, -1) == "test")
+--]]
 

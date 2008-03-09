@@ -42,12 +42,9 @@ public class LuaThread {
 	public LuaCallFrame[] callFrameStack;
 	public int callFrameTop;
 	
-	public static int THREADSTATUS_SUSPENDED = 0;
-	public static int THREADSTATUS_NORMAL = 1;
-	public static int THREADSTATUS_DEAD = 2;
-	public int status;
-
 	public LuaState state;
+
+	public int expectedResults;
 	
 	public LuaThread(LuaState state) {
 		objectStack = new Object[INITIAL_STACK_SIZE];
@@ -58,7 +55,7 @@ public class LuaThread {
 		this.state = state;
 	}
 	
-	public LuaCallFrame pushNewCallFrame(int localBase, int returnBase, int nArguments, boolean fromLua, boolean insideCoroutine) {
+	public LuaCallFrame pushNewCallFrame(LuaClosure closure, int localBase, int returnBase, int nArguments, boolean fromLua, boolean insideCoroutine) {
 		setCallFrameStackTop(callFrameTop + 1);
 		LuaCallFrame callFrame = currentCallFrame();
 		
@@ -67,6 +64,7 @@ public class LuaThread {
 		callFrame.nArguments = nArguments;
 		callFrame.fromLua = fromLua;
 		callFrame.insideCoroutine = insideCoroutine;
+		callFrame.closure = closure;
 		
 		return callFrame;
 	}

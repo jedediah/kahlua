@@ -92,7 +92,7 @@ public class Test {
 					successful++;
 				}
 			} catch (RuntimeException e) {
-				System.out.println("Failed: " + child + " :" +  e.getMessage());
+				System.out.println("Failed: " + child + ": " +  e.getMessage());
 				e.printStackTrace();
 				System.out.println(state.currentThread.stackTrace);
 
