@@ -118,7 +118,12 @@ public final class LuaState {
 	}
 	
 	public static void inspectThread(LuaThread t) {
-		System.out.println(t.callFrameTop + ", " + t.top);
+		System.out.println("call frames (" + t.callFrameTop + "):");
+		for (int i = 0; i < t.callFrameTop; i++) {
+			LuaCallFrame f = t.callFrameStack[i];
+			System.out.println(pad("" + i, 3) + ": " + (f.fromLua ? "from lua" : "from java") + ", " + (f.insideCoroutine ? "yieldable" : "-") + ", " + (f.closure != null ? "lua" : "java"));
+		}
+		System.out.println("------------");
 		if (t.callFrameTop == 0) {
 			return;
 		}
@@ -135,9 +140,9 @@ public final class LuaState {
 
 			String info = "";
 			if (callFrame.returnBase == i) {
-				info = pad(""+stackIndex, 3) + "return base";
+				info = pad(""+stackIndex, 3) + " return base";
 			} else if (callFrame.localBase == i) {
-				info = pad(""+stackIndex, 3) + "local base";
+				info = pad(""+stackIndex, 3) + " local base";
 			}
 			Object obj = t.objectStack[i];
 			if (obj == null) {
@@ -145,6 +150,10 @@ public final class LuaState {
 			}
 			String output = pad(""+i, 3) + ": " + pad(obj.toString(), 50) + " - " + info;
 			System.out.println(output);
+		}
+		if (t.parent != null) {
+			System.out.println("Child of:");
+			inspectThread(t.parent);
 		}
 	}
 	
@@ -895,6 +904,19 @@ public final class LuaState {
 				}
 				} // switch
 			} catch (RuntimeException e) {
+				//inspectThread(currentThread);
+				
+				// Pop off all java frames first
+				while (true) {
+					callFrame = currentThread.currentCallFrame();
+					if (callFrame.closure != null) {
+						break;
+					}
+					currentThread.cleanCallFrames(callFrame);
+					currentThread.addStackTrace(callFrame);
+					currentThread.popCallFrame();
+				}
+				
 				boolean rethrow = true;
 				while (true) {
 					callFrame = currentThread.currentCallFrame();

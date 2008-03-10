@@ -1,13 +1,17 @@
+do return end
+
 do
+
 	local ok, err, stacktrace = pcall(function()
-		local f = coroutine.wrap(function()
+		local f = coroutine.wrap(function(...)
+			assert(select("#", ...) == 3)
 			error("test")
-		end) 
+		end)
 		f(11,22,33)
 	end)
 
 	assert(not ok)
-	assert(err:sub(-4, -1) == "test")
+	assert(err:sub(-4, -1) == "test", err)
 
 	local coro = coroutine.create(function()
 		error("test")
