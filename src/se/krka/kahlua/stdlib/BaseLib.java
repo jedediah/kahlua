@@ -298,7 +298,6 @@ public final class BaseLib implements JavaFunction {
 			errorMessage = e.getMessage();
 		}
 		
-		
 		callFrame.thread.cleanCallFrames(callFrame);
 		
 		if (errorMessage instanceof String) {

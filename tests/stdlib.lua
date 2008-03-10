@@ -97,7 +97,6 @@ end
 
 do
 	local error = error
-	
 	local ccreate = coroutine.create
 	local cresume = coroutine.resume
 

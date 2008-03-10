@@ -224,6 +224,6 @@ public class LuaThread {
 	
 	public final void cleanup(int top) {
 		closeUpvalues(top);
-		stackTrace = "";
+		//stackTrace = "";
 	}
 }

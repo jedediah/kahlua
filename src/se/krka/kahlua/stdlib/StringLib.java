@@ -302,12 +302,13 @@ public final class StringLib implements JavaFunction {
 		String res;
 		int istart = (int) start;
 		int iend = (int) end;
+
+		if (istart < 0) {
+			istart += Math.max(0, s.length() + 1);
+		}
 		
 		if (iend < 0) {
-			iend += s.length() + 1;
-		}
-		if (iend < 0) {
-			iend = 0;
+			iend += Math.max(0, s.length() + 1);
 		}
 		
 		if (istart > iend) {

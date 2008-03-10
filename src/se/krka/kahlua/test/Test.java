@@ -36,7 +36,6 @@ import se.krka.kahlua.vm.LuaState;
 
 public class Test {
 	private static LuaState getState(File dir) throws FileNotFoundException, IOException {
-		System.out.println("Loading file: stdlib.lbc");
 		File stdlib = new File(dir, "stdlib.lbc");
 
 		LuaState state = new LuaState(System.out);

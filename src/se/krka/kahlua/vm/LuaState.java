@@ -112,6 +112,42 @@ public final class LuaState {
 	private final void setup() {
 	}
 
+	private static String pad(String s, int width) {
+		while (s.length() < width) s = " " + s;
+		return s;
+	}
+	
+	public static void inspectThread(LuaThread t) {
+		System.out.println(t.callFrameTop + ", " + t.top);
+		if (t.callFrameTop == 0) {
+			return;
+		}
+		int stackIndex = 0;
+		LuaCallFrame callFrame = t.callFrameStack[stackIndex];
+		for (int i = 0; i < t.top; i++) {
+			if (stackIndex < t.callFrameTop - 1) {
+				LuaCallFrame nextCallFrame = t.callFrameStack[stackIndex + 1];
+				if (nextCallFrame.returnBase <= i) {
+					stackIndex++;
+					callFrame = nextCallFrame;
+				}
+			}
+
+			String info = "";
+			if (callFrame.returnBase == i) {
+				info = pad(""+stackIndex, 3) + "return base";
+			} else if (callFrame.localBase == i) {
+				info = pad(""+stackIndex, 3) + "local base";
+			}
+			Object obj = t.objectStack[i];
+			if (obj == null) {
+				obj = "null";
+			}
+			String output = pad(""+i, 3) + ": " + pad(obj.toString(), 50) + " - " + info;
+			System.out.println(output);
+		}
+	}
+	
 	public void inspectStack(LuaCallFrame callFrame) {
 		System.out.println("-- Current Stack --");
 		for (int i = 0; i < callFrame.getTop(); i++) {
@@ -211,8 +247,8 @@ public final class LuaState {
 		LuaPrototype prototype = closure.prototype;
 		int[] opcodes = prototype.opcodes;
 		
-		try {
-			while (true) {
+		while (true) {
+			try {
 				int a, b, c;
 
 				int op = opcodes[callFrame.pc++];
@@ -718,6 +754,26 @@ public final class LuaState {
 					currentThread.popCallFrame();
 					if (callFrame.fromLua) {
 						callFrame = currentThread.currentCallFrame();
+						
+						// Handle implicit yield
+						if (callFrame == null) {
+							if (currentThread.parent == null) {
+								// should never happen
+								throw new RuntimeException("Internal lua state broken. This should NEVER happen.");
+							}
+							
+							LuaThread parent = currentThread.parent;
+							currentThread.parent = null;
+							callFrame = parent.currentCallFrame();
+							
+							callFrame.push(Boolean.TRUE);
+							for (int i = 0; i < currentThread.top; i++) {
+								callFrame.push(currentThread.objectStack[i]);
+							}
+							
+							currentThread = parent;
+						}
+						
 						closure = callFrame.closure;
 						prototype = closure.prototype;
 						opcodes = prototype.opcodes;
@@ -838,18 +894,46 @@ public final class LuaState {
 					// unreachable for proper bytecode
 				}
 				} // switch
-			}
-		} catch (RuntimeException e) {
-			while (true) {
-				callFrame = currentThread.currentCallFrame();
-				if (callFrame == null || !callFrame.fromLua) {
-					break;
+			} catch (RuntimeException e) {
+				boolean rethrow = true;
+				while (true) {
+					callFrame = currentThread.currentCallFrame();
+					if (callFrame == null) {
+						LuaThread parent = currentThread.parent;
+						if (parent != null) {
+							currentThread.parent = null;
+							// Yield and fail
+							
+							// Copy arguments
+							LuaCallFrame nextCallFrame = parent.currentCallFrame();
+							
+							nextCallFrame.push(Boolean.FALSE);
+							nextCallFrame.push(e.getMessage().intern());
+							nextCallFrame.push(currentThread.stackTrace.intern());
+							
+							currentThread.state.currentThread = parent;
+							currentThread = parent;
+							callFrame = currentThread.currentCallFrame();
+							closure = callFrame.closure;
+							prototype = closure.prototype;
+							opcodes = prototype.opcodes;
+							
+							rethrow = false;
+						}
+						break;
+					}
+					currentThread.cleanCallFrames(callFrame);
+					currentThread.addStackTrace(callFrame);
+					currentThread.popCallFrame();
+					
+					if (!callFrame.fromLua) {
+						break;
+					}
 				}
-				currentThread.cleanCallFrames(callFrame);
-				currentThread.addStackTrace(callFrame);
-				currentThread.popCallFrame();
+				if (rethrow) {
+					throw e;
+				}
 			}
-			throw e;
 		}
 	}
 
