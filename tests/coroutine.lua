@@ -23,9 +23,6 @@ end
 
 generator = coroutine.wrap(getprimes)
 
-print(generator())
-print(generator())
---[[
 t = {2,3,5,7,11,13,17,19,23}
 local i = 1
 for p in generator do
@@ -62,5 +59,4 @@ end)
 local status, error = coroutine.resume(co)
 assert(not status)
 assert(err:sub(-4, -1) == "test")
---]]
 
