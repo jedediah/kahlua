@@ -38,6 +38,10 @@ public class CoroutineLib implements JavaFunction {
 		}
 	}
 	
+	public String toString() {
+		return "coroutine." + names[index];
+	}
+	
 	public CoroutineLib(int index) {
 		this.index = index;
 	}
@@ -112,16 +116,14 @@ public class CoroutineLib implements JavaFunction {
 		
 		LuaThread t = getCoroutine(callFrame, nArguments);
 		
-		System.out.println("Trying to resume: " + t);
-		LuaState.inspectThread(callFrame.thread);
+		//System.out.println("Trying to resume: " + t);	LuaState.inspectThread(callFrame.thread);
 		
 		
 		if (t.parent != null) {
 			throw new LuaException("Can not resume a running thread");
 		}
 		if (t.callFrameTop == 0) {
-			System.out.println("Thread is dead: " + t);
-			LuaState.inspectThread(t);
+			// System.out.println("Thread is dead: " + t); LuaState.inspectThread(t);
 			throw new LuaException("Can not resume a dead thread");
 		}
 
@@ -197,8 +199,7 @@ public class CoroutineLib implements JavaFunction {
 		newThread.pushNewCallFrame(c, 0, 0, -1, true, true);
 		callFrame.push(newThread);
 		
-		System.out.println("Thread is created: " + newThread);
-		LuaState.inspectThread(newThread);
+		//System.out.println("Thread is created: " + newThread); LuaState.inspectThread(newThread);
 		
 		return 1;
 	}

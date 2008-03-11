@@ -25,6 +25,7 @@ import java.io.PrintStream;
 import java.util.Random;
 
 import se.krka.kahlua.stdlib.BaseLib;
+import se.krka.kahlua.stdlib.CoroutineLib;
 import se.krka.kahlua.stdlib.MathLib;
 
 public final class LuaState {
@@ -218,8 +219,14 @@ public final class LuaState {
 		//System.out.println("Pre: " + f);
 		//inspectStack(callFrame);
 		
-		int nReturnValues = f.call(callFrame, nArguments); 
+		/*
+		if (f instanceof CoroutineLib) {
+			System.out.println("Thread before call to " + f);
+			inspectThread(currentThread);
+		}
+		*/
 		
+		int nReturnValues = f.call(callFrame, nArguments); 
 		//System.out.println("Post: " + f);
 		//System.out.println("return values: " + nReturnValues);
 		//inspectStack(callFrame);
@@ -236,6 +243,13 @@ public final class LuaState {
 		//inspectStack(callFrame);
 		
 		thread.popCallFrame();
+
+		/*
+		if (f instanceof CoroutineLib) {
+			System.out.println("Thread after call to " + f);
+			inspectThread(currentThread);
+		}
+		*/
 		
 		return nReturnValues;
 	}

@@ -1,36 +1,5 @@
-do return end
-
-do
-
-	local ok, err, stacktrace = pcall(function()
-		local f = coroutine.wrap(function(...)
-			assert(select("#", ...) == 3)
-			error("test")
-		end)
-		f(11,22,33)
-	end)
-
-	assert(not ok)
-	assert(err:sub(-4, -1) == "test", err)
-
-	local coro = coroutine.create(function()
-		error("test")
-	end)
-	assert(coroutine.status(coro) == "suspended")
-
-	local status, err = coroutine.resume(coro)
-
-	assert(not status)
-	assert(err:sub(-4, -1) == "test")
-
-	assert(coroutine.status(coro) == "dead")
-
-end
-
-
 do
 	local coro = coroutine.create(function(a,b,c)
-		print(a, b, c)
 		assert(a == 11)
 		assert(b == 22)
 		assert(c == 33)
@@ -49,7 +18,6 @@ end
 
 do
 	local coro = coroutine.create(function(a,b,c)
-		print(a,b,c)
 		assert(a == 11)
 		assert(b == 22)
 		assert(c == 33)
@@ -98,6 +66,14 @@ end
 
 generator = coroutine.wrap(getprimes)
 t = {2,3,5,7,11,13,17,19,23}
+
+for i = 1, #t do
+	local p1 = t[i]
+	local p2 = generator()
+	print(p1, p2)
+end
+
+--[[
 local i = 1
 for p in generator do
 	local correct = t[i]
@@ -115,5 +91,33 @@ for p in generator do
 	if p > 20 then
 		break
 	end
+end
+--]]
+
+do
+
+	local ok, err, stacktrace = pcall(function()
+		local f = coroutine.wrap(function(...)
+			assert(select("#", ...) == 3)
+			error("test")
+		end)
+		f(11,22,33)
+	end)
+
+	assert(not ok)
+	assert(err:sub(-4, -1) == "test", err)
+
+	local coro = coroutine.create(function()
+		error("test")
+	end)
+	assert(coroutine.status(coro) == "suspended")
+
+	local status, err = coroutine.resume(coro)
+
+	assert(not status)
+	assert(err:sub(-4, -1) == "test")
+
+	assert(coroutine.status(coro) == "dead")
+
 end
 
