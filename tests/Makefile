@@ -5,5 +5,8 @@ compile:	$(patsubst %.lua,bin/%.lbc,$(wildcard *.lua))
 bin/%.lbc:	%.lua
 	luac -o $@ $<
 
-test:	compile
+test:	mkdir compile
+
+mkdir:
+	mkdir -p bin
 
