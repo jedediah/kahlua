@@ -110,7 +110,11 @@ do
 	function coroutine.wrap(f)
 		local coro = ccreate(f)
 		return function(...)
-			return wrap_helper(cresume(coro, ...))
+			return wrap_helper(
+				cresume(
+					coro, ...
+				)
+			)
 		end
 	end
 end

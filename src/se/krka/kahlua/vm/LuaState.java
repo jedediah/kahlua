@@ -25,7 +25,6 @@ import java.io.PrintStream;
 import java.util.Random;
 
 import se.krka.kahlua.stdlib.BaseLib;
-import se.krka.kahlua.stdlib.CoroutineLib;
 import se.krka.kahlua.stdlib.MathLib;
 
 public final class LuaState {
@@ -276,6 +275,8 @@ public final class LuaState {
 
 				int op = opcodes[callFrame.pc++];
 				int opcode = op & 63;
+
+				//System.out.println("At " + System.identityHashCode(currentThread) + ":" + closure.prototype.name + ":" + closure.prototype.lines[callFrame.pc - 1] + " (" + opcode + ") " + currentThread.top + ", " + currentThread.callFrameTop + ", " + (callFrame.pc - 1));
 				
 				//inspectStack(callFrame);
 				//System.out.println(opcode);
@@ -740,9 +741,6 @@ public final class LuaState {
 						currentThread.popCallFrame();
 						if (callFrame.fromLua) {
 							callFrame = currentThread.currentCallFrame();
-							closure = callFrame.closure;
-							prototype = closure.prototype;
-							opcodes = prototype.opcodes;
 
 							if (callFrame.restoreTop) {
 								callFrame.setTop(prototype.maxStacksize);
@@ -750,10 +748,13 @@ public final class LuaState {
 						} else {
 							return;
 						}
-						
 					} else {
 						throw new RuntimeException("Tried to call a non-function: " + fun);
 					}
+					
+					closure = callFrame.closure;
+					prototype = closure.prototype;
+					opcodes = prototype.opcodes;
 					
 					break;
 				}

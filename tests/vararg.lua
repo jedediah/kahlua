@@ -1,8 +1,8 @@
 function id(...)
-   return ...
+	return ...
 end
 
-local a, b, c, d = id(1,2,3)
+local a, b, c, d = id(1, 2, 3)
 assert(a == 1, "a == 1")
 assert(b == 2, "b == 2")
 assert(c == 3, "c == 3")

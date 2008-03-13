@@ -77,10 +77,12 @@ public class LuaCallFrame {
 			if (closure.prototype.isVararg) {
 				localBase += nArguments;
 				
+				setTop(closure.prototype.maxStacksize);
 				int toCopy = Math.min(nArguments, closure.prototype.numParams);
 				stackCopy(-nArguments, 0, toCopy);
+			} else {
+				setTop(closure.prototype.maxStacksize);
 			}
-			setTop(closure.prototype.maxStacksize);
 		}
 	}
 
