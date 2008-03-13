@@ -214,42 +214,18 @@ public final class LuaState {
 		LuaThread thread = currentThread;
 		
 		LuaCallFrame callFrame = thread.pushNewCallFrame(null, base + 1, base, nArguments, false, false);
-
-		//System.out.println("Pre: " + f);
-		//inspectStack(callFrame);
-		
-		/*
-		if (f instanceof CoroutineLib) {
-			System.out.println("Thread before call to " + f);
-			inspectThread(currentThread);
-		}
-		*/
 		
 		int nReturnValues = f.call(callFrame, nArguments); 
-		//System.out.println("Post: " + f);
-		//System.out.println("return values: " + nReturnValues);
-		//inspectStack(callFrame);
 		
 		// Clean up return values
 		int top = callFrame.getTop();
 		int actualReturnBase = top - nReturnValues; 
 
-		//System.out.println("Copy " + actualReturnBase + " to " + -1 + " [" + nReturnValues);
 		callFrame.stackCopy(actualReturnBase, -1, nReturnValues);
 		callFrame.setTop(nReturnValues - 1);
 		
-		//System.out.println("Post2: " + f + ", " + actualReturnBase);
-		//inspectStack(callFrame);
-		
 		thread.popCallFrame();
 
-		/*
-		if (f instanceof CoroutineLib) {
-			System.out.println("Thread after call to " + f);
-			inspectThread(currentThread);
-		}
-		*/
-		
 		return nReturnValues;
 	}
 
@@ -276,11 +252,6 @@ public final class LuaState {
 				int op = opcodes[callFrame.pc++];
 				int opcode = op & 63;
 
-				//System.out.println("At " + System.identityHashCode(currentThread) + ":" + closure.prototype.name + ":" + closure.prototype.lines[callFrame.pc - 1] + " (" + opcode + ") " + currentThread.top + ", " + currentThread.callFrameTop + ", " + (callFrame.pc - 1));
-				
-				//inspectStack(callFrame);
-				//System.out.println(opcode);
-				
 				int returnBase = callFrame.returnBase;
 				switch (opcode) {
 				case OP_MOVE: {
@@ -691,14 +662,10 @@ public final class LuaState {
 					} else if (fun instanceof JavaFunction) {
 						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
 					
-						// TODO: handle correct top after yield / resume
-						
-						// The call might have changed something...
 						callFrame = currentThread.currentCallFrame();
 						closure = callFrame.closure;
 						prototype = closure.prototype;
 						opcodes = prototype.opcodes;
-						
 
 						if (callFrame.restoreTop) {
 							callFrame.setTop(prototype.maxStacksize);
@@ -737,7 +704,6 @@ public final class LuaState {
 					} else if (fun instanceof JavaFunction) {
 						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
 
-						// TODO: handle yield
 						currentThread.popCallFrame();
 						if (callFrame.fromLua) {
 							callFrame = currentThread.currentCallFrame();
@@ -759,8 +725,6 @@ public final class LuaState {
 					break;
 				}
 				case OP_RETURN: {
-					// TODO: Set up return to recreate top according to prototype
-					
 					a = getA8(op);
 					b = getB9(op) - 1;
 
@@ -774,7 +738,6 @@ public final class LuaState {
 					currentThread.stackCopy(callFrame.localBase + a, returnBase, b);
 					currentThread.setTop(returnBase + b);
 
-					// TODO: handle yield
 					currentThread.popCallFrame();
 					if (callFrame.fromLua) {
 						callFrame = currentThread.currentCallFrame();

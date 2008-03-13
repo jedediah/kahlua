@@ -74,7 +74,8 @@ public class CoroutineLib implements JavaFunction {
 	private int running(LuaCallFrame callFrame, int nArguments) {
 		LuaThread t = callFrame.thread;
 		
-		// return nil if the thread is the root thread 
+		// same behaviour as in original lua,
+		// return nil if it's the root thread 
 		if (t.parent == null) {
 			t = null;
 		}
@@ -84,10 +85,6 @@ public class CoroutineLib implements JavaFunction {
 	}
 
 	private int status(LuaCallFrame callFrame, int nArguments) {
-		if (true) {
-			//throw new RuntimeException("NYI: coroutine.status");
-		}
-
 		LuaThread t = getCoroutine(callFrame, nArguments);
 		
 		String status = null;
@@ -110,26 +107,15 @@ public class CoroutineLib implements JavaFunction {
 	}
 
 	private int resume(LuaCallFrame callFrame, int nArguments) {
-		if (true) {
-			//throw new RuntimeException("NYI: coroutine.resume");
-		}
-		
 		LuaThread t = getCoroutine(callFrame, nArguments);
-		
-		//System.out.println("Trying to resume: " + t);	LuaState.inspectThread(callFrame.thread);
-		
 		
 		if (t.parent != null) {
 			throw new LuaException("Can not resume a running thread");
 		}
 		if (t.callFrameTop == 0) {
-			// System.out.println("Thread is dead: " + t); LuaState.inspectThread(t);
 			throw new LuaException("Can not resume a dead thread");
 		}
 
-		
-		//System.out.println("Resuming from"); LuaState.inspectThread(callFrame.thread);
-		
 		LuaThread parent = callFrame.thread;
 		t.parent = parent;
 		
@@ -153,29 +139,21 @@ public class CoroutineLib implements JavaFunction {
 
 		callFrame.thread.state.currentThread = t;
 		
-		//System.out.println("Resuming to"); LuaState.inspectThread(t);
-		
 		return 0;
 	}
 
 	public int yield(LuaCallFrame callFrame, int nArguments) {
-		if (true) {
-			//throw new RuntimeException("NYI: coroutine.yield");
-		}
-		
 		LuaThread t = callFrame.thread;
 		LuaThread parent = t.parent;
-		// assert parent != null;
 
-
-		LuaCallFrame realCallFrame = t.callFrameStack[t.callFrameTop - 2];
-		
-		if (!realCallFrame.insideCoroutine) {
+		if (parent == null) {
 			throw new LuaException("Can not yield outside of a coroutine");
 		}
 		
-		//System.out.println("Yielding from"); LuaState.inspectThread(callFrame.thread);
-		//System.out.println("Yielding to"); LuaState.inspectThread(parent);
+		LuaCallFrame realCallFrame = t.callFrameStack[t.callFrameTop - 2];
+		if (!realCallFrame.insideCoroutine) {
+			throw new LuaException("Can not yield outside of a coroutine");
+		}
 		
 		t.parent = null;
 
@@ -198,9 +176,6 @@ public class CoroutineLib implements JavaFunction {
 		LuaThread newThread = new LuaThread(callFrame.thread.state);
 		newThread.pushNewCallFrame(c, 0, 0, -1, true, true);
 		callFrame.push(newThread);
-		
-		//System.out.println("Thread is created: " + newThread); LuaState.inspectThread(newThread);
-		
 		return 1;
 	}
 

@@ -74,9 +74,6 @@ public class Test {
 		int successful = 0;
 		int total = 0;
 		for (int i = 0; i < children.length; i++) {
-			
-			//LuaState state = getState(dir);
-			
 			File child = children[i];
 			
 			try {

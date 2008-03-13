@@ -145,8 +145,6 @@ public final class BaseLib implements JavaFunction {
         t.rawset(key, value);
         callFrame.setTop(1);
         return 1;        
-        // stack[0] is already t
-        // callFrame.setStack(0, t);
 	}
 
 	private int rawequal(LuaCallFrame callFrame, int nArguments) {
@@ -199,8 +197,14 @@ public final class BaseLib implements JavaFunction {
     			throw new RuntimeException("Expected number");
         	}
         	int level = d.intValue();
-        	// TODO: Add proper value here
-        	res = null;
+        	if (level <= 0) {
+        		// TODO: compare against manual definition
+            	res = null;
+        	} else {
+	        	int callFrame2index = callFrame.thread.callFrameTop - level;
+	        	LuaCallFrame callFrame2 = callFrame.thread.callFrameStack[callFrame2index];
+	        	res = callFrame2.getEnvironment();
+        	}
         }
         callFrame.push(res);
         return 1;
