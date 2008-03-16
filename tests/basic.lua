@@ -23,10 +23,19 @@ do
 end
 
 
-function f()
-	f()
+do
+	local function foo(...)
+		return select("#", ...)
+	end
+	assert(foo(1, 2, 3) == 3)
 end
 
-local ok, errorMsg = pcall(f)
-assert(not ok)
+do
+	function f()
+		f()
+	end
+
+	local ok, errorMsg = pcall(f)
+	assert(not ok)
+end
 

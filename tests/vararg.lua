@@ -10,6 +10,7 @@ assert(d == nil, "d == nil")
 
 assert(select("#", id(1,2,3)) == 3)
 assert(select(2, id(1,20,3)) == 20)
+assert(select("2", id(1,20,3)) == 20)
 
 function test(a,b,c, ...)
    assert(select("#", ...) == 3, "vararg size incorrect")
@@ -52,4 +53,16 @@ end
 
 local v = tailrec(1, 10, 2, 3)
 assert(v == 60, "v == 60")
+
+
+do
+	local function foo(...)
+		local a, b, c, d = ...
+		return a, b, c, d
+	end
+	local a, b, c, d = foo(1,2,3,4,5,6)
+	assert(a == 1 and b == 2 and c == 3 and d == 4)
+	a, b, c, d = foo(1, 2)
+	assert(a == 1 and b == 2 and c == nil and d == nil)
+end
 

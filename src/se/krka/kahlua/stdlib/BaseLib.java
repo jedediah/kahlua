@@ -54,6 +54,7 @@ public final class BaseLib implements JavaFunction {
 	
 	private static final String[] names;
 	private static final Object MODE_KEY = "__mode";
+	private static final Object DOUBLE_ONE = new Double(1.0);
 	
 	static {
 		names = new String[NUM_FUNCTIONS];
@@ -178,15 +179,17 @@ public final class BaseLib implements JavaFunction {
 	}
 
 	private int getfenv(LuaCallFrame callFrame, int nArguments) {
-        luaAssert(nArguments >= 1, "Not enough arguments");
-		
+		Object o = DOUBLE_ONE;
+		if (nArguments >= 1) {
+	        o = callFrame.get(0);
+		}
+	
         Object res = null;
-        Object o = callFrame.get(0);
-        if (o instanceof LuaClosure) {
+        if (o == null || o instanceof JavaFunction) {
+        	res = callFrame.thread.state.environment;
+        } else if (o instanceof LuaClosure) {
         	LuaClosure closure = (LuaClosure) o;
         	res = closure.env;
-        } else if (o instanceof JavaFunction) {
-        	res = callFrame.getState().environment;
         } else {
         	Double d = null;
         	if (o instanceof String) {
@@ -197,14 +200,11 @@ public final class BaseLib implements JavaFunction {
     			throw new RuntimeException("Expected number");
         	}
         	int level = d.intValue();
-        	if (level <= 0) {
-        		// TODO: compare against manual definition
-            	res = null;
-        	} else {
-	        	int callFrame2index = callFrame.thread.callFrameTop - level;
-	        	LuaCallFrame callFrame2 = callFrame.thread.callFrameStack[callFrame2index];
-	        	res = callFrame2.getEnvironment();
-        	}
+        	luaAssert(level >= 0, "level must be non-negative");
+        	int callFrame2index = callFrame.thread.callFrameTop - level - 1;
+        	luaAssert(callFrame2index >= 0, "invalid level");
+        	LuaCallFrame callFrame2 = callFrame.thread.callFrameStack[callFrame2index];
+        	res = callFrame2.getEnvironment();
         }
         callFrame.push(res);
         return 1;
@@ -336,14 +336,12 @@ public final class BaseLib implements JavaFunction {
 	private static int select(LuaCallFrame callFrame, int nArguments) {
 		luaAssert(nArguments >= 1, "Not enough arguments");
 		Object arg1 = callFrame.get(0);
-		
 		Double d_indexDouble;
 		if (arg1 instanceof String) {
 			if (((String) arg1).startsWith("#")) {
 				callFrame.push(LuaState.toDouble(nArguments - 1));
 				return 1;
 			}
-			
 			d_indexDouble = tonumber((String) arg1);
 		} else {
 			d_indexDouble = (Double) arg1;
@@ -527,8 +525,8 @@ public final class BaseLib implements JavaFunction {
 		if (o instanceof String) return (String) o;
 		if (o instanceof Double) return ((Double) o).toString().intern();
 		if (o instanceof Boolean) return o == Boolean.TRUE ? "true" : "false";
-		if (o instanceof JavaFunction) return "function";
-		if (o instanceof LuaClosure) return "function";
+		if (o instanceof JavaFunction) return "function 0x" + System.identityHashCode(o);
+		if (o instanceof LuaClosure) return "function 0x" + System.identityHashCode(o);
 		
 		Object tostringFun = state.getMetaOp(o, "__tostring");
 		if (tostringFun != null) {
@@ -537,7 +535,7 @@ public final class BaseLib implements JavaFunction {
 			return res;
 		}
 		
-		if (o instanceof LuaTable) return "table";
+		if (o instanceof LuaTable) return "table 0x" + System.identityHashCode(o);
 		throw new RuntimeException("no __tostring found on object");
 	}
 

@@ -34,7 +34,9 @@ public final class LuaClosure {
 		upvalues = new UpValue[prototype.numUpvalues];
 	}
 	
+	/*
 	public String toString() {
 		return prototype.toString() + ":" + prototype.lines[0];
 	}
+	*/
 }

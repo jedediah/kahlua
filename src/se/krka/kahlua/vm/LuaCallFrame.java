@@ -66,10 +66,6 @@ public class LuaCallFrame {
 		return thread.getTop() - localBase;
 	}
 
-	public LuaState getState() {
-		return thread.getState();
-	}
-
 	public void init() {
 		pc = 0;
 		

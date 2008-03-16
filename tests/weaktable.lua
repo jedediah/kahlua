@@ -53,3 +53,14 @@ collectgarbage();
 collectgarbage();
 collectgarbage();
 assert(count(t) == 5)
+
+do
+	local t = setmetatable({}, {__mode = "kv"})
+	for i = 1, 10 do
+		for i = 1, 10 do
+			t[{}] = {}
+		end
+		collectgarbage()
+	end
+end
+

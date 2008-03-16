@@ -369,7 +369,7 @@ public final class LuaTable {
 		 * Thus, don't try to fix it to weak if it's already weak.
 		 */
 		
-		if (entries == null) return;
+		//if (entries == null) return;
 		
 		for (int i = entries.length - 1; i >= 0; i--) {
 			Object o = entries[i];

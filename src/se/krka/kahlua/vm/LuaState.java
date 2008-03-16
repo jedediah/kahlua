@@ -97,7 +97,6 @@ public final class LuaState {
 	}
 	public LuaState(PrintStream stream) {
 		out = stream;
-		setup();
 		reset();
 	}
 
@@ -107,9 +106,6 @@ public final class LuaState {
 		environment.rawset("_G", environment);
 		environment.rawset("_VERSION", "Lua 5.1 for CLDC 1.1");
 		currentThread = new LuaThread(this);
-	}
-
-	private final void setup() {
 	}
 
 	private static String pad(String s, int width) {
@@ -164,13 +160,6 @@ public final class LuaState {
 			
 			System.out.println(i + ": " + BaseLib.type(o) + ": " + o);
 		}
-		/*
-		System.out.println("-- Live upvalues --");
-		for (int i = 0; i < liveUpvalues.size(); i++) {
-			UpValue uv = (UpValue) liveUpvalues.elementAt(i);
-			System.out.println(uv.index + ": " + uv.getValue());
-		}
-		*/
 		System.out.println("-------------------");
 
 	}
@@ -386,14 +375,7 @@ public final class LuaState {
 					if ((bd = BaseLib.rawTonumber(bo)) == null || (cd = BaseLib.rawTonumber(co)) == null) {
 						String meta_op = meta_ops[opcode];
 
-						Object metafun = null;
-						if (bd == null) {
-							metafun = getMetaOp(bo, meta_op);
-						}
-						if (metafun == null && cd == null) {
-							metafun = getMetaOp(co, meta_op);
-						}
-						BaseLib.luaAssert(metafun != null, "no meta function was found for " + meta_op);
+						Object metafun = getMetaOp(bo, co, meta_op);
 						res = call(metafun, bo, co, null);
 					} else {
 						res = primitiveMath(bo, co, opcode);
@@ -561,25 +543,15 @@ public final class LuaState {
 
 						String meta_op = meta_ops[opcode];
 
-						Object metafun = null;
-						if (bo == null) {
-							metafun = getMetaOp(bo, meta_op);
-						}
-						if (metafun == null && co == null) {
-							metafun = getMetaOp(co, meta_op);
-						}
+						Object metafun = getMetaOp(bo, co, meta_op);
 
 						/* Special case:
 						 * OP_LE uses OP_LT if __le is not defined.
-						 * if a <= b is then translated to not (b < a)
+						 * a <= b is then translated to not (b < a)
 						 */
 						if (metafun == null && opcode == OP_LE) {
-							if (bo == null) {
-								metafun = getMetaOp(bo, "__lt");
-							}
-							if (metafun == null && co == null) {
-								metafun = getMetaOp(co, "__lt");
-							}								
+							metafun = getMetaOp(bo, co, "__lt");
+							
 							// Swap the objects
 							Object tmp = bo;
 							bo = co;
@@ -592,13 +564,13 @@ public final class LuaState {
 						boolean resBool;
 						if (metafun == null && opcode == OP_EQ) {
 							resBool = LuaState.luaEquals(bo, co); 
-						} else {	
+						} else {
 							Object res = call(metafun, bo, co, null);
 							resBool = boolEval(res);
 						}
 
 						if (invert) {
-							resBool = !resBool; 
+							resBool = !resBool;
 						}
 						if (resBool == (a == 0)) {
 							callFrame.pc++;
@@ -660,7 +632,7 @@ public final class LuaState {
 						prototype = closure.prototype;
 						opcodes = prototype.opcodes;
 					} else if (fun instanceof JavaFunction) {
-						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
+						callJava((JavaFunction) fun, base + a, nArguments2);
 					
 						callFrame = currentThread.currentCallFrame();
 						closure = callFrame.closure;
@@ -702,16 +674,17 @@ public final class LuaState {
 						callFrame.init();
 						
 					} else if (fun instanceof JavaFunction) {
-						int nReturnValues = callJava((JavaFunction) fun, base + a, nArguments2);
+						inspectThread(callFrame.thread);
+						callJava((JavaFunction) fun, returnBase, nArguments2);
+						inspectThread(callFrame.thread);
 
-						currentThread.popCallFrame();
-						if (callFrame.fromLua) {
-							callFrame = currentThread.currentCallFrame();
+						callFrame = currentThread.currentCallFrame();
 
-							if (callFrame.restoreTop) {
-								callFrame.setTop(prototype.maxStacksize);
-							}
-						} else {
+						if (callFrame.restoreTop) {
+							callFrame.setTop(prototype.maxStacksize);
+						}
+						
+						if (!callFrame.fromLua) {
 							return;
 						}
 					} else {
@@ -938,14 +911,21 @@ public final class LuaState {
 	}
 
 	public final Object getMetaOp(Object o, String meta_op) {
-		if (o == null) {
-			return null;
-		}
 		LuaTable meta = (LuaTable) getmetatable(o, true);
 		if (meta == null) {
 			return null;
 		}
 		return meta.rawget(meta_op);
+	}
+
+	public final Object getMetaOp(Object a, Object b, String meta_op) {
+		LuaTable meta1 = (LuaTable) getmetatable(a, true);
+		LuaTable meta2 = (LuaTable) getmetatable(b, true);
+		BaseLib.luaAssert(meta1 == meta2, "objects must have the same metatable");
+		if (meta1 == null) {
+			return null;
+		}
+		return meta1.rawget(meta_op);
 	}
 
 	public void setUserdataMetatable(Class type, LuaTable metatable) {
@@ -1065,7 +1045,7 @@ public final class LuaState {
     			curObj = metaOp;
     		}
     	}
-   		throw new RuntimeException("recursive metatable!");
+   		throw new RuntimeException("loop in gettable");
 	}
 	
 	public final void tableSet(Object table, Object key, Object value) {
@@ -1098,10 +1078,13 @@ public final class LuaState {
     			curObj = metaOp;
     		}
     	}
-   		throw new RuntimeException("recursive metatable!");
+   		throw new RuntimeException("loop in settable");
 	}
 
 	public final Object getmetatable(Object o, boolean raw) {
+		if (o == null) {
+			return null;
+		}
 		LuaTable metatable;
 		if (o instanceof LuaTable) {
 			LuaTable t = (LuaTable) o;

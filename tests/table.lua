@@ -34,3 +34,26 @@ assert(rawget(t, "hello") == "world")
 rawset(t, "hello", "WORLD")
 assert(rawget(t, "hello") == "WORLD")
 
+
+do
+	local t = {}
+	for i = 1, 6 do
+		for j = 1, 2^i do
+			t[i] = i^2
+		end
+		for k, v in next, t do
+			assert(k^2 == v)
+			t[k] = nil
+		end
+	end
+end
+
+function endswith(s1, s2)
+	return s1:sub(-#s2, -1) == s2
+end
+
+
+local status, errmsg = pcall(function() local t = {} t[0/0] = 1 end)
+assert(not status)
+assert(endswith(errmsg, "table index is NaN"))
+

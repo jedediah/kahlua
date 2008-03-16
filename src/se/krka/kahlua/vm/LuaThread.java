@@ -198,10 +198,6 @@ public class LuaThread {
 		return top;
 	}
 
-	public LuaState getState() {
-		return state;
-	}
-
 	public void cleanCallFrames(LuaCallFrame callerFrame) {
 		LuaCallFrame frame;
 		while ((frame = currentCallFrame()) != callerFrame) {
