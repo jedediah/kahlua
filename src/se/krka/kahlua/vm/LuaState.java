@@ -378,7 +378,7 @@ public final class LuaState {
 						Object metafun = getMetaOp(bo, co, meta_op);
 						res = call(metafun, bo, co, null);
 					} else {
-						res = primitiveMath(bo, co, opcode);
+						res = primitiveMath(bd, cd, opcode);
 					}
 					callFrame.set(a, res);
 					break;
@@ -967,7 +967,7 @@ public final class LuaState {
 		return (op >>> 14) - 131071;
 	}
 
-	private Double primitiveMath(Object x, Object y, int opcode)
+	private Double primitiveMath(Double x, Double y, int opcode)
 	{
 		double v1 = fromDouble(x);
 		double v2 = fromDouble(y);

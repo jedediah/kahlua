@@ -85,9 +85,11 @@ public class LuaThread {
 		while (newSize <= index) {
 			newSize = 2 * newSize;
 		}
-		LuaCallFrame[] newStack = new LuaCallFrame[newSize];
-		System.arraycopy(callFrameStack, 0, newStack, 0, oldSize);
-		callFrameStack = newStack;
+		if (newSize > oldSize) {
+			LuaCallFrame[] newStack = new LuaCallFrame[newSize];
+			System.arraycopy(callFrameStack, 0, newStack, 0, oldSize);
+			callFrameStack = newStack;
+		}
 	}
 
 	public final void setCallFrameStackTop(int newTop) {
@@ -117,9 +119,11 @@ public class LuaThread {
 		while (newSize <= index) {
 			newSize = 2 * newSize;
 		}
-		Object[] newStack = new Object[newSize];
-		System.arraycopy(objectStack, 0, newStack, 0, oldSize);
-		objectStack = newStack;
+		if (newSize > oldSize) {
+			Object[] newStack = new Object[newSize];
+			System.arraycopy(objectStack, 0, newStack, 0, oldSize);
+			objectStack = newStack;
+		}
 	}
 
 	public final void setTop(int newTop) {
