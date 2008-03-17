@@ -108,6 +108,7 @@ public final class LuaState {
 		currentThread = new LuaThread(this);
 	}
 
+	/*
 	private static String pad(String s, int width) {
 		while (s.length() < width) s = " " + s;
 		return s;
@@ -163,6 +164,7 @@ public final class LuaState {
 		System.out.println("-------------------");
 
 	}
+	*/
 	
 	public int call(int nArguments) {
 		int top = currentThread.getTop();
@@ -433,10 +435,9 @@ public final class LuaState {
 
 					int first = b;
 					int last = c;
-
-					Object res = currentThread.objectStack[last];
+					
+					Object res = callFrame.get(last);
 					last--;
-
 					while (first <= last) {
 						// Optimize for multi string concats
 						{
@@ -476,12 +477,14 @@ public final class LuaState {
 							if (metafun == null) {
 								metafun = getMetaOp(res, "__concat");
 							}
-							
+							if (metafun == null) {
+								throw new RuntimeException("missing __concat for " + leftConcat + " and " + res);
+							}
 							res = call(metafun, leftConcat, res, null);
 							last--;
 						}
 					}
-					callFrame.set(a,  res);
+					callFrame.set(a, res);
 					break;
 				}
 				case OP_JMP: {
@@ -674,17 +677,22 @@ public final class LuaState {
 						callFrame.init();
 						
 					} else if (fun instanceof JavaFunction) {
-						inspectThread(callFrame.thread);
 						callJava((JavaFunction) fun, returnBase, nArguments2);
-						inspectThread(callFrame.thread);
 
-						callFrame = currentThread.currentCallFrame();
+						currentThread.popCallFrame();
+						if (callFrame.fromLua) {
+							if (callFrame.restoreTop) {
+								callFrame.setTop(prototype.maxStacksize);
+							}
+							
+							callFrame = currentThread.currentCallFrame();
 
-						if (callFrame.restoreTop) {
-							callFrame.setTop(prototype.maxStacksize);
-						}
-						
-						if (!callFrame.fromLua) {
+							// FIXME: Handle implicit yield
+							if (callFrame == null) {
+								throw new RuntimeException("NYI: implicit yield");
+							}
+
+						} else {
 							return;
 						}
 					} else {

@@ -1,3 +1,33 @@
+-- test concatenation
+do
+	local s1, s2 = "hello", "world"
+	local s = s1 .. s2
+	assert(s == "helloworld")
+end
+
+do
+	local s1, s2, s3, s4 = "this", "is", "a", "test"
+	local s = s1 .. s2 .. s3 .. s4
+	assert(s == "thisisatest")
+end
+
+do
+	local meta = {__concat = function(a, b)
+		if type(a) == "table" then
+			a = a[1]
+		end
+		if type(b) == "table" then
+			b = b[1]
+		end
+		return a .. b
+	end}
+	local t1 = setmetatable({"hello"}, meta)
+	local t2 = setmetatable({" "}, meta)
+	local t3 = setmetatable({"world"}, meta)
+	local s = t1 .. t2 .. t3
+	assert(s == "hello world")
+end
+
 do
 	assert(type(string) == "table")
 	assert(type(string.sub) == "function")

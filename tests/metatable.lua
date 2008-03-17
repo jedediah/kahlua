@@ -61,7 +61,7 @@ do
 	assert(not ok)
 	--assert(endswith(errmsg, "no meta function was found for __add"))
 	
-	local ok, errmsg = pcall(function() return -t1 end)
+	local ok, errmsg = pcall(function() local x = (-t1) end)
 	assert(not ok)
 
 	local ok, errmsg = pcall(function() return t1 <= t2 end)

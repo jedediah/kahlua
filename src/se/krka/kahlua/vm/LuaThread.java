@@ -205,6 +205,7 @@ public class LuaThread {
 	public void cleanCallFrames(LuaCallFrame callerFrame) {
 		LuaCallFrame frame;
 		while ((frame = currentCallFrame()) != callerFrame) {
+			closeUpvalues(frame.returnBase);
 			addStackTrace(frame);				
 			popCallFrame();
 		}
@@ -220,9 +221,5 @@ public class LuaThread {
 				}
 			}
 		}
-	}
-	
-	public final void cleanup(int top) {
-		closeUpvalues(top);
 	}
 }

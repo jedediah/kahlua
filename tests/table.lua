@@ -57,3 +57,11 @@ local status, errmsg = pcall(function() local t = {} t[0/0] = 1 end)
 assert(not status)
 assert(endswith(errmsg, "table index is NaN"))
 
+local status, errmsg = pcall(function() local t = {} t[nil] = 1 end)
+assert(not status)
+assert(endswith(errmsg, "table index is nil"))
+
+local status, errmsg = pcall(function() local t = {} next(t, "bad key") end)
+assert(not status)
+assert(endswith(errmsg, "invalid key to 'next'"))
+

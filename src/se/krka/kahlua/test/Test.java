@@ -94,7 +94,6 @@ public class Test {
 
 				// TODO: Repair cleanup code!
 				state.currentThread.cleanCallFrames(null);
-				state.currentThread.cleanup(0);
 				state.currentThread.setTop(0);
 				
 			}
