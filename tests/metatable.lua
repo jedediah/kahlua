@@ -91,3 +91,11 @@ do
 	assert(not ok)
 end
 
+do
+	local meta = {__unm = function(a) return {-a[1]} end}
+	local t
+	local ok, errmsg = pcall(function() t = -{12} end)
+	assert(ok)
+	assert(t[1] == -12)
+end
+
