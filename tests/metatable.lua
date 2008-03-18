@@ -93,9 +93,20 @@ end
 
 do
 	local meta = {__unm = function(a) return {-a[1]} end}
-	local t
-	local ok, errmsg = pcall(function() t = -{12} end)
+	local t1 = setmetatable({12}, meta)
+	local t2
+	local ok, errmsg = pcall(function() t2 = -t1 end)
 	assert(ok)
-	assert(t[1] == -12)
+	assert(t2[1] == -12)
+end
+
+do
+	local meta = {__eq = function(a, b) return rawequal(a, b) end}
+	local t1 = setmetatable({}, meta)
+	local t2 = setmetatable({}, meta)
+	assert(t1 == t1)
+	assert(not (t1 == t2))
+	assert(not (t1 ~= t1))
+	assert(t1 ~= t2)
 end
 

@@ -35,8 +35,15 @@ do
 	assert(a == b)
 	assert(rawequal(a, b))
 	a = 1.0
+
+	assert(not (a == b))
+	assert(not rawequal(a, b))
 	b = 1.0
+	assert(a == b)
 	assert(rawequal(a, b))
+	b = 2.0
+	assert(not (a == b))
+	assert(not rawequal(a, b))
 end
 
 do
@@ -70,5 +77,66 @@ do
 	local ok, errmsg = pcall(function() error(t) end)
 	assert(not ok)
 	assert(errmsg == t)
+end
+
+
+
+do
+	local function test(a, b)
+		-- test OP_LT
+		if a < b then
+			assert(true)
+		else
+			assert(false)
+		end
+		if not (a < b) then
+			assert(false)
+		else
+			assert(true)
+		end
+		if b < a then
+			assert(false)
+		else
+			assert(true)
+		end
+		if not (b < a) then
+			assert(true)
+		else
+			assert(false)
+		end
+
+		-- test OP_LE
+		if a <= b then
+			assert(true)
+		else
+			assert(false)
+		end
+		if not (a <= b) then
+			assert(false)
+		else
+			assert(true)
+		end
+		if b <= a then
+			assert(false)
+		else
+			assert(true)
+		end
+		if not (b <= a) then
+			assert(true)
+		else
+			assert(false)
+		end
+	end
+	test(1, 2)
+	test("1", "2")
+
+end
+
+do
+	local ok, errmsg = pcall(function() (nil)() end)
+	assert(not ok)
+
+	local ok, errmsg = pcall(function() return (nil)() end)
+	assert(not ok)
 end
 

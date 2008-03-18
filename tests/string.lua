@@ -29,6 +29,15 @@ do
 end
 
 do
+	local t1 = {"hello"}
+	local t2 = {" "}
+	local t3 = {"world"}
+	local s
+	local ok, errmsg = pcall(function() s = t1 .. t2 .. t3 end)
+	assert(not ok)
+end
+
+do
 	assert(type(string) == "table")
 	assert(type(string.sub) == "function")
 	assert(type(string.byte) == "function")
