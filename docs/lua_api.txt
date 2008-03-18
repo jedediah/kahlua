@@ -5,7 +5,8 @@ Implemented in Java
 -------------------
 getfenv(f)
 	returns the environment for function f
-	f must be a lua function
+	f must be a lua function or an integer describing the stack level,
+	much like in real lua
 
 setfenv(f, env)
 	   sets the environment of f to env
@@ -35,12 +36,15 @@ setmetatable
 tostring
 tonumber
 print
+collectgarbage
 string.char
 string.byte
 string.sub
 string.lower
 string.upper
+string.reverse
 math.*
+coroutine.*
 
 Implemented in Lua
 ------------------
@@ -54,10 +58,10 @@ table.remove
 table.maxn
 table.getn
 table.setn
+coroutine.wrap
 
 Not implemented
 ---------------
-collectgarbage
 dofile
 load
 loadfile
@@ -68,15 +72,12 @@ module
 require
 package.*
 
-coroutine.*
-
 string.dump
 string.find
 string.format
 string.gmatch
 string.gsub
 string.match
-string.reverse
 
 table.concat
 table.sort

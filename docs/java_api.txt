@@ -23,10 +23,9 @@ Use null as metatable to unset.
 Differences compared to standard Lua
 ------------------------------------
 
-All metatable keys except for __gc and __mode are supported.
+All metatable keys except for __gc are supported.
 __gc is unsupported because CLDC 1.1 doesn't have a way to report when an
 object gets garbage collected.
-Since Java handles garbage collection, weak tables also become a problem.
 
 Strings
 -------
@@ -44,8 +43,7 @@ Native functions
 ----------------
 You most likely want to provide more functions for your lua environment to use.
 Any object that implements the JavaFunction interface may be passed to Kahlua.
-See the classes in se.krka.kahlua.stdlib for examples on usage. StringLib is probably the easiest to take a
-look at.
+See the classes in se.krka.kahlua.stdlib for examples on usage. StringLib is probably the easiest to take a look at.
 
 Loading Lua code
 ----------------
@@ -59,3 +57,4 @@ See se.krka.kahlua.test.Test to see examples of usage
 Supported Lua versions
 ----------------------
 Kahlua only supports Lua 5.1 bytecode, without any of the 5.0 compat options.
+

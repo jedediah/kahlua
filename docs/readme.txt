@@ -18,3 +18,4 @@ Kahlua is distributed under the MIT licence which is the same as standard Lua wh
 pretty much use it in any way you want.
 However, I would very much appreciate bug reports, bug fixes, optimizations or simply any good idea that might
 improve Kahlua
+
