@@ -312,7 +312,7 @@ public final class BaseLib implements JavaFunction {
 		callFrame.set(0, Boolean.FALSE);
 		callFrame.set(1, errorMessage);
 		callFrame.set(2, state.currentThread.stackTrace.intern());
-		
+		state.currentThread.stackTrace = "";
 		return 3;
 	}
 

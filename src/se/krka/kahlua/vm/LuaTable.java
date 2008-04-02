@@ -327,9 +327,8 @@ public final class LuaTable {
 		while (low < high) {
 			int middle = (high + low + 1) >> 1;
 			Double key = LuaState.toDouble(middle);
-			int mp = getMP(key);
-			int index = hash_primitiveFindKey(key, mp);
-			if (index == -1) {
+			Object value = rawget(key);
+			if (value == null) {
 				high = middle - 1;
 			} else {
 				low = middle;

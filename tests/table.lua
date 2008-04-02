@@ -65,3 +65,28 @@ local status, errmsg = pcall(function() local t = {} next(t, "bad key") end)
 assert(not status)
 assert(endswith(errmsg, "invalid key to 'next'"))
 
+do
+	t = {1, 2, 3, 4, 5, 6, 7}
+	assert(#t == 7)
+	
+	t = {math.cos(1)}
+	assert(#t == 1)
+	
+	function f() return 1 end
+	t = {f()}
+	assert(#t == 1)
+	
+	function f() return 1, 2, 3, 4, 5 end
+	t = {f()}
+	assert(#t == 5)
+
+	t = {1, 2, 3, f()}
+	assert(#t == 8)
+
+	t = {f(), 1, 2, 3}
+	assert(#t == 4)
+
+	t = {f(), nil}
+	assert(#t == 1)
+end
+

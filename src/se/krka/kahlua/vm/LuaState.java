@@ -806,6 +806,10 @@ public final class LuaState {
 					b = getB9(op);
 					c = getC9(op);
 
+					if (b == 0) {
+						b = callFrame.getTop() - a - 1;
+					}
+					
 					if (c == 0) {
 						c = opcodes[callFrame.pc++];						
 					}
