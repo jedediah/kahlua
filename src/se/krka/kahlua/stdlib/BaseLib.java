@@ -390,7 +390,7 @@ public final class BaseLib implements JavaFunction {
 			}
 			if (o instanceof String) {
 				try {
-					return new Double(Double.parseDouble((String)o));
+					return Double.valueOf((String)o);
 				} catch (NumberFormatException nfe) {
 					throw new RuntimeException("bad argument #" + n + " to '" + function +
 						"' (number expected, got string)");
@@ -425,7 +425,7 @@ public final class BaseLib implements JavaFunction {
 			}
 			if (o instanceof String) {
 				try {
-					return new Double((String)o);
+					return Double.valueOf((String)o);
 				} catch (NumberFormatException nfe) {
 					return null;
 				}
@@ -582,7 +582,7 @@ public final class BaseLib implements JavaFunction {
 
 		try {
 			if (radix == 10) {
-				return LuaState.toDouble(Double.parseDouble(s));
+				return Double.valueOf(s);
 			} else {
 				return LuaState.toDouble(Integer.parseInt(s, radix));
 			}
