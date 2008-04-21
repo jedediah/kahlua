@@ -110,3 +110,22 @@ do
 	assert(t1 ~= t2)
 end
 
+do
+	assert("a" ~= nil)
+end
+
+do
+	local meta1 = {__eq = function(a, b) return true end}
+	local meta2 = {__eq = function(a, b) return false end}
+	local t1 = setmetatable({}, meta1)
+	local t2 = nil
+	assert(t1 ~= t2)
+	assert(t2 ~= t1)
+	t2 = {}
+	assert(t1 ~= t2)
+	assert(t2 ~= t1)
+	t2 = setmetatable(t2, meta2)
+	assert(t1 ~= t2)
+	assert(t2 ~= t1)
+end
+

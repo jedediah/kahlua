@@ -933,8 +933,7 @@ public final class LuaState {
 	public final Object getMetaOp(Object a, Object b, String meta_op) {
 		LuaTable meta1 = (LuaTable) getmetatable(a, true);
 		LuaTable meta2 = (LuaTable) getmetatable(b, true);
-		BaseLib.luaAssert(meta1 == meta2, "objects must have the same metatable");
-		if (meta1 == null) {
+		if (meta1 != meta2 || meta1 == null) {
 			return null;
 		}
 		return meta1.rawget(meta_op);
