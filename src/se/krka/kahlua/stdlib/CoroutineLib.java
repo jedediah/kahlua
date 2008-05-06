@@ -41,6 +41,10 @@ public class CoroutineLib implements JavaFunction {
 	
 	
 	private static final String[] names;
+	
+	// NOTE: LuaThread.class won't work in J2ME - so this is used as a workaround
+	private static final Class LUA_THREAD_CLASS = new LuaThread(null).getClass();
+	
 	static {
 		names = new String[NUM_FUNCTIONS];
 		names[CREATE] = "create";
@@ -75,7 +79,7 @@ public class CoroutineLib implements JavaFunction {
 		}
 		
 		coroutine.rawset("__index", coroutine);
-		state.setUserdataMetatable(LuaThread.class, coroutine);
+		state.setUserdataMetatable(LUA_THREAD_CLASS, coroutine);
 	}
 	
 	public int call(LuaCallFrame callFrame, int nArguments) {

@@ -364,9 +364,9 @@ public final class BaseLib implements JavaFunction {
 	public static String numberToString(Double num) {
 		double n = num.doubleValue();
 		if (Math.floor(n) == n) {
-			return Long.toString(num.longValue()).intern();
+			return String.valueOf(num.longValue());
 		}
-		return num.toString().intern();
+		return num.toString();
 	}
 	
 	public static Object getArg(LuaCallFrame callFrame, int n, String type,
@@ -515,7 +515,7 @@ public final class BaseLib implements JavaFunction {
 	private static int tostring(LuaCallFrame callFrame, int nArguments) {
 		luaAssert(nArguments >= 1, "Not enough arguments");
 		Object o = callFrame.get(0);
-		Object res = tostring(o, callFrame.thread.state);
+		Object res = tostring(o, callFrame.thread.state).intern();
 		callFrame.push(res);
 		return 1;
 	}
@@ -523,7 +523,7 @@ public final class BaseLib implements JavaFunction {
 	public static String tostring(Object o, LuaState state) {
 		if (o == null) return "nil";
 		if (o instanceof String) return (String) o;
-		if (o instanceof Double) return ((Double) o).toString().intern();
+		if (o instanceof Double) return rawTostring(o);
 		if (o instanceof Boolean) return o == Boolean.TRUE ? "true" : "false";
 		if (o instanceof JavaFunction) return "function 0x" + System.identityHashCode(o);
 		if (o instanceof LuaClosure) return "function 0x" + System.identityHashCode(o);
@@ -543,28 +543,21 @@ public final class BaseLib implements JavaFunction {
 		luaAssert(nArguments >= 1, "Not enough arguments");
 		Object o = callFrame.get(0);
 
-		if (o instanceof Double) {
-			o = ((Double) o).toString().intern();
+		if (nArguments == 1) {
+			callFrame.push(rawTonumber(o));
+			return 1;
 		}
-		
+
 		String s = (String) o;
 
-		int radix = 10;
-		if (nArguments >= 2) {
-			Object radixObj = callFrame.get(1);
-			Double radixDouble; 
-			if (radixObj instanceof Double) {
-				radixDouble = (Double) radixObj;
-			} else if (radixObj instanceof String) {
-				radixDouble = tonumber((String) radixObj);
-			} else {
-				throw new RuntimeException("Argument 2 must be a number");
-			}
-			double dradix = LuaState.fromDouble(radixDouble);
-			radix = (int) dradix;
-			if (radix != dradix) {
-				throw new RuntimeException("base is not an integer");
-			}
+		Object radixObj = callFrame.get(1);
+		Double radixDouble = rawTonumber(radixObj); 
+		luaAssert(radixDouble != null, "Argument 2 must be a number");
+		
+		double dradix = LuaState.fromDouble(radixDouble);
+		int radix = (int) dradix;
+		if (radix != dradix) {
+			throw new RuntimeException("base is not an integer");
 		}
 		Object res = tonumber(s, radix);
 		callFrame.push(res);
@@ -623,7 +616,7 @@ public final class BaseLib implements JavaFunction {
 			return (String) o;
 		}
 		if (o instanceof Double) {
-			return ((Double) o).toString();
+			return numberToString((Double) o);
 		}
 		return null;
 	}

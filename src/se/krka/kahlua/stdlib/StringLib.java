@@ -42,6 +42,10 @@ public final class StringLib implements JavaFunction {
 	
 	
 	private static final String[] names;
+	
+	// NOTE: String.class won't work in J2ME - so this is used as a workaround
+	private static final Class STRING_CLASS = "".getClass();
+	
 	static {
 		names = new String[NUM_FUNCTIONS];
 		names[SUB] = "sub";
@@ -76,7 +80,7 @@ public final class StringLib implements JavaFunction {
 		}
 		
 		string.rawset("__index", string);
-		state.setUserdataMetatable(String.class, string);
+		state.setUserdataMetatable(STRING_CLASS, string);
 	}
 
 	public String toString() {

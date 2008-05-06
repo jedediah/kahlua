@@ -19,8 +19,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
-package se.krka.kahlua.test;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -33,6 +31,7 @@ import se.krka.kahlua.stdlib.StringLib;
 import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaPrototype;
 import se.krka.kahlua.vm.LuaState;
+import se.krka.kahlua.test.UserdataArray;
 
 public class Test {
 	private static LuaState getState(File dir) throws FileNotFoundException, IOException {

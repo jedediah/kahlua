@@ -26,7 +26,7 @@ import java.util.Vector;
 public class LuaThread {
 	public LuaThread parent;
 	
-	public String stackTrace;
+	public String stackTrace = "";
 
 	public Vector liveUpvalues;
 
@@ -47,12 +47,15 @@ public class LuaThread {
 	public int expectedResults;
 	
 	public LuaThread(LuaState state) {
-		objectStack = new Object[INITIAL_STACK_SIZE];
-		callFrameStack = new LuaCallFrame[INITIAL_CALL_FRAME_STACK_SIZE];
-		liveUpvalues = new Vector();
-		stackTrace = "";
-		
 		this.state = state;
+	}
+
+	private void init() {
+		if (objectStack == null) {
+			objectStack = new Object[INITIAL_STACK_SIZE];
+			callFrameStack = new LuaCallFrame[INITIAL_CALL_FRAME_STACK_SIZE];
+			liveUpvalues = new Vector();
+		}
 	}
 	
 	public LuaCallFrame pushNewCallFrame(LuaClosure closure, int localBase, int returnBase, int nArguments, boolean fromLua, boolean insideCoroutine) {
@@ -77,6 +80,7 @@ public class LuaThread {
 	}
 	
 	private final void ensureCallFrameStackSize(int index) {
+		init();
 		if (index > MAX_CALL_FRAME_STACK_SIZE) {
 			throw new RuntimeException("Stack overflow");			
 		}
@@ -111,6 +115,7 @@ public class LuaThread {
 	}
 
 	private final void ensureStacksize(int index) {
+		init();
 		if (index > MAX_STACK_SIZE) {
 			throw new RuntimeException("Stack overflow");			
 		}

@@ -222,6 +222,11 @@ public final class LuaTable {
 	}
 
 	private void hash_rehash() {
+		// NOTE: it's important to avoid GC of weak stuff here, so convert it
+		// to plain before rehashing
+		boolean oldWeakKeys = weakKeys, oldWeakValues = weakValues;
+		updateWeakSettings(false, false);
+		
 		Object[] oldKeys = keys;
 		Object[] oldValues = values;
 		int n = oldKeys.length;
@@ -229,12 +234,8 @@ public final class LuaTable {
 		int used= 0;
 		int i = n;
 		while (i-- > 0) {
-			if (__getKey(i) != null && __getValue(i) != null) {
+			if (keys[i] != null && values[i] != null) {
 				used++;
-			} else {
-				// Wipe nil key/value pairs early, to simplify copying for weak tables
-				keys[i] = null;
-				values[i] = null;
 			}
 		}
 		int capacity = 2 * nearestPowerOfTwo(used);
@@ -256,6 +257,7 @@ public final class LuaTable {
 				}
 			}
 		}
+		updateWeakSettings(oldWeakKeys, oldWeakValues);
 	}
 
 	public LuaTable metatable;
@@ -304,7 +306,7 @@ public final class LuaTable {
 	public final Object next(Object key) {
 		int index = 0;
 		if (key != null) {
-			int mp = luaHashcode(key) & (keys.length - 1);
+			int mp = getMP(key);
 			index = 1 + hash_primitiveFindKey(key, mp);
 			BaseLib.luaAssert(index > 0, "invalid key to 'next'");
 		}
@@ -346,6 +348,11 @@ public final class LuaTable {
 				return 0;
 			}
 			return ad.hashCode();
+		}
+		if (BuildSettings.TARGET_PLATFORM_J2ME_EMULATOR) {
+			if (a instanceof String) {
+				return a.hashCode();
+			}
 		}
 		return System.identityHashCode(a);
 	}

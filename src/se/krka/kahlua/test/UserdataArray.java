@@ -37,6 +37,9 @@ public class UserdataArray implements JavaFunction {
 	private static final int NEW = 3;
 	private static final int PUSH = 4;
 	
+	// NOTE: Vector.class won't work in J2ME - so this is used as a workaround
+	private static final Class VECTOR_CLASS = new Vector().getClass();
+	
 	private static LuaTable metatable;
 	
 	public static void register(LuaState state) {
@@ -51,7 +54,7 @@ public class UserdataArray implements JavaFunction {
 			metatable.rawset("push", new UserdataArray(PUSH));
 		}
 		
-		state.setUserdataMetatable(Vector.class, metatable);
+		state.setUserdataMetatable(VECTOR_CLASS, metatable);
 		state.environment.rawset("array", metatable);
 	}
 
