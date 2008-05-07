@@ -5,21 +5,21 @@
 	
 	<!-- Default properties - please change this to what you want to use, or predefine them in a file called local.properties -->
 	
-	<property name="wtk.home" value="${basedir}/WTK2.2" />
+	<property name="wtk.home" value="${basedir}/WTK" />
 	<property name="antenna.jar" value="${basedir}/tools/antenna-bin-0.9.13.jar" />
 	<property name="luac.path" value="luac" />
 	
 	<!-- Don't modify below here unless you know what you're doing -->
 	<available property="required.wtk" file="${wtk.home}" />
-	<fail unless="required.wtk" message="You must set up wtk.home to point to a WTK directory" />	
+	<fail unless="required.wtk" message="You must set up wtk.home to point to a WTK directory: ${wtk.home}" />	
 
 	<available property="required.antenna" file="${antenna.jar}" />
 	<fail unless="required.antenna" message="You must set up antenna.jar to point to the antenna jar" />	
 	
-	<available property="required.cldc" file="${basedir}/lib/cldcapi11.jar" />
-	<available property="required.midp" file="${basedir}/lib/midpapi20.jar" />
-	<fail unless="required.cldc" message="You must place cldcapi11.jar in the lib-directory" />	
-	<fail unless="required.midp" message="You must place midpapi20.jar in the lib-directory" />	
+	<available property="required.cldc" file="${wtk.home}/lib/cldcapi11.jar" />
+	<available property="required.midp" file="${wtk.home}/lib/midpapi20.jar" />
+	<fail unless="required.cldc" message="You must place cldcapi11.jar in ${wtk.home}/lib" />	
+	<fail unless="required.midp" message="You must place midpapi20.jar in ${wtk.home}/lib" />	
 
 	<property name="midlet.mainclass" value="KahluaDemo" />
 
@@ -27,9 +27,9 @@
 	<taskdef resource="antenna.properties" classpath="${antenna.jar}"/>
 	
 	<path id="build.buildclasspath">
-		<fileset dir="${basedir}/lib/">
-			<include name="*.jar"/>
-			<include name="*.zip"/>
+		<fileset dir="${wtk.home}/lib">
+			<include name="cldcapi11.jar"/>
+			<include name="midpapi20.jar"/>
 		</fileset>
 	</path>	
 		
@@ -116,7 +116,7 @@
 
 		<exec executable="${wtk.home}/bin/preverify">
 			<arg line="-classpath" />
-			<arg line="lib/cldcapi11.jar:lib/midpapi20.jar" />
+			<arg line="${wtk.home}/lib/cldcapi11.jar:${wtk.home}/lib/midpapi20.jar" />
 			<arg line="-target" />
 			<arg line="CLDC1.1" />
 			<arg line="${basedir}/build/kahluademo.jar" />
