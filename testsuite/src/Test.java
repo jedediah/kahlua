@@ -28,10 +28,10 @@ import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.stdlib.CoroutineLib;
 import se.krka.kahlua.stdlib.MathLib;
 import se.krka.kahlua.stdlib.StringLib;
+import se.krka.kahlua.test.UserdataArray;
 import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaPrototype;
 import se.krka.kahlua.vm.LuaState;
-import se.krka.kahlua.test.UserdataArray;
 
 public class Test {
 	private static LuaState getState(File dir) throws FileNotFoundException, IOException {
@@ -45,17 +45,15 @@ public class Test {
 		UserdataArray.register(state);
 		CoroutineLib.register(state);
 		
-		LuaClosure closure;
-		try {
-			closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
-			state.call(closure, null, null, null);
-			return state;		
-		} catch (RuntimeException e) {
-			System.out.println("Stdlib failed: " + e.getMessage());
-			e.printStackTrace();
-			System.out.println(state.currentThread.stackTrace);
-			throw e;
+		LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
+		Object[] results = state.pcall(closure);
+		if (results[0] != Boolean.TRUE) {
+			System.out.println("Stdlib failed: " + results[1]);
+			((Throwable) (results[3])).printStackTrace();
+			System.out.println(results[2]);
+			state = null;
 		}
+		return state;
 	}
 	
 	public static void main(String[] args) throws FileNotFoundException, IOException {
@@ -74,27 +72,20 @@ public class Test {
 		int total = 0;
 		for (int i = 0; i < children.length; i++) {
 			File child = children[i];
-			
-			try {
-				if (!child.getName().equals("stdlib.lbc") && child.getName().endsWith(".lbc")) {
-					total++;
-					LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.environment);
-					if (closure == null) {
-						throw new RuntimeException("null");
-					}
-					state.call(closure, null, null, null);
+
+			if (!child.getName().equals("stdlib.lbc") && child.getName().endsWith(".lbc")) {
+				total++;
+				
+				LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.environment);
+				Object[] results = state.pcall(closure);
+				if (results[0] == Boolean.TRUE) {
 					System.out.println("Ok:     " + child);
 					successful++;
+				} else {
+					System.out.println("Failed: " + child + ": " +  results[1]);
+					((Throwable) (results[3])).printStackTrace();
+					System.out.println(results[2]);
 				}
-			} catch (RuntimeException e) {
-				System.out.println("Failed: " + child + ": " +  e.getMessage());
-				e.printStackTrace();
-				System.out.println(state.currentThread.stackTrace);
-
-				// TODO: Repair cleanup code!
-				state.currentThread.cleanCallFrames(null);
-				state.currentThread.setTop(0);
-				
 			}
 		}
 		System.out.println(successful + " of " + total + " tests were ok!");

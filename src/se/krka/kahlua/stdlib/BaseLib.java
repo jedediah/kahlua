@@ -191,14 +191,8 @@ public final class BaseLib implements JavaFunction {
         	LuaClosure closure = (LuaClosure) o;
         	res = closure.env;
         } else {
-        	Double d = null;
-        	if (o instanceof String) {
-        		d = tonumber((String) o);
-        	} else if (o instanceof Double) {
-        		d = (Double) o;
-        	} else {
-    			throw new RuntimeException("Expected number");
-        	}
+        	Double d = rawTonumber(o);
+        	luaAssert(d != null, "Expected number");
         	int level = d.intValue();
         	luaAssert(level >= 0, "level must be non-negative");
         	int callFrame2index = callFrame.thread.callFrameTop - level - 1;
@@ -283,37 +277,7 @@ public final class BaseLib implements JavaFunction {
 	}
 
 	public static int pcall(LuaCallFrame callFrame, int nArguments) {
-		callFrame.thread.stackTrace = "";
-
-		LuaState state = callFrame.thread.state;
-		Object errorMessage;
-		try {
-
-			int nValues = state.call(nArguments - 1);
-			
-			callFrame.setTop(1 + nValues);
-			callFrame.stackCopy(0, 1, nValues);
-			callFrame.set(0, Boolean.TRUE);
-			
-			return 1 + nValues;
-		} catch (LuaException e) {
-			errorMessage = e.errorMessage;
-		} catch (Throwable e) {
-			errorMessage = e.getMessage();
-		}
-		
-		callFrame.thread.cleanCallFrames(callFrame);
-		
-		if (errorMessage instanceof String) {
-			errorMessage = ((String) errorMessage).intern();
-		}
-		
-		callFrame.setTop(3);
-		callFrame.set(0, Boolean.FALSE);
-		callFrame.set(1, errorMessage);
-		callFrame.set(2, state.currentThread.stackTrace.intern());
-		state.currentThread.stackTrace = "";
-		return 3;
+		return callFrame.thread.state.pcall(nArguments - 1);
 	}
 
 	private static int print(LuaCallFrame callFrame, int nArguments) {
@@ -336,16 +300,13 @@ public final class BaseLib implements JavaFunction {
 	private static int select(LuaCallFrame callFrame, int nArguments) {
 		luaAssert(nArguments >= 1, "Not enough arguments");
 		Object arg1 = callFrame.get(0);
-		Double d_indexDouble;
 		if (arg1 instanceof String) {
 			if (((String) arg1).startsWith("#")) {
 				callFrame.push(LuaState.toDouble(nArguments - 1));
 				return 1;
 			}
-			d_indexDouble = tonumber((String) arg1);
-		} else {
-			d_indexDouble = (Double) arg1;
 		}
+		Double d_indexDouble = rawTonumber(arg1);
 		double d_index = LuaState.fromDouble(d_indexDouble);
 		int index = (int) d_index;
 		if (index >= 1 && index <= (nArguments - 1)) {
@@ -378,24 +339,17 @@ public final class BaseLib implements JavaFunction {
 		}
 		// type coercion
 		if (type == "string") {
-			if (o instanceof Double) {
-				return numberToString((Double)o);
-			}
-			if (o instanceof String) {
-				return o;
+			String res = rawTostring(o);
+			if (res != null) {
+				return res;
 			}
 		} else if (type == "number") {
-			if (o instanceof Double) {
-				return o;
+			Double d = rawTonumber(o);
+			if (d != null) {
+				return d;
 			}
-			if (o instanceof String) {
-				try {
-					return Double.valueOf((String)o);
-				} catch (NumberFormatException nfe) {
-					throw new RuntimeException("bad argument #" + n + " to '" + function +
-						"' (number expected, got string)");
-				}
-			}
+			throw new RuntimeException("bad argument #" + n + " to '" + function +
+			"' (number expected, got string)");
 		}
 		// type checking
 		String isType = type(o);
@@ -413,23 +367,9 @@ public final class BaseLib implements JavaFunction {
 		}
 		// type coercion
 		if (type == "string") {
-			if (o instanceof Double) {
-				return numberToString((Double)o);
-			}
-			if (o instanceof String) {
-				return o;
-			}
+			return rawTostring(o);
 		} else if (type == "number") {
-			if (o instanceof Double) {
-				return o;
-			}
-			if (o instanceof String) {
-				try {
-					return Double.valueOf((String)o);
-				} catch (NumberFormatException nfe) {
-					return null;
-				}
-			}
+			return rawTonumber(o);
 		}
 		// no type checking, this is optional after all
 		return o;

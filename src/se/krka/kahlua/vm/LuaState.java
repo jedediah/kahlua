@@ -1113,6 +1113,62 @@ public final class LuaState {
 		return metatable;
 	}
 
+	public Object[] pcall(Object fun, Object[] args) {
+		int nArgs = args == null ? 0 : args.length;
+		
+		int oldTop = currentThread.getTop();
+		
+		currentThread.setTop(oldTop + 1 + nArgs);
+		currentThread.objectStack[oldTop] = fun;
+		int nRet = pcall(nArgs);
+		Object[] ret = new Object[nRet];
+		for (int i = 0; i < nRet; i++) {
+			ret[i] = currentThread.objectStack[oldTop + i];
+		}
+		currentThread.setTop(oldTop);
+		return ret;
+	}
+	
+	public Object[] pcall(Object fun) {
+		return pcall(fun, null);
+	}	
+	
+	public int pcall(int nArguments) {
+		LuaCallFrame currentCallFrame = currentThread.currentCallFrame();
+		currentThread.stackTrace = "";
+		int oldBase = currentThread.getTop() - nArguments - 1;
+		
+		Object errorMessage;
+		Throwable exception;
+		try {
+			int nValues = call(nArguments);
+			int newTop = oldBase + nValues + 1;
+			currentThread.setTop(newTop);
+			currentThread.stackCopy(oldBase, oldBase + 1, nValues);
+			currentThread.objectStack[oldBase] = Boolean.TRUE;
+			
+			return 1 + nValues; 
+		} catch (LuaException e) {
+			exception = e;
+			errorMessage = e.errorMessage;
+		} catch (Throwable e) {
+			exception = e;
+			errorMessage = e.getMessage();
+		}
+		currentThread.cleanCallFrames(currentCallFrame);
+		if (errorMessage instanceof String) {
+			errorMessage = ((String) errorMessage).intern();
+		}
+		currentThread.setTop(oldBase + 4);
+		currentThread.objectStack[oldBase] = Boolean.FALSE;
+		currentThread.objectStack[oldBase + 1] = errorMessage;
+		currentThread.objectStack[oldBase + 2] = currentThread.stackTrace.intern();
+		currentThread.objectStack[oldBase + 3] = exception;
+		currentThread.stackTrace = "";
+		
+		return 4;
+	}
+
 	public static boolean luaEquals(Object a, Object b) {
 		if (a == null || b == null) {
 			return a == b;

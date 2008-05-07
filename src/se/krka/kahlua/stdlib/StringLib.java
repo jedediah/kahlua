@@ -112,29 +112,15 @@ public final class StringLib implements JavaFunction {
 		return v;
 	}
 	
-	private String formatNumberByBase(Double num, int base, String digits) {
+	private String formatNumberByBase(Double num, int base) {
 		long number = unsigned(num);
-		StringBuffer result = new StringBuffer();
-		while (number > 0) {
-			result.append(digits.charAt((int)(number % base)));
-			number /= base;
-		}
-		return result.reverse().toString(); // intern not needed here.
+		return Long.toString(number, base);
 	}
 	
 	private int format(LuaCallFrame callFrame, int nArguments) {
-		final String lowerHex = "0123456789abcdef";
-		final String upperHex = "0123456789ABCDEF";
-
 		//BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
-		Object o = BaseLib.getArg(callFrame, 1, "string", "format");
+		String f = (String) BaseLib.getArg(callFrame, 1, "string", "format");
 		
-		if (o instanceof Double) {
-			// coerce number to string
-			callFrame.push(((Double) o).toString().intern());
-			return 1;
-		}
-		String f = (String) o;
 		int len = f.length();
 		int argc = 2;
 		StringBuffer result = new StringBuffer();
@@ -154,18 +140,15 @@ public final class StringLib implements JavaFunction {
 					break;
 				case 'o':
 					result.append(formatNumberByBase(
-						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 8,
-							lowerHex));
+						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 8));
 					break;
 				case 'x':
 					result.append(formatNumberByBase(
-						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 16,
-							lowerHex));
+						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 16));
 					break;
 				case 'X':
 					result.append(formatNumberByBase(
-						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 16,
-							upperHex));
+						(Double)BaseLib.getArg(callFrame, argc, "number", "format"), 16).toUpperCase());
 					break;
 				case 'u':
 					result.append(Long.toString(unsigned(
@@ -189,11 +172,12 @@ public final class StringLib implements JavaFunction {
 							"format");
 					result.append(BaseLib.numberToString(v));
 					break;
-				case 's':
-					o = BaseLib.getArg(callFrame, argc, "string", "format");
-					result.append((String)o);
+				case 's': {
+					String s = (String) BaseLib.getArg(callFrame, argc, "string", "format");
+					result.append(s);
 					argc++;
 					break;
+				}
 				case 'q':
 					String q = BaseLib.rawTostring(
 							BaseLib.getArg(callFrame, argc, "string", "format"));
@@ -254,9 +238,9 @@ public final class StringLib implements JavaFunction {
 		Double di = null;
 		Double dj = null;
 		if (nArguments >= 2) {
-			di = (Double) callFrame.get(1);
+			di = BaseLib.rawTonumber(callFrame.get(1));
 			if (nArguments >= 3) {
-				dj = (Double) callFrame.get(2);
+				dj = BaseLib.rawTonumber(callFrame.get(2));
 			}
 		}
 		double di2 = 1, dj2 = 1;
