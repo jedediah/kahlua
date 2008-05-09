@@ -21,11 +21,11 @@ THE SOFTWARE.
 */
 package se.krka.kahlua.vm;
 
-import java.io.PrintStream;
-import java.util.Random;
-
 import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.stdlib.MathLib;
+
+import java.io.PrintStream;
+import java.util.Random;
 
 public final class LuaState {
 	private static final int FIELDS_PER_FLUSH = 50;
@@ -1115,16 +1115,15 @@ public final class LuaState {
 
 	public Object[] pcall(Object fun, Object[] args) {
 		int nArgs = args == null ? 0 : args.length;
-		
+
 		int oldTop = currentThread.getTop();
-		
+
 		currentThread.setTop(oldTop + 1 + nArgs);
 		currentThread.objectStack[oldTop] = fun;
+		System.arraycopy(args, 0, currentThread.objectStack, oldTop + 1, nArgs);
 		int nRet = pcall(nArgs);
 		Object[] ret = new Object[nRet];
-		for (int i = 0; i < nRet; i++) {
-			ret[i] = currentThread.objectStack[oldTop + i];
-		}
+		System.arraycopy(currentThread.objectStack, oldTop, ret, 0, nRet);
 		currentThread.setTop(oldTop);
 		return ret;
 	}
