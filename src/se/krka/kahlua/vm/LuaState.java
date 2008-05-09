@@ -1120,7 +1120,9 @@ public final class LuaState {
 
 		currentThread.setTop(oldTop + 1 + nArgs);
 		currentThread.objectStack[oldTop] = fun;
-		System.arraycopy(args, 0, currentThread.objectStack, oldTop + 1, nArgs);
+		if (nArgs > 0) {
+			System.arraycopy(args, 0, currentThread.objectStack, oldTop + 1, nArgs);
+		}
 		int nRet = pcall(nArgs);
 		Object[] ret = new Object[nRet];
 		System.arraycopy(currentThread.objectStack, oldTop, ret, 0, nRet);
