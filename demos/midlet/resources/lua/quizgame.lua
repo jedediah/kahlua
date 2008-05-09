@@ -1,22 +1,20 @@
 local t = {
-"", "What is the best programming language?", "Lua", "Basic", "Lisp", "Java", "Easy", "Programming",
-"", "What is the worst programming language?", "Basic", "Lua", "Lisp", "Java", "Easy", "Programming",
+	{topic = "Lua", question = "What is the best programming language?", correct = "Lua", wrong = {"Basic", "Lisp", "Java"}},
+	{topic = "Lua", question = "What is the worst programming language?", correct = "Basic", wrong = {"Lua", "Lisp", "Java", "Pascal", "Haskell"}},
 }
 
-local numQuestions = math.floor(#t / 8)
 local score, total = 0, 0
 while true do
-	local qId = math.random(1, numQuestions) - 1
-	local offset = qId * 8
-	local correct = t[offset + 3]
-	local topic = t[offset + 8]
-	local question = t[offset + 2]
-	local answers = {correct, t[offset+ 4], t[offset + 5], t[offset + 6]}
-	for i = 1, 10 do
-		local a, b = math.random(1, 4), math.random(1, 4)
+	local q = t[math.random(1, #t)]
+	local correct = q.correct
+	local topic = q.topic
+	local question = q.question
+	local answers = {q.correct, unpack(q.wrong)}
+	for i = 1, 3 * #answers do
+		local a, b = math.random(1, #answers), math.random(1, #answers)
 		answers[a], answers[b] = answers[b], answers[a]
 	end
-	local response = query(topic .. ": ", question, answers[1], answers[2], answers[3], answers[4])
+	local response = query(topic .. ": ", question, unpack(answers))
 	total = total + 1
 	local s = "Wrong! "
 	if response == tostring(correct) then
