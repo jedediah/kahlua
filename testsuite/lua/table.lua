@@ -90,3 +90,32 @@ do
 	assert(#t == 1)
 end
 
+do
+	local t = {"Hello", "World"}
+	assert(tableconcat(t) == "HelloWorld")
+
+	t = {"Hello", "World"}
+	assert(tableconcat(t, " ") == "Hello World")
+	
+	t = {"Hello", "World"}
+	assert(tableconcat(t, 1.5) == "Hello1.5World")
+
+	t = {"a", "b", "c"}
+	assert(tableconcat(t, " ") == "a b c")
+	
+	t = {"a", "b", "c"}
+	assert(tableconcat(t, " ", 1, 3) == "a b c")
+	
+	t = {"a", "b", "c"}
+	assert(tableconcat(t, " ", 2, 3) == "b c")
+	
+	t = {"a", "b", "c"}
+	assert(tableconcat(t, " ", 1, 2) == "a b")
+	
+	t = {"a", "b", "c"}
+	assert(tableconcat(t, " ", 1, 1) == "a")
+	
+	t = {"a", "b", "c"}
+	assert(tableconcat(t, " ", 100, 99) == "")	
+end
+

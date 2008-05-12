@@ -15,14 +15,21 @@ setfenv(f, env)
 
 pcall(f, ...)
 	 calls f with ... as args
-	 if f throws an error, pcall catches it and returns false, error message, stack trace
-	 the stack trace is a concatenation of stack trace lines, where each line is on the form:
-	 "at <sourcefile>:<linenumber>\n"
-	 if f returns cleanly, pcall returns true and f:s return values	 
+	 if f throws an error, pcall catches it and returns:
+	 	 false, error message, stack trace, exception object
+	 and if it succeeds:
+	 	true, [original return values from f]
+	 The stack trace is a concatenation of stack trace lines, where each line is on the form:
+	 "at <sourcefile>:<linenumber>\n" and the exception object is the java exception that originally threw the exception.
 
 
 error(msg)
-	throws an error (a RuntimeException) with the error message msg
+	throws an error (a LuaException) with the error message msg
+
+collectgarbage([option])
+	if option is nil, "step" or "collect", this performs a full garbage collect
+	if option is "count", this returns used memory, free memory and total memory in KB
+
 
 rawequal
 rawset
@@ -36,7 +43,6 @@ setmetatable
 tostring
 tonumber
 print
-collectgarbage
 string.char
 string.byte
 string.sub
@@ -45,8 +51,9 @@ string.upper
 string.reverse
 math.*
 coroutine.*
+table.concat (as tableconcat)
 
-Implemented in Lua
+Implemented in stdlib.lua
 ------------------
 assert
 ipairs
@@ -59,6 +66,12 @@ table.maxn
 table.getn
 table.setn
 coroutine.wrap
+
+In progress
+-----------
+string.find
+string.match
+string.format
 
 Not implemented
 ---------------
@@ -73,15 +86,12 @@ require
 package.*
 
 string.dump
-string.find
-string.format
 string.gmatch
 string.gsub
-string.match
 
-table.concat
 table.sort
 
 io.*
 os.*
 debug.*
+

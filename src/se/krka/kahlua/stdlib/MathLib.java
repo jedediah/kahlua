@@ -109,7 +109,7 @@ public final class MathLib implements JavaFunction {
 		state.environment.rawset("math", math);
 
 		math.rawset("pi", LuaState.toDouble(Math.PI));
-		math.rawset("huge", LuaState.toDouble(Double.MAX_VALUE));
+		math.rawset("huge", LuaState.toDouble(Double.POSITIVE_INFINITY));
 		
 		for (int i = 0; i < NUM_FUNCTIONS; i++) {
 		    math.rawset(names[i], functions[i]);

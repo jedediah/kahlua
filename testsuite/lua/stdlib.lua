@@ -119,3 +119,6 @@ do
 	end
 end
 
+table = table or {}
+table.concat = tableconcat
+
