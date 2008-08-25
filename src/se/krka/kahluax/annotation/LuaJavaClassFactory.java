@@ -9,9 +9,7 @@ import se.krka.kahlua.vm.LuaTable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A tool to automatically expose java classes and
@@ -21,11 +19,11 @@ import java.util.Map;
  */
 public class LuaJavaClassFactory {
 	private LuaState state;
-	private Map<String, ClassHolder> classMap;
+	private Map<Class, ClassHolder> classMap;
 
 	public LuaJavaClassFactory(LuaState state) {
 		this.state = state;
-		classMap = new HashMap<String, ClassHolder>();
+		classMap = new HashMap<Class, ClassHolder>();
 	}
 
 	private String getName(Class clazz) {
@@ -41,20 +39,48 @@ public class LuaJavaClassFactory {
 		String name = getName(clazz);
 
 		//System.out.println("Registering class: " + name);
-		ClassHolder classHolder = new ClassHolder();
-		classHolder.exposeConstructor = exposeConstructor;
-		classHolder.clazz = clazz;
-		classHolder.name = name;
-		classHolder.reflectMethods();
+
+
+		List<Class> hierchy = new ArrayList<Class>();
+		Class superClass = clazz.getSuperclass();
+		while (!superClass.equals(Object.class)) {
+			if(superClass.isAnnotationPresent(LuaClass.class)) {
+				hierchy.add(superClass);
+			}
+			superClass = superClass.getSuperclass();
+		}
+
+		ClassHolder currentHolder = null;
+		for (int i = hierchy.size() - 1; i >= 0; i--) {
+			Class current = hierchy.get(i);
+			ClassHolder superHolder = null;
+			if (i < hierchy.size() - 1) {
+				superHolder = classMap.get(hierchy.get(i + 1));
+			}
+			String currentName = getName(current);
+
+			currentHolder = getClassHolder(currentName, current, false, superHolder);
+			reflectMethods(current, currentHolder);
+		}
+		ClassHolder classHolder = getClassHolder(name, clazz, exposeConstructor, currentHolder);
+		reflectMethods(clazz, classHolder);
 
 		state.setUserdataMetatable(clazz, classHolder.mt);
+	}
 
-		classMap.put(name, classHolder);
+	private ClassHolder getClassHolder(String name, Class clazz, boolean exposeConstructor, ClassHolder superClass) {
+		ClassHolder holder = classMap.get(clazz);
+		if(holder == null) {
+			System.out.println("Adding to classmap " + clazz);
+			holder = new ClassHolder(name, clazz, exposeConstructor, superClass);
+			classMap.put(clazz, holder);
+		}
+		return holder;
 	}
 
 	public void overideMethod(Class clazz, String methodName, JavaFunction javaFunction) {
 		String name = getName(clazz);
-		ClassHolder ch = classMap.get(name);
+		ClassHolder ch = classMap.get(clazz);
 		ch.it.rawset(methodName, javaFunction);
 	}
 
@@ -160,46 +186,58 @@ public class LuaJavaClassFactory {
 		throw new InstantiationException("Cant create unknown class: " + name);
 	}
 
+	public void reflectMethods(Class clazz, ClassHolder holder) {
+		Method m[] = clazz.getMethods();
+		//System.out.println(m.length);
+		for (Method method : clazz.getMethods()) {
 
-	private class ClassHolder {
-		String name;
-		boolean exposeConstructor;
-		Class clazz;
-		LuaTable mt;
-		LuaTable it;
+			if (method.isAnnotationPresent(LuaMethod.class)) {
+				LuaMethod luaMethod = method.getAnnotation(LuaMethod.class);
 
-		private ClassHolder() {
-			mt = new LuaTable();
-			it = new LuaTable();
-
-			mt.rawset("__index", it);
-
-		}
-
-		public void reflectMethods() {
-			Method m[] = clazz.getMethods();
-			//System.out.println(m.length);
-			for (Method method : clazz.getMethods()) {
-
-				if (method.isAnnotationPresent(LuaMethod.class)) {
-					LuaMethod luaMethod = method.getAnnotation(LuaMethod.class);
-
-					String methodName = method.getName();
-					if (!luaMethod.alias().equals("[unassigned]")) {
-						methodName = luaMethod.alias();
-					}
-
-					registerLuaMethod(methodName, method);
-
+				String methodName = method.getName();
+				if (!luaMethod.alias().equals("[unassigned]")) {
+					methodName = luaMethod.alias();
 				}
+
+				holder.registerLuaMethod(methodName, method);
 
 			}
 
 		}
 
+	}
+	
+
+
+	private class ClassHolder {
+		private String name;
+		private boolean exposeConstructor;
+		private Class clazz;
+		LuaTable mt;
+		LuaTable it;
+
+		private ClassHolder(String name, Class clazz, boolean exposeConstructor) {
+			this(name, clazz, exposeConstructor, null);
+		}
+
+		private ClassHolder(String name, Class clazz, boolean exposeConstructor, ClassHolder superClass) {
+			this.name = name;
+			this.clazz = clazz;
+			this.exposeConstructor = exposeConstructor;
+
+			mt = new LuaTable();
+			it = new LuaTable();
+
+			mt.rawset("__index", it);
+			if(superClass != null) {
+				it.metatable = superClass.mt;
+			}
+		}
+
+
 		private void registerLuaMethod(String methodName, final Method method) {
 
-			//System.out.println("Registering method: " + methodName);
+			System.out.println("Registering method: " + methodName + " of " + clazz);
 
 			it.rawset(methodName, new JavaFunction() {
 				public int call(LuaCallFrame luaCallFrame, int i) {
