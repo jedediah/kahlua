@@ -26,18 +26,7 @@ public class LuaJavaClassFactory {
 		classMap = new HashMap<Class, ClassHolder>();
 	}
 
-	private String getName(Class clazz) {
-		String name = clazz.getName();
-		if (clazz.isAnnotationPresent(LuaClass.class)) {
-			LuaClass luaClass = (LuaClass) clazz.getAnnotation(LuaClass.class);
-			name = luaClass.alias();
-		}
-		return name;
-	}
-
-	public void exposeClass(Class clazz, boolean exposeConstructor) {
-		String name = getName(clazz);
-
+	public void exposeClass(Class clazz) {
 		//System.out.println("Registering class: " + name);
 
 		List<Class> hierchy = new ArrayList<Class>();
@@ -56,18 +45,17 @@ public class LuaJavaClassFactory {
 			if (i < hierchy.size() - 1) {
 				superHolder = classMap.get(hierchy.get(i + 1));
 			}
-			String currentName = getName(current);
 
-			currentHolder = getClassHolder(currentName, current, false, superHolder);
+			currentHolder = getClassHolder(current, superHolder);
 			reflectMethods(current, currentHolder);
 		}
-		ClassHolder classHolder = getClassHolder(name, clazz, exposeConstructor, currentHolder);
+		ClassHolder classHolder = getClassHolder(clazz, currentHolder);
 		reflectMethods(clazz, classHolder);
 
 		state.setUserdataMetatable(clazz, classHolder.mt);
 	}
 
-	private ClassHolder getClassHolder(String name, Class clazz, boolean exposeConstructor, ClassHolder superClass) {
+	private ClassHolder getClassHolder(Class clazz, ClassHolder superClass) {
 		ClassHolder holder = classMap.get(clazz);
 		if(holder == null) {
 			//System.out.println("Adding to classmap " + clazz);
@@ -78,7 +66,6 @@ public class LuaJavaClassFactory {
 	}
 
 	public void overideMethod(Class clazz, String methodName, JavaFunction javaFunction) {
-		String name = getName(clazz);
 		ClassHolder ch = classMap.get(clazz);
 		ch.it.rawset(methodName, javaFunction);
 	}
@@ -103,14 +90,6 @@ public class LuaJavaClassFactory {
 		return newParams;
 	}
 
-	private Object createInstance(String name) throws IllegalAccessException, InstantiationException {
-		if (classMap.containsKey(name)) {
-			Class clazz = classMap.get(name).clazz;
-			return clazz.newInstance();
-		}
-		throw new InstantiationException("Cant create unknown class: " + name);
-	}
-
 	public void reflectMethods(Class clazz, ClassHolder holder) {
 		Method m[] = clazz.getMethods();
 		//System.out.println(m.length);
@@ -131,8 +110,6 @@ public class LuaJavaClassFactory {
 		}
 
 	}
-	
-
 
 	private class ClassHolder {
 		private Class clazz;
@@ -154,7 +131,6 @@ public class LuaJavaClassFactory {
 				it.metatable = superClass.mt;
 			}
 		}
-
 
 		private void registerLuaMethod(String methodName, final Method method) {
 			//System.out.println("Registering method: " + methodName + " of " + clazz);
@@ -217,8 +193,5 @@ public class LuaJavaClassFactory {
 				}
 			});
 		}
-
-
 	}
-
 }
