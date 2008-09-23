@@ -62,6 +62,17 @@
     	</jar>
     </target>
 
+	<target name="release" depends="setup">
+		<tstamp />
+		<zip zipfile="${build.dir}/kahlua-release-${DSTAMP}.zip">
+			<fileset dir="${basedir}">
+				<exclude name="**/.svn/**" />
+				<exclude name="**/bin/**" />
+				<exclude name="**/local.properties" />
+			</fileset>
+		</zip>
+	</target>
+
 	<!-- Test stuff -->
 	<target name="compile-test" depends="setup" description="Compile test classes">
 		<javac
