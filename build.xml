@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Kahlua" basedir="." default="all">
+	<property file="local.properties" />
+
+	<property name="luac.path" value="luac" />
+	<property name="emma.dir" value="/usr/share/java" />
+
+	<property name="src.dir"       value="${basedir}/src"/>
+	<property name="build.dir"     value="${basedir}/bin"/>
+	<property name="classes.dir"     value="${build.dir}/classes"/>
+
+	<property name="test.dir"       value="${basedir}/testsuite"/>
+	<property name="test.src.dir"       value="${test.dir}/src"/>
+	<property name="test.build.dir"     value="${test.dir}/bin"/>
+	<property name="test.classes.dir"     value="${test.build.dir}/classes"/>
+	<property name="test.lua.output.dir"     value="${test.build.dir}/lua"/>
+	<property name="test.lua.input.dir"     value="${test.dir}/lua"/>
+	<property name="test.emma.coverage.dir"     value="${test.dir}/coverage"/>
+
+	<path id="main.classpath">
+		<pathelement path="${classes.dir}"/>
+	</path>
+
+	<path id="test.classpath">
+		<path refid="main.classpath" />
+		<pathelement path="${test.classes.dir}"/>
+	</path>
+
+	<path id="emma.lib" >
+		<pathelement location="${emma.dir}/emma.jar" />
+		<pathelement location="${emma.dir}/emma_ant.jar" />
+	</path>
+	<taskdef resource="emma_ant.properties" classpathref="emma.lib" />
+
+	<!-- Main targets -->
+	<target name="all" depends="clean, package, emma" />
+	
+	<target name="clean" description="Removes old build files">
+		<delete dir="${build.dir}" failonerror="false"/>
+		<mkdir dir="${build.dir}"/>
+		<mkdir dir="${classes.dir}"/>
+	</target>
+
+	<target name="compile" description="Compiles Kahlua">
+		<javac
+			destdir="${classes.dir}" debug="true" target="1.4" source="1.4">
+			<src path="${src.dir}"/>
+		</javac>
+	</target>
+
+    <target name="package" depends="compile" description="Package the final kahlua jar">
+    	<jar jarfile="${build.dir}/kahlua.jar">
+    		<fileset dir="${classes.dir}" />
+    	</jar>
+    </target>
+
+	<!-- Test -->
+	<target name="clean-test" description="Clean tests">
+		<delete dir="${test.build.dir}" failonerror="false"/>
+		<mkdir dir="${test.build.dir}"/>
+		<mkdir dir="${test.classes.dir}"/>
+		<mkdir dir="${test.lua.output.dir}"/>
+		<mkdir dir="${test.emma.coverage.dir}"/>
+	</target>
+
+	<target name="compile-test" description="Compile test classes">
+		<javac
+			destdir="${test.classes.dir}"
+			debug="true"
+			target="1.5"
+			source="1.5"
+			classpathref="main.classpath"
+		>
+			<src path="${test.src.dir}"/>
+		</javac>
+	</target>
+
+	<target name="compile-test-lua" description="Compile test lua files">
+		<apply executable="${luac.path}" dest="${test.lua.output.dir}" dir="${test.lua.input.dir}">
+			<arg value="-o" />
+			<targetfile />
+			<srcfile />
+			<fileset dir="${test.lua.input.dir}" includes="*.lua" />
+			<mapper type="glob" from="*.lua" to="*.lbc"/>
+		</apply>
+	</target>
+
+    <target name="test-depend" depends="compile, clean-test, compile-test, compile-test-lua">
+    </target>
+
+    <target name="run-test" depends="test-depend" description="Run the test-suite">
+		<java classname="Test" classpathref="test.classpath" fork="true" dir="${test.dir}">
+			<arg value="${test.lua.output.dir}" />
+		</java>
+    </target>
+
+	<target name="emma" depends="test-depend" description="Run Emma to get code coverage">
+		<emmajava enabled="true" libclasspathref="emma.lib"
+			classname="Test"
+			classpathref="test.classpath"
+		>
+			<arg value="${test.lua.output.dir}" />
+
+			<filter includes="" />
+			<sourcepath>
+				<dirset dir="${basedir}/src" />
+			</sourcepath>
+			<txt outfile="${test.emma.coverage.dir}/coverage.txt" />
+			<xml outfile="${test.emma.coverage.dir}/coverage.xml" />
+			<html outfile="${test.emma.coverage.dir}/coverage.html"  />
+		</emmajava>
+	</target>
+
+</project>
+
