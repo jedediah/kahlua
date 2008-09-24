@@ -10,13 +10,13 @@ public class AnnotationTest extends TestCase {
 	public void testSimpleAnnotation() {
 		LuaState state = new LuaState(System.out);
 		LuaJavaClassFactory factory = new LuaJavaClassFactory(state);
-		factory.exposeClass(SimpleAnnotatedClass.class, false);
+		factory.exposeClass(SimpleAnnotatedClass.class);
 	}
 
 	public void testInheritedAnnotation() {
 		LuaState state = new LuaState(System.out);
 		LuaJavaClassFactory factory = new LuaJavaClassFactory(state);
-		factory.exposeClass(InheritedAnnotationClass.class, false);
+		factory.exposeClass(InheritedAnnotationClass.class);
 		InheritedAnnotationClass aClass = new InheritedAnnotationClass();
 		LuaTable metatable = (LuaTable) state.getmetatable(aClass, true);
 		
