@@ -66,9 +66,23 @@
 		<tstamp />
 		<zip zipfile="${build.dir}/kahlua-release-${DSTAMP}.zip">
 			<fileset dir="${basedir}">
+				<include name="contrib/annotation/src/**" />
+				<include name="contrib/annotation/test/**" />
+				<include name="contrib/annotation/build.xml" />
+				<include name="contrib/JavaLuac/include/**" />
+				<include name="contrib/JavaLuac/jni_src/**" />
+				<include name="contrib/JavaLuac/src/**" />
+				<include name="contrib/midlet/resources/**" />
+				<include name="contrib/midlet/src/**" />
+				<include name="contrib/midlet/tools/**" />
+				<include name="contrib/midlet/build.xml" />
+				<include name="docs/**" />
+				<include name="src/**" />
+				<include name="testsuite/lua/**" />
+				<include name="testsuite/src/**" />
+				<include name="build.xml" />
+				
 				<exclude name="**/.svn/**" />
-				<exclude name="**/bin/**" />
-				<exclude name="**/local.properties" />
 			</fileset>
 		</zip>
 	</target>
