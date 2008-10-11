@@ -62,7 +62,7 @@
     	</jar>
     </target>
 
-	<target name="release" depends="setup">
+	<target name="release" depends="setup" description="Create a release zip">
 		<tstamp />
 		<zip zipfile="${build.dir}/kahlua-release-${DSTAMP}.zip">
 			<fileset dir="${basedir}">

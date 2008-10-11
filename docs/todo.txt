@@ -1,7 +1,4 @@
-* add tests for all ops
 * add array part of lua table
-* write docs and contract spec.
-* choose licence
-
 * add testing for environments
+* implement a lua compiler
 
