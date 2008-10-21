@@ -39,6 +39,13 @@
 		<mkdir dir="${test.result.dir}"/>
 	</target>
 
+    <target name="package" depends="compile" description="Package into a binary jar">
+    	<jar jarfile="${build.dir}/kahlua-annotations.jar">
+    		<fileset dir="${classes.dir}" />
+    	</jar>
+    </target>
+
+
 	<target name="compile" depends="setup" description="Compiles annotations">
 		<javac
 			destdir="${classes.dir}" debug="true" target="1.5" source="1.5" classpathref="kahlua.classpath">
