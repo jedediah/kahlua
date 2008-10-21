@@ -1,6 +1,6 @@
 package se.krka.kahluax.annotation;
 
-@LuaClass(alias="SubClass")
+@LuaClass
 public class InheritedAnnotationClass extends BaseAnnotationClass {
 
 	@LuaMethod

@@ -1,6 +1,6 @@
 package se.krka.kahluax.annotation;
 
-@LuaClass(alias="SimpleClass")
+@LuaClass
 public class SimpleAnnotatedClass {
 
 	@LuaMethod
