@@ -3,7 +3,6 @@ package se.krka.kahlua.stdlib;
 import java.util.Calendar;
 import java.util.Date;
 
-import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
@@ -13,35 +12,35 @@ public class OsLib implements JavaFunction {
 	private static final int DATE = 0;
 	private static final int DATEDIFF = 1;
 	private static final int TIME = 2;
-	
+
 	private static final int NUM_FUNCS = 3;
-	
+
 	private static String[] funcnames;
 	private static OsLib[] funcs;
-	
+
 	static {
 		funcnames = new String[NUM_FUNCS];
 		funcnames[DATE] = "date";
 		funcnames[DATEDIFF] = "datediff";
 		funcnames[TIME] = "time";
-		
+
 		funcs = new OsLib[NUM_FUNCS];
 		for (int i = 0; i < NUM_FUNCS; i++) {
 			funcs[i] = new OsLib(i);
 		}
 	}
-	
+
 	public static void register(LuaState state) {
 		LuaTable os = new LuaTable();
 		state.environment.rawset("os", os);
-		
+
 		for (int i = 0; i < NUM_FUNCS; i++) {
 			os.rawset(funcnames[i], funcs[i]);
 		}
 	}
-	
+
 	private static final int TIME_DIVIDEND = 1000; // number to divide by for converting from milliseconds.
-	
+
 	private static final String YEAR = "year";
 	private static final String MONTH = "month";
 	private static final String DAY = "day";
@@ -51,12 +50,12 @@ public class OsLib implements JavaFunction {
 	private static final String WDAY = "wday";
 	private static final String YDAY = "yday";
 	//private static final String ISDST = "isdst";
-	
+
 	private int methodId;
 	private OsLib(int methodId) {
 		this.methodId = methodId;
 	}
-	
+
 	public int call(LuaCallFrame cf, int nargs) {
 		switch (methodId) {
 		case DATE: return date(cf, nargs);
@@ -107,7 +106,7 @@ public class OsLib implements JavaFunction {
 	private Object getdate(String format) {
 		return getdate(format, new Date().getTime());
 	}
-	
+
 	private Object getdate(String format, long time) {
 		//boolean universalTime = format.startsWith("!");
 		Date d = new Date(time);
@@ -120,7 +119,7 @@ public class OsLib implements JavaFunction {
 			return d.toString().intern();
 		}
 	}
-	
+
 	private LuaTable getTimeTable(Date d) {
 		LuaTable time = new LuaTable();
 		Calendar c = Calendar.getInstance();
@@ -135,7 +134,7 @@ public class OsLib implements JavaFunction {
 		time.rawset(YDAY, LuaState.toDouble(getDayOfYear(c)));
 		return time;
 	}
-	
+
 	private int getDayOfYear(Calendar c) {
 		int daysPerMonth[] = new int[12];
 		daysPerMonth[Calendar.JANUARY] = 31;
@@ -150,9 +149,10 @@ public class OsLib implements JavaFunction {
 		daysPerMonth[Calendar.OCTOBER] = 31;
 		daysPerMonth[Calendar.NOVEMBER] = 30;
 		daysPerMonth[Calendar.DECEMBER] = 31;
-		
+
 		int days = 0;
-		for (int i = Calendar.JANUARY; i < c.get(Calendar.MONTH); i++) {
+		int numberOfMonths = c.get(Calendar.MONTH);
+		for (int i = Calendar.JANUARY; i < numberOfMonths; i++) {
 			days += daysPerMonth[i];
 		}
 		days += c.get(Calendar.DAY_OF_MONTH);
@@ -162,7 +162,7 @@ public class OsLib implements JavaFunction {
 	private boolean isLeapYear(int year) {
 		return year % 4 == 0 && year % 100 != 0 && year % 400 == 0;
 	}
-	
+
 	/**
 	 * converts the relevant fields in the given luatable to a Date object.
 	 * @param time LuaTable with entries for year month and day, and optionally hour/min/sec
@@ -177,18 +177,21 @@ public class OsLib implements JavaFunction {
 		Object minute = time.rawget(MIN);
 		Object seconds = time.rawget(SEC);
 		//Object isDst = time.rawget(ISDST);
-		if (hour != null) 
+		if (hour != null) {
 			c.set(Calendar.HOUR_OF_DAY, (int)LuaState.fromDouble(hour));
-		else 
+		} else {
 			c.set(Calendar.HOUR_OF_DAY, 0);
-		if (minute != null) 
+		}
+		if (minute != null) {
 			c.set(Calendar.MINUTE, (int)LuaState.fromDouble(minute));
-		else
+		} else {
 			c.set(Calendar.MINUTE, 0);
-		if (seconds != null) 
+		}
+		if (seconds != null) {
 			c.set(Calendar.SECOND, (int)LuaState.fromDouble(seconds));
-		else
+		} else {
 			c.set(Calendar.SECOND, 0);
+		}
 		// TODO: daylight savings support (is it possible?)
 		return c.getTime();
 	}
