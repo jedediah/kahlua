@@ -44,7 +44,7 @@ public final class LuaPrototype {
 	public int numUpvalues;
 
 	public int maxStacksize;
-    
+
 	public LuaPrototype(DataInputStream in, boolean littleEndian, String parentName, int size_t) throws IOException {
 		int tmp;
 
@@ -55,9 +55,9 @@ public final class LuaPrototype {
 
 		// Commented out since they are not used
 		// read line defined and last line defined
-		in.readInt();		
 		in.readInt();
-		
+		in.readInt();
+
 		numUpvalues = in.read();
 		numParams = in.read();
 		int isVararg = in.read();
@@ -86,7 +86,9 @@ public final class LuaPrototype {
 			    break;
 			case 3:
 				long bits = in.readLong();
-				if (littleEndian) bits = rev(bits);
+				if (littleEndian) {
+					bits = rev(bits);
+				}
 				o = LuaState.toDouble(Double.longBitsToDouble(bits));
 				break;
 			case 4:
@@ -103,14 +105,14 @@ public final class LuaPrototype {
 		for (int i = 0; i < prototypesLen; i++) {
 			prototypes[i] = new LuaPrototype(in, littleEndian, name, size_t);
 		}
-		
+
 		// DEBUGGING INFORMATION
-		
+
 		// read lines
 		tmp = toInt(in.readInt(), littleEndian);
 
 		lines = new int[tmp];
-		
+
 		for (int i = 0; i < tmp; i++) {
 			int tmp2 = toInt(in.readInt(), littleEndian);
 			lines[i] = tmp2;
@@ -123,76 +125,78 @@ public final class LuaPrototype {
 			in.readInt();
 			in.readInt();
 		}
-		
+
 		// read upvalues
 		tmp = toInt(in.readInt(), littleEndian);
 		for (int i = 0; i < tmp; i++) {
 			readLuaString(in, size_t, littleEndian);
 		}
 	}
-	
+
 	public String toString() {
 		return name;
 	}
-	
+
 	// NOTE: known weakness - will crash if a string is longer than 2^16 - 1
 	private static String readLuaString(DataInputStream in, int size_t, boolean littleEndian) throws IOException {
 		long len = 0;
-		
+
 		if (size_t == 4) {
 			len = toInt(in.readInt(), littleEndian);
 		} else if (size_t == 8) {
 			len = toLong(in.readLong(), littleEndian);
 		}
-		
-		if (len == 0) return null;
+
+		if (len == 0) {
+			return null;
+		}
 
 		len = len - 1;
-		
+
 		// Change this to a proper string loader if you need longer strings.
 		// The extra code needed seems unnecessary for the common use cases.
 		loadAssert(len < 0x10000);
 
 		int iLen = (int) len;
 		byte[] stringData = new byte[2 + 1 + iLen];
-		
+
 		stringData[0] = (byte) ((iLen >> 8) & 0xff);
 		stringData[1] = (byte) (iLen & 0xff);
-		
+
 		// Remember to read the trailing 0 too
 		int bytesRead = in.read(stringData, 2, iLen + 1);
 		loadAssert(bytesRead == iLen + 1);
 		loadAssert(stringData[2 + iLen] == 0);
-		
+
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(stringData));
 		String s = dis.readUTF().intern();
 		dis.close();
 
 		return s;
 	}
-	
+
 	public static int rev(int v) {
 		int a, b, c, d;
-		a = (v >>> 24) & 255;
-		b = (v >>> 16) & 255;
-		c = (v >>> 8) & 255;
-		d = v & 255;
+		a = (v >>> 24) & 0xff;
+		b = (v >>> 16) & 0xff;
+		c = (v >>> 8) & 0xff;
+		d = v & 0xff;
 		return (d << 24) | (c << 16) | (b << 8) | a;
-		
+
 		// This works in J2SE, but not J2ME
 		// return Integer.reverseBytes(v);
 	}
-	
+
 	public static long rev(long v) {
 		long a, b, c, d, e, f, g, h;
-		a = (v >>> 56) & 255;
-		b = (v >>> 48) & 255;
-		c = (v >>> 40) & 255;
-		d = (v >>> 32) & 255;
-		e = (v >>> 24) & 255;
-		f = (v >>> 16) & 255;
-		g = (v >>> 8) & 255;
-		h = v & 255;
+		a = (v >>> 56) & 0xff;
+		b = (v >>> 48) & 0xff;
+		c = (v >>> 40) & 0xff;
+		d = (v >>> 32) & 0xff;
+		e = (v >>> 24) & 0xff;
+		f = (v >>> 16) & 0xff;
+		g = (v >>> 8) & 0xff;
+		h = v & 0xff;
 		return	(h << 56) | (g << 48)
 			| (f << 40) | (e << 32)
 			| (d << 24) | (c << 16)
@@ -205,17 +209,17 @@ public final class LuaPrototype {
 	public static int toInt(int bits, boolean littleEndian) {
 		return littleEndian ? rev(bits) : bits;
 	}
-	
+
 	public static long toLong(long bits, boolean littleEndian) {
 		if (!littleEndian) {
 			return bits;
 		}
-		
-		int low = (int) (bits & 0xffffffff);
-		int high = (int) ((bits >>> 32) & 0xffffffff);
+
+		long low = (bits & 0xffffffff);
+		long high = ((bits >>> 32) & 0xffffffff);
 		return (rev(low) << 32) | rev(high);
 	}
-	
+
 
 	public static LuaClosure loadByteCode(DataInputStream in, LuaTable env)
 	throws IOException {
@@ -272,12 +276,14 @@ public final class LuaPrototype {
 	}
 
 	private static void loadAssert(boolean c) throws IOException {
-	    if (!c) throw new IOException("could not load bytecode");
+	    if (!c) {
+			throw new IOException("could not load bytecode");
+		}
 	}
 
 	public static LuaClosure loadByteCode(InputStream in, LuaTable env) throws IOException {
 		return loadByteCode(new DataInputStream(in), env);
 	}
-	
+
 
 }

@@ -30,40 +30,40 @@ import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
 
 public class UserdataArray implements JavaFunction {
-	
+
 	private static final int LENGTH = 0;
 	private static final int INDEX = 1;
 	private static final int NEWINDEX = 2;
 	private static final int NEW = 3;
 	private static final int PUSH = 4;
-	
+
 	// NOTE: Vector.class won't work in J2ME - so this is used as a workaround
 	private static final Class VECTOR_CLASS = new Vector().getClass();
-	
+
 	private static LuaTable metatable;
-	
-	public static void register(LuaState state) {
+
+	public static synchronized void register(LuaState state) {
 		if (metatable == null) {
 			metatable = new LuaTable();
 			metatable.rawset("__metatable", "restricted");
 			metatable.rawset("__len", new UserdataArray(LENGTH));
 			metatable.rawset("__index", new UserdataArray(INDEX));
 			metatable.rawset("__newindex", new UserdataArray(NEWINDEX));
-			
+
 			metatable.rawset("new", new UserdataArray(NEW));
 			metatable.rawset("push", new UserdataArray(PUSH));
 		}
-		
+
 		state.setUserdataMetatable(VECTOR_CLASS, metatable);
 		state.environment.rawset("array", metatable);
 	}
 
 	private int index;
-	
+
 	private UserdataArray(int index) {
 		this.index = index;
 	}
-	
+
 	public int call(LuaCallFrame callFrame, int nArguments) {
 		switch (index) {
 		case LENGTH: return length(callFrame, nArguments);
@@ -76,10 +76,10 @@ public class UserdataArray implements JavaFunction {
 	}
 
 	private int push(LuaCallFrame callFrame, int nArguments) {
-		BaseLib.luaAssert(nArguments >= 2, "not enough parameters");		
+		BaseLib.luaAssert(nArguments >= 2, "not enough parameters");
 		Vector v = (Vector) callFrame.get(0);
 		Object value = callFrame.get(1);
-		
+
 		v.addElement(value);
 		callFrame.push(v);
 		return 1;
@@ -95,7 +95,7 @@ public class UserdataArray implements JavaFunction {
 		Vector v = (Vector) callFrame.get(0);
 		Object key = callFrame.get(1);
 		Object value = callFrame.get(2);
-		
+
 		v.setElementAt(value, (int) LuaState.fromDouble(key));
 		return 0;
 	}
@@ -103,7 +103,7 @@ public class UserdataArray implements JavaFunction {
 	private int index(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "not enough parameters");
 		Vector v = (Vector) callFrame.get(0);
-		
+
 		Object key = callFrame.get(1);
 		Object res;
 		if (key instanceof Double) {

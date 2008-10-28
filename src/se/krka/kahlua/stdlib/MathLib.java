@@ -56,9 +56,9 @@ public final class MathLib implements JavaFunction {
     private static final int SQRT = 23;
     private static final int TAN = 24;
     private static final int TANH = 25;
-	
+
     private static final int NUM_FUNCTIONS = 26;
-    
+
     private static String[] names;
     static {
 	names = new String[NUM_FUNCTIONS];
@@ -89,37 +89,42 @@ public final class MathLib implements JavaFunction {
 	names[TAN] = "tan";
 	names[TANH] = "tanh";
     }
-	
+
 	private int index;
-	private static MathLib[] functions;	
-	
+	private static MathLib[] functions;
+
 	public MathLib(int index) {
 		this.index = index;
 	}
 
-	
+
 	public static void register(LuaState state) {
+		initFunctions();
+		LuaTable math = new LuaTable();
+		state.environment.rawset("math", math);
+
+		math.rawset("pi", LuaState.toDouble(Math.PI));
+		math.rawset("huge", LuaState.toDouble(Double.POSITIVE_INFINITY));
+
+		for (int i = 0; i < NUM_FUNCTIONS; i++) {
+		    math.rawset(names[i], functions[i]);
+		}
+	}
+
+
+	private static synchronized void initFunctions() {
 		if (functions == null) {
 			functions = new MathLib[NUM_FUNCTIONS];
 			for (int i = 0; i < NUM_FUNCTIONS; i++) {
 				functions[i] = new MathLib(i);
 			}
 		}
-		LuaTable math = new LuaTable();
-		state.environment.rawset("math", math);
-
-		math.rawset("pi", LuaState.toDouble(Math.PI));
-		math.rawset("huge", LuaState.toDouble(Double.POSITIVE_INFINITY));
-		
-		for (int i = 0; i < NUM_FUNCTIONS; i++) {
-		    math.rawset(names[i], functions[i]);
-		}
 	}
 
 	public String toString() {
 		return "math." + names[index];
 	}
-	
+
 	public int call(LuaCallFrame callFrame, int nArguments) {
 		switch (index) {
 		case ABS: return abs(callFrame, nArguments);
@@ -178,7 +183,7 @@ public final class MathLib implements JavaFunction {
 	private static int modf(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
 		double x = LuaState.fromDouble(callFrame.get(0));
-		
+
 		boolean negate = false;
 		if (x < 0) {
 			negate = true;
@@ -203,7 +208,7 @@ public final class MathLib implements JavaFunction {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
 		double v1 = LuaState.fromDouble(callFrame.get(0));
 		double v2 = LuaState.fromDouble(callFrame.get(1));
-		
+
 		double res;
 		if (Double.isInfinite(v1) || Double.isNaN(v1)) {
 			res = Double.NaN;
@@ -359,7 +364,7 @@ public final class MathLib implements JavaFunction {
 		callFrame.push(LuaState.toDouble(Math.tan(x)));
 		return 1;
 	}
-	
+
 	// Power functions
 	private static int sqrt(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
@@ -383,7 +388,7 @@ public final class MathLib implements JavaFunction {
 		return 1;
 	}
 
-	private static int log(LuaCallFrame callFrame, int nArguments) {		
+	private static int log(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
 		double x = LuaState.fromDouble(callFrame.get(0));
 		callFrame.push(LuaState.toDouble(ln(x)));
@@ -429,32 +434,32 @@ public final class MathLib implements JavaFunction {
 		if (Double.isInfinite(tmp) || Double.isNaN(tmp)) {
 			ret = m;
 		} else {
-			int e = (int) dE; 
+			int e = (int) dE;
 			ret = m * (1 << e);
 		}
-		
+
 		callFrame.push(LuaState.toDouble(ret));
 		return 1;
 	}
 
-	
-	
-	
-	
+
+
+
+
 	public static final double EPS = 1e-15;
-	
+
 	/*
 	 * Simple implementation of the taylor expansion of
 	 * exp(x) = 1 + x + x^2/2 + x^3/6 + ...
 	 */
-    public static double exp(double x) {	
-    	double x_acc = 1;	
+    public static double exp(double x) {
+    	double x_acc = 1;
     	double div = 1;
 
     	double res = 0;
     	while (Math.abs(x_acc) > EPS) {
     		res = res + x_acc;
-    		
+
     		x_acc *= x;
     		x_acc /= div;
     		div++;
@@ -483,9 +488,9 @@ public final class MathLib implements JavaFunction {
     		x = 1 / x;
     	}
     	int multiplier = 1;
-    	
+
     	 // x must be between 0 and 2 - close to 1 means faster taylor expansion
-    	while (x >= 1.1) { 
+    	while (x >= 1.1) {
     		multiplier *= 2;
     		x = Math.sqrt(x);
     	}
@@ -493,7 +498,7 @@ public final class MathLib implements JavaFunction {
     	double tpow = t;
     	int divisor = 1;
     	double result = 0;
-    	
+
     	double toSubtract;
     	while (Math.abs((toSubtract = tpow / divisor)) > EPS) {
     		result -= toSubtract;
@@ -532,17 +537,19 @@ public final class MathLib implements JavaFunction {
 		double b = 1;
 		for (b = (exponent & 1) != 0 ? base : 1, exponent >>= 1; exponent != 0; exponent >>= 1) {
 			base *= base;
-			if ((exponent & 1) != 0) b *= base;
+			if ((exponent & 1) != 0) {
+				b *= base;
+			}
 		}
 		if (inverse) {
 			return 1 / b;
 		}
 		return b;
     }
-	
 
-	
-	
+
+
+
     // constants
     static final double sq2p1 = 2.414213562373095048802e0;
     static final double sq2m1  = .414213562373095048802e0;
@@ -572,18 +579,21 @@ public final class MathLib implements JavaFunction {
     // reduce
     private static double msatan(double arg)
     {
-        if(arg < sq2m1)
-            return mxatan(arg);
-        if(arg > sq2p1)
-            return PIO2 - mxatan(1/arg);
+        if(arg < sq2m1) {
+			return mxatan(arg);
+		}
+        if(arg > sq2p1) {
+			return PIO2 - mxatan(1/arg);
+		}
 	return PIO2/2 + mxatan((arg-1)/(arg+1));
     }
 
     // implementation of atan
     public static double atan(double arg)
     {
-        if(arg > 0)
-            return msatan(arg);
+        if(arg > 0) {
+			return msatan(arg);
+		}
         return -msatan(-arg);
     }
 
@@ -592,13 +602,19 @@ public final class MathLib implements JavaFunction {
     {
     	// both are 0 or arg1 is +/- inf
     	if(arg1+arg2 == arg1) {
-    		if(arg1 > 0) return PIO2;
-    		if(arg1 < 0) return -PIO2;
+    		if(arg1 > 0) {
+				return PIO2;
+			}
+    		if(arg1 < 0) {
+				return -PIO2;
+			}
     		return 0;
     	}
     	arg1 = atan(arg1/arg2);
     	if(arg2 < 0) {
-    		if(arg1 <= 0) return arg1 + Math.PI;
+    		if(arg1 <= 0) {
+				return arg1 + Math.PI;
+			}
     		return arg1 - Math.PI;
     	}
     	return arg1;
@@ -616,24 +632,28 @@ public final class MathLib implements JavaFunction {
 		arg = -arg;
 		sign++;
 	    }
-        if(arg > 1)
-            return Double.NaN;
+        if(arg > 1) {
+			return Double.NaN;
+		}
         temp = Math.sqrt(1 - arg*arg);
-        if(arg > 0.7)
-            temp = PIO2 - atan(temp/arg);
-        else
-            temp = atan(arg/temp);
-        if(sign > 0)
-            temp = -temp;
+        if(arg > 0.7) {
+			temp = PIO2 - atan(temp/arg);
+		} else {
+			temp = atan(arg/temp);
+		}
+        if(sign > 0) {
+			temp = -temp;
+		}
         return temp;
     }
 
     // implementation of acos
     public static double acos(double arg)
     {
-        if(arg > 1 || arg < -1)
-            return Double.NaN;
+        if(arg > 1 || arg < -1) {
+			return Double.NaN;
+		}
         return PIO2 - asin(arg);
     }
-	
+
 }

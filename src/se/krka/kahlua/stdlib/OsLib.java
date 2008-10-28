@@ -61,7 +61,7 @@ public class OsLib implements JavaFunction {
 		}
 	}
 
-	private static final int TIME_DIVIDEND = 1000; // number to divide by for converting from milliseconds.
+	private static final long TIME_DIVIDEND = 1000; // number to divide by for converting from milliseconds.
 
 	private static final String YEAR = "year";
 	private static final String MONTH = "month";
@@ -90,7 +90,7 @@ public class OsLib implements JavaFunction {
 	private int time(LuaCallFrame cf, int nargs) {
 		if (nargs == 0) {
 			Date d = new Date();
-			cf.push(LuaState.toDouble(d.getTime() / TIME_DIVIDEND));
+			cf.push(LuaState.toDouble(((d.getTime() / TIME_DIVIDEND))));
 		} else if (nargs == 1) {
 			Object o = cf.get(0);
 			if (!(o instanceof LuaTable)) {
