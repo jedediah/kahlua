@@ -53,6 +53,20 @@ math.*
 coroutine.*
 table.concat (as tableconcat)
 
+os implementation details (thanks Kevin Lundberg):
+
+os.time: 
+fully implemented except for processing table entry "isdst"
+
+os.difftime: 
+fully implemented
+
+os.date: 
+partially implemented.  supports "*t" format (returning a table), any
+other format just returns a toString() version of the date given to the function
+(or the current datetime if one is not given to the function).  Also ignores the
+"isdst" entry.
+
 Implemented in stdlib.lua
 ------------------
 assert

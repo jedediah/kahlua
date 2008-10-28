@@ -28,6 +28,7 @@ import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.stdlib.CoroutineLib;
 import se.krka.kahlua.stdlib.MathLib;
 import se.krka.kahlua.stdlib.StringLib;
+import se.krka.kahlua.stdlib.OsLib;
 import se.krka.kahlua.test.UserdataArray;
 import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaPrototype;
@@ -44,7 +45,8 @@ public class Test {
 		StringLib.register(state);
 		UserdataArray.register(state);
 		CoroutineLib.register(state);
-		
+		OsLib.register(state);
+
 		LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
 		Object[] results = state.pcall(closure);
 		if (results[0] != Boolean.TRUE) {
