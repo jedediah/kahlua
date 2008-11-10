@@ -125,11 +125,11 @@ public class OsLib implements JavaFunction {
 		return 1;
 	}
 
-	private Object getdate(String format) {
+	public static Object getdate(String format) {
 		return getdate(format, new Date().getTime());
 	}
 
-	private Object getdate(String format, long time) {
+	public static Object getdate(String format, long time) {
 		//boolean universalTime = format.startsWith("!");
 		Date d = new Date(time);
 		if (format.indexOf("*t") > -1) {
@@ -142,7 +142,7 @@ public class OsLib implements JavaFunction {
 		}
 	}
 
-	private LuaTable getTimeTable(Date d) {
+	public static LuaTable getTimeTable(Date d) {
 		LuaTable time = new LuaTable();
 		Calendar c = Calendar.getInstance();
 		c.setTime(d);
@@ -157,7 +157,7 @@ public class OsLib implements JavaFunction {
 		return time;
 	}
 
-	private int getDayOfYear(Calendar c) {
+	private static int getDayOfYear(Calendar c) {
 		int daysPerMonth[] = new int[12];
 		daysPerMonth[Calendar.JANUARY] = 31;
 		daysPerMonth[Calendar.FEBRUARY] = (isLeapYear(c.get(Calendar.YEAR)) ? 29 : 28);
@@ -181,7 +181,7 @@ public class OsLib implements JavaFunction {
 		return days;
 	}
 
-	private boolean isLeapYear(int year) {
+	private static boolean isLeapYear(int year) {
 		return year % 4 == 0 && year % 100 != 0 && year % 400 == 0;
 	}
 
@@ -190,7 +190,7 @@ public class OsLib implements JavaFunction {
 	 * @param time LuaTable with entries for year month and day, and optionally hour/min/sec
 	 * @return a date object representing the date frim the luatable.
 	 */
-	private Date getDateFromTable(LuaTable time) {
+	public static Date getDateFromTable(LuaTable time) {
 		Calendar c = Calendar.getInstance();
 		c.set(Calendar.YEAR, (int)LuaState.fromDouble(time.rawget(YEAR)));
 		c.set(Calendar.MONTH, (int)LuaState.fromDouble(time.rawget(MONTH))-1);

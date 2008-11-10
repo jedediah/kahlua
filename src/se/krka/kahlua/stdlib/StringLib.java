@@ -314,6 +314,68 @@ public final class StringLib implements JavaFunction {
 		return 1;
 	}
 	
+	// Pattern Matching
+	
+	private int findAux(LuaCallFrame callFrame, int nArguments, boolean find) {
+		String f = find?"find":"match";
+		String source = (String) BaseLib.getArg(callFrame, 1, BaseLib.TYPE_STRING, f);
+		String pattern = (String) BaseLib.getArg(callFrame, 2, BaseLib.TYPE_STRING, f);
+		Double i = (Double)(BaseLib.getOptArg(callFrame, 3, BaseLib.TYPE_NUMBER));
+		boolean plain = LuaState.boolEval(BaseLib.getOptArg(callFrame, 4, BaseLib.TYPE_BOOLEAN));
+		int init = 0;
+		if (i != null) {
+			init = i.intValue();
+			if (init < 0) {
+				// negative numbers count backwards from the end.
+				init += source.length();
+			} else if (init > 0) { 
+				// lua strings reference characters starting at 1, so subtract 1 to translate to java
+				init--;
+			} 
+			// fall through case is if init = 0, in which case we leave it as is.
+		}
+		
+		if (plain || noSpecialChars(pattern)) {  
+			//  do a plain search
+			int pos = source.indexOf(pattern, init);
+			if (pos > -1) {
+				if (find) { // if find is called, return the start and end pos of the pattern in the source string.
+					callFrame.push(LuaState.toDouble(pos + 1), LuaState.toDouble(pos + pattern.length()));
+					return 2;
+				} else { // if match is called, return the pattern itself since there's no special chars to parse.
+					callFrame.push(pattern);
+					return 1;
+				}
+			}
+		} else {
+			boolean anchor = false;
+			int pIndex = 0;
+			int sIndex = init;
+			if (pattern.charAt(0) == '^') {
+				anchor = true;
+				pIndex = 1;
+			}
+			do {
+				int[][] captures = createCaptures();
+				int level = match(source, pattern, sIndex, pIndex, captures);
+				if (level > -1) {
+					if (find) {
+						int[] indices = captures[0];
+						callFrame.push(new Double(indices[0]), new Double(indices[0] + indices[1] - 1));
+						// shift base right by 2, add the 2 later
+						return 2 + pushCaptures(callFrame, source, captures, level, 1);
+					} else {
+						return pushCaptures(callFrame, source, captures, level, 0);
+					}
+				}
+				sIndex++;
+			} while (source.length() > sIndex && !anchor);
+		}
+		// find unsuccessful, return nil.
+		callFrame.push(null);
+		return 1; 
+	}
+	
 	private boolean matchClass(char classIdentifier, char c) {
 		boolean res;
 		switch (Character.toLowerCase(classIdentifier)) {
@@ -377,100 +439,50 @@ public final class StringLib implements JavaFunction {
 	}
 	
 	private int match(String source, String pattern,
-			int sIndex, int pIndex, int[] captures, int level) {
+			int sIndex, int pIndex, int[][] captures) {
+		int level = 1;
 		int sLen = source.length();
 		int pLen = pattern.length();
 		int si = sIndex;
 		while (pIndex < pLen && si < sLen) {
-			//TODO: captures, etc.
+			//TODO: captures, etc.  Currently supports regular escape patterns
 			pIndex = singleMatch(source.charAt(si), pattern, pIndex);
 			if (pIndex < 0) return -1;
 			si++;
 		}
-		captures[0] = sIndex + 1;
-		captures[1] = si;
+		// if the pattern isn't finished when the loop finishes, the pattern doesn't match
+		if (pIndex < pLen) 
+			return -1; 
+		captures[0][0] = sIndex + 1;
+		captures[0][1] = si;
 		return level;
 	}
-	
-	private int findAux(LuaCallFrame callFrame, int nArguments, boolean find) {
-		String f = find?"find":"match";
-		String source = (String) BaseLib.getArg(callFrame, 1, BaseLib.TYPE_STRING, f);
-		String pattern = (String) BaseLib.getArg(callFrame, 2, BaseLib.TYPE_STRING, f);
-		Double i = (Double)(BaseLib.getOptArg(callFrame, 3, BaseLib.TYPE_NUMBER));
-		boolean plain = LuaState.boolEval(BaseLib.getOptArg(callFrame, 4, BaseLib.TYPE_BOOLEAN));
-		int init = 0;
-		if (i != null) {
-			init = i.intValue() - 1;
-			if (init < 0) { 
-				init = 0;
-			} else if (init >= source.length()) {
-				init = source.length()-1;
-			}
-		}
-		if (plain || noSpecialChars(pattern)) {  
-			//  do a plain search
-			int pos = source.indexOf(pattern, init);
-			if (pos > -1) {
-				if (find) { // if find is called, return the start and end pos of the pattern in the source string.
-					callFrame.push(LuaState.toDouble(pos + 1), LuaState.toDouble(pos + pattern.length()));
-					return 2;
-				} else { // if match is called, return the pattern itself since there's no special chars.
-					callFrame.push(pattern);
-					return 1;
-				}
-			} else {
-				return 0; // find unsuccessful, returns nil.
-			}
-		} else {
-			boolean anchor = false;
-			int pIndex = 0;
-			int sIndex = 0;
-			if (pattern.charAt(0) == '^') {
-				anchor = true;
-				pIndex = 1;
-			}
-			do {
-				int[] captures = createCaptures();
-				int level = match(source, pattern, sIndex, pIndex, captures, 1);
-				if (level > -1) {
-					if (find) {
-						callFrame.push(new Double(captures[0]), new Double(captures[0] + captures[1] - 1));
-						// shift base right by 2, add the 2 later
-						pushCaptures(callFrame, source, captures, level);
-						return level + 2;
-					} else {
-						pushCaptures(callFrame, source, captures, level);
-						return level;
-					}
-				}
-				sIndex++;
-			} while (source.length() > sIndex && !anchor);
-		}
-		return 0;
-	}
 
-	private int[] createCaptures() {
-		int[] result = new int[MAXCAPTURES * 2];
-		for (int i = 0; i < MAXCAPTURES * 2; i += 2) {
-			result[i] = 0;
-			result[i + 1] = -1;
+	private int[][] createCaptures() {
+		int[][] result = new int[MAXCAPTURES + 1][2];// +1 for the initial search
+		for (int i = 0; i < result.length; i++) {
+			result[i][0] = 0;
+			result[i][1] = -1;
 		}
 		return result;
 	}
 	
-	private void pushCaptures(LuaCallFrame callFrame, String source, int[] caps, 
-			int level) {
-		int i = 0;
-		for (int j = 0; j < level; j ++) {
-			int from = caps[i++];
-			int to = caps[i++];
+	private int pushCaptures(LuaCallFrame callFrame, String source, int[][] caps, 
+			int level, int i) {
+		int pushed = 0;
+		for (int j = 0; j < level; j++) {
+			int from = caps[i][0];
+			int to = caps[i++][1];
 			if (from == to) {
 				// location capture
 				callFrame.push(new Double(from));
-			} else {
+				pushed++;
+			} else if (from < to) {
 				callFrame.push(source.substring(from - 1, to).intern());
+				pushed++;
 			}
 		}
+		return pushed;
 	}
 	
 	private boolean noSpecialChars(String pattern) {
