@@ -56,6 +56,15 @@ public final class BaseLib implements JavaFunction {
 	private static final String[] names;
 	private static final Object MODE_KEY = "__mode";
 	private static final Object DOUBLE_ONE = new Double(1.0);
+	
+	public static String TYPE_NIL = "nil".intern();
+	public static String TYPE_STRING = "string".intern();
+	public static String TYPE_NUMBER = "number".intern();
+	public static String TYPE_BOOLEAN = "boolean".intern();
+	public static String TYPE_FUNCTION = "function".intern();
+	public static String TYPE_TABLE = "table".intern();
+	public static String TYPE_THREAD = "thread".intern();
+	public static String TYPE_USERDATA = "userdata".intern();
 
 	static {
 		names = new String[NUM_FUNCTIONS];
@@ -347,12 +356,12 @@ public final class BaseLib implements JavaFunction {
 				"' (" + type + " expected, got no value)");
 		}
 		// type coercion
-		if (type == "string") {
+		if (type == TYPE_STRING) {
 			String res = rawTostring(o);
 			if (res != null) {
 				return res;
 			}
-		} else if (type == "number") {
+		} else if (type == TYPE_NUMBER) {
 			Double d = rawTonumber(o);
 			if (d != null) {
 				return d;
@@ -375,9 +384,9 @@ public final class BaseLib implements JavaFunction {
 			return null;
 		}
 		// type coercion
-		if (type == "string") {
+		if (type == TYPE_STRING) {
 			return rawTostring(o);
-		} else if (type == "number") {
+		} else if (type == TYPE_NUMBER) {
 			return rawTonumber(o);
 		}
 		// no type checking, this is optional after all
@@ -451,30 +460,27 @@ public final class BaseLib implements JavaFunction {
 
 	public static String type(Object o) {
 		if (o == null) {
-			return "nil";
+			return TYPE_NIL;
 		}
 		if (o instanceof String) {
-			return "string";
+			return TYPE_STRING;
 		}
 		if (o instanceof Double) {
-			return "number";
+			return TYPE_NUMBER;
 		}
 		if (o instanceof Boolean) {
-			return "boolean";
+			return TYPE_BOOLEAN;
 		}
-		if (o instanceof JavaFunction) {
-			return "function";
-		}
-		if (o instanceof LuaClosure) {
-			return "function";
+		if (o instanceof JavaFunction || o instanceof LuaClosure) {
+			return TYPE_FUNCTION;
 		}
 		if (o instanceof LuaTable) {
-			return "table";
+			return TYPE_TABLE;
 		}
 		if (o instanceof LuaThread) {
-			return "thread";
+			return TYPE_THREAD;
 		}
-		return "userdata";
+		return TYPE_USERDATA;
 	}
 
 	private static int tostring(LuaCallFrame callFrame, int nArguments) {
@@ -487,7 +493,7 @@ public final class BaseLib implements JavaFunction {
 
 	public static String tostring(Object o, LuaState state) {
 		if (o == null) {
-			return "nil";
+			return TYPE_NIL;
 		}
 		if (o instanceof String) {
 			return (String) o;
