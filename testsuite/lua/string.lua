@@ -104,6 +104,24 @@ assert(string.char(65) == "A")
 assert(s:lower() == "hello world")
 assert(s:upper() == "HELLO WORLD")
 
-assert(string.match(s, "Hello") == "Hello")
-assert(string.match(s, "H.l%D%w") == "Hello")
+assert(s:match("Hello") == "Hello")
+assert(s:match("H.l%D%w") == "Hello")
+
+assert(s:find("worl") == 7)
+assert(not s:find("worlld"))
+
+assert(not s:find("%w%w%w%w%w%w"))
+assert(s:find("%w%w%w%w%w") == 1)
+assert(s:find("%w%w%w%w%w",5) == 7)
+assert(not s:find("%w%w%w%w%w",8))
+
+do
+	local s2 = "abcdabcd"
+	assert(s2:find("bc") == 2)
+	assert(s2:match("bc") == "bc")
+	assert(s2:match("%wc") == "bc")
+	assert(not s2:find("cd",10))
+	assert(s2:find("cd",-4) == 7)
+	assert(s2:find("cd",-8) == 3)
+end	
 
