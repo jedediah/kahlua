@@ -423,8 +423,16 @@ public final class StringLib implements JavaFunction {
 		return sig ? -1 : p.indexOf(']', index);
 	}
 
-	private int singleMatch(char sc, String pattern, int pIndex) {
+	private int singleMatch(String source, String pattern, int sIndex, int pIndex) {
 		char pc = pattern.charAt(pIndex);
+		if (sIndex == source.length()) {
+			if (pIndex == pattern.length()-1 && pc == '$') {
+				return pIndex + 1; // match the end of string pattern char if we passed the end of the source.
+			} else {
+				return -1;
+			}
+		}
+		char sc = source.charAt(sIndex);
 		switch (pc) {
 			case '.': return pIndex + 1;
 			case '%': 
@@ -434,6 +442,7 @@ public final class StringLib implements JavaFunction {
 					return -1;
 				}
 			case '[': return matchBracketClass(sc, pattern, pIndex);
+			
 			default: return (pc == sc) ? (pIndex + 1) : -1;
 		}
 	}
@@ -441,17 +450,15 @@ public final class StringLib implements JavaFunction {
 	private int match(String source, String pattern,
 			int sIndex, int pIndex, int[][] captures) {
 		int level = 1;
-		int sLen = source.length();
-		int pLen = pattern.length();
 		int si = sIndex;
-		while (pIndex < pLen && si < sLen) {
+		while (pIndex < pattern.length() && si <= source.length()) {
 			//TODO: captures, etc.  Currently supports regular escape patterns
-			pIndex = singleMatch(source.charAt(si), pattern, pIndex);
+			pIndex = singleMatch(source, pattern, si, pIndex);
 			if (pIndex < 0) return -1;
 			si++;
 		}
 		// if the pattern isn't finished when the loop finishes, the pattern doesn't match
-		if (pIndex < pLen) 
+		if (pIndex < pattern.length()) 
 			return -1; 
 		captures[0][0] = sIndex + 1;
 		captures[0][1] = si;

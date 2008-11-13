@@ -123,5 +123,10 @@ do
 	assert(not s2:find("cd",10))
 	assert(s2:find("cd",-4) == 7)
 	assert(s2:find("cd",-8) == 3)
+	
+	assert(s2:find("bcd$") == 6)
+	assert(not s2:find("abc$"))
+	assert(s2:find("^abcdabcd$") == 1)
+	assert(not s2:find("^abcd$"))
 end	
 
