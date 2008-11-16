@@ -57,14 +57,14 @@ public final class BaseLib implements JavaFunction {
 	private static final Object MODE_KEY = "__mode";
 	private static final Object DOUBLE_ONE = new Double(1.0);
 	
-	public static String TYPE_NIL = "nil".intern();
-	public static String TYPE_STRING = "string".intern();
-	public static String TYPE_NUMBER = "number".intern();
-	public static String TYPE_BOOLEAN = "boolean".intern();
-	public static String TYPE_FUNCTION = "function".intern();
-	public static String TYPE_TABLE = "table".intern();
-	public static String TYPE_THREAD = "thread".intern();
-	public static String TYPE_USERDATA = "userdata".intern();
+	public static String TYPE_NIL = "nil"
+	public static String TYPE_STRING = "string"
+	public static String TYPE_NUMBER = "number"
+	public static String TYPE_BOOLEAN = "boolean"
+	public static String TYPE_FUNCTION = "function"
+	public static String TYPE_TABLE = "table"
+	public static String TYPE_THREAD = "thread"
+	public static String TYPE_USERDATA = "userdata"
 
 	static {
 		names = new String[NUM_FUNCTIONS];

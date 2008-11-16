@@ -145,6 +145,8 @@ public final class LuaPrototype {
 			len = toInt(in.readInt(), littleEndian);
 		} else if (size_t == 8) {
 			len = toLong(in.readLong(), littleEndian);
+		} else {
+			loadAssert(false);
 		}
 
 		if (len == 0) {
@@ -211,13 +213,7 @@ public final class LuaPrototype {
 	}
 
 	public static long toLong(long bits, boolean littleEndian) {
-		if (!littleEndian) {
-			return bits;
-		}
-
-		long low = (bits & 0xffffffff);
-		long high = ((bits >>> 32) & 0xffffffff);
-		return (rev(low) << 32) | rev(high);
+		return littleEndian ? rev(bits) : bits;
 	}
 
 

@@ -130,3 +130,35 @@ do
 	assert(not s2:find("^abcd$"))
 end	
 
+function concattest(...)
+	local t = {test = "world"}
+	local tmp = ...
+	local s = "hello" .. t.test
+	assert(s == "helloworld")
+end
+concattest()
+
+function concattest2(...)
+	local function t() return "world" end
+	local tmp = ...
+	local s = "hello" .. t()
+	assert(s == "helloworld")
+end
+concattest2()
+
+function concattest3(...)
+	local t = setmetatable({}, {__index = function() return "world" end})
+	local tmp = ...
+	local s = "hello" .. t.test
+	assert(s == "helloworld")
+end
+concattest3()
+
+function concattest4(...)
+	local t = setmetatable({}, {__index = function() return "world" end})
+	local tmp = ...
+	local s = tmp .. t.test
+	assert(s == "helloworld")
+end
+concattest4("hello")
+

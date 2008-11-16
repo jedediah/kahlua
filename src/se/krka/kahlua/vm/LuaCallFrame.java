@@ -107,10 +107,11 @@ public class LuaCallFrame {
 		int nParams = closure.prototype.numParams;
 		int nVarargs = nArguments - nParams;
 		if (nVarargs < 0) nVarargs = 0;
-		if (n == -1) n = nVarargs;
+		if (n == -1) {
+			n = nVarargs;
+			setTop(index + n);
+		}
 		if (nVarargs > n) nVarargs = n;
-		
-		setTop(index + n);
 		
 		stackCopy(-nArguments + nParams, index, nVarargs);
 		
