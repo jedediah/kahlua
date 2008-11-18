@@ -114,8 +114,10 @@
     </target>
 
     <target name="run-test" depends="test-depend" description="Run the test-suite">
+		<property name="test.file" value="" />
 		<java classname="Test" classpathref="test.classpath" fork="true" dir="${test.dir}">
 			<arg value="${test.lua.output.dir}" />
+			<arg value="${test.file}" />
 		</java>
     </target>
 
