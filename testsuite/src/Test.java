@@ -63,19 +63,26 @@ public class Test {
 
 		LuaState state = getState(dir);
 
-		File[] children; 
-		if (args.length < 2) {
-			children = dir.listFiles();
-		} else {
-			children = new File[1];
-			children[0] = new File(dir, args[1]);
+		File[] children = null;
+		for (int i = 1; i < args.length; i++) {
+			File f = new File(dir, args[i]);
+			if (f.exists() && f.isFile()) {
+				if (children == null) {
+					children = new File[args.length];
+				}
+				children[i] =  f;
+			} else {
+			}
 		}
+		if (children == null) {
+			children = dir.listFiles();
+		}
+		
 		int successful = 0;
 		int total = 0;
 		for (int i = 0; i < children.length; i++) {
 			File child = children[i];
-
-			if (!child.getName().equals("stdlib.lbc") && child.getName().endsWith(".lbc")) {
+			if (child != null && !child.getName().equals("stdlib.lbc") && child.getName().endsWith(".lbc")) {
 				total++;
 				
 				LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.environment);
