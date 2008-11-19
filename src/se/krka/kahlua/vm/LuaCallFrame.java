@@ -41,10 +41,16 @@ public class LuaCallFrame {
 	boolean restoreTop;
 	
 	public void set(int index, Object o) {
+		if (index > getTop()) {
+			throw new LuaException("Tried to access index outside of stack, top: " + getTop() + ", index: " + index);
+		}
 		thread.objectStack[localBase + index] = o;
 	}
 
 	public Object get(int index) {
+		if (index > getTop()) {
+			throw new LuaException("Tried to access index outside of stack, top: " + getTop() + ", index: " + index);
+		}
 		return thread.objectStack[localBase + index];
 	}
 
@@ -69,6 +75,17 @@ public class LuaCallFrame {
 		for (; startIndex <= endIndex; startIndex++) {
 			thread.objectStack[localBase + startIndex] = null;
 		}
+	}
+
+	/**
+	 * This ensures that top is at least as high as index, and that everything from index and up is empty.
+	 * @param index
+	 */
+	public void clearFromIndex(int index) {
+		if (getTop() < index) {
+			setTop(index);
+		}
+		stackClear(index, getTop() - 1);
 	}
 	
 	public void setTop(int index) {
@@ -103,6 +120,12 @@ public class LuaCallFrame {
 		}
 	}
 
+	public void setPrototypeStacksize() {
+		if (closure != null) {
+			setTop(closure.prototype.maxStacksize);
+		}
+	}
+	
 	public void pushVarargs(int index, int n) {
 		int nParams = closure.prototype.numParams;
 		int nVarargs = nArguments - nParams;

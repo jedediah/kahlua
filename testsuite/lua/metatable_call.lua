@@ -8,7 +8,14 @@ function mt.__call(caller, ...)
 	assert(b == 2)
 	assert(c == 3)
 	assert(d == nil)
+	return 123
 end
 
-t(1, 2, 3)
+assert(t(1, 2, 3) == 123)
+
+function foo()
+	return t(1, 2, 3)
+end
+
+assert(foo() == 123)
 

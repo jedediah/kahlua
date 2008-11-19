@@ -1,3 +1,8 @@
+local assert = assert
+local pairs = pairs
+local setmetatable = setmetatable
+local type = type
+
 local mt = {}
 function mt.__index(t, k)
 	if type(k) == "string" then
@@ -7,6 +12,7 @@ end
 
 local t = setmetatable({}, mt)
 for key, value in pairs{1} do
+	assert(true)
 	assert(t.hello == "hellohello")
 end
 

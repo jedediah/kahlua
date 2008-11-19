@@ -622,7 +622,8 @@ public final class LuaState {
 
 					callFrame.restoreTop = c != 0;
 
-					Object fun = prepareMetatableCall(callFrame.get(a));
+					Object funObject = callFrame.get(a);
+					Object fun = prepareMetatableCall(funObject);
 
 					int base = callFrame.localBase;
 
@@ -780,7 +781,7 @@ public final class LuaState {
 						callFrame.pc += b;
 						callFrame.set(a + 3, iterDouble);
 					} else {
-						callFrame.setTop(a);
+						callFrame.clearFromIndex(a);
 					}
 					break;
 				}
@@ -791,7 +792,8 @@ public final class LuaState {
 					callFrame.setTop(a + 6);
 					callFrame.stackCopy(a, a + 3, 3);
 					call(2);
-					callFrame.setTop(a + 3 + c);
+					callFrame.clearFromIndex(a + 3 + c);
+					callFrame.setPrototypeStacksize();
 
 					Object aObj3 = callFrame.get(a + 3);
 					if (aObj3 != null) {
