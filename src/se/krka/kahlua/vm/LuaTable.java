@@ -28,6 +28,8 @@ import se.krka.kahlua.stdlib.BaseLib;
 
 
 public final class LuaTable {
+	private static final int MIN_CAPACITY = 16;
+
 	private Object[] keys;
 	private Object[] values;
 	private int[] next;
@@ -36,6 +38,9 @@ public final class LuaTable {
 	private boolean weakKeys, weakValues;
 
 	private static int nearestPowerOfTwo(int x) {
+		if (x < MIN_CAPACITY) {
+			return MIN_CAPACITY;
+		}
 		x--;
 		x |= (x >> 1);
 		x |= (x >> 2);
@@ -239,7 +244,6 @@ public final class LuaTable {
 			}
 		}
 		int capacity = 2 * nearestPowerOfTwo(used);
-
 
 		keys = new Object[capacity];
 		values = new Object[capacity];
