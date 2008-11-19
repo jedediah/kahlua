@@ -105,7 +105,7 @@ public class LuaJavaClassFactory {
 				Object param = params[i];
 				Class paramType = paramTypes[i];
 				if (paramType == Long.class || paramType == long.class) {
-					param = Double.valueOf(((Double) param).longValue());
+					param = Long.valueOf(((Double) param).longValue());
 				} else if (paramType == Integer.class || paramType == int.class) {
 					param = Integer.valueOf(((Double) param).intValue());
 				} else if (paramType == Float.class || paramType == float.class) {
