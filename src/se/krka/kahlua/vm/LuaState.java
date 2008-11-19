@@ -182,7 +182,7 @@ public final class LuaState {
 		}
 
 		if (o instanceof JavaFunction) {
-			return callJava((JavaFunction) o, base, nArguments);
+			return callJava((JavaFunction) o, base + 1, base, nArguments);
 		}
 
 		if (!(o instanceof LuaClosure)) {
@@ -201,10 +201,10 @@ public final class LuaState {
 		return nReturnValues;
 	}
 
-	private int callJava(JavaFunction f, int base, int nArguments) {
+	private int callJava(JavaFunction f, int localBase, int returnBase, int nArguments) {
 		LuaThread thread = currentThread;
 
-		LuaCallFrame callFrame = thread.pushNewCallFrame(null, base + 1, base, nArguments, false, false);
+		LuaCallFrame callFrame = thread.pushNewCallFrame(null, localBase, returnBase, nArguments, false, false);
 
 		int nReturnValues = f.call(callFrame, nArguments);
 
@@ -622,13 +622,22 @@ public final class LuaState {
 
 					callFrame.restoreTop = c != 0;
 
-					Object funObject = callFrame.get(a);
-					Object fun = prepareMetatableCall(funObject);
-
 					int base = callFrame.localBase;
 
+					int localBase2 = base + a + 1;
+					int returnBase2 = base + a;
+					
+					Object funObject = callFrame.get(a);
+					Object fun = prepareMetatableCall(funObject);
+					
+					// If it's a metatable __call, prepend the caller as the first argument 
+					if (fun != funObject) {
+						localBase2 = returnBase2;
+						nArguments2++;
+					}
+					
 					if (fun instanceof LuaClosure) {
-						LuaCallFrame newCallFrame = currentThread.pushNewCallFrame((LuaClosure) fun, base + a + 1, base + a, nArguments2, true, callFrame.insideCoroutine);
+						LuaCallFrame newCallFrame = currentThread.pushNewCallFrame((LuaClosure) fun, localBase2, returnBase2, nArguments2, true, callFrame.insideCoroutine);
 						newCallFrame.init();
 
 						callFrame = newCallFrame;
@@ -636,7 +645,7 @@ public final class LuaState {
 						prototype = closure.prototype;
 						opcodes = prototype.opcodes;
 					} else if (fun instanceof JavaFunction) {
-						callJava((JavaFunction) fun, base + a, nArguments2);
+						callJava((JavaFunction) fun, base + a + 1, base + a, nArguments2);
 
 						callFrame = currentThread.currentCallFrame();
 						closure = callFrame.closure;
@@ -666,8 +675,15 @@ public final class LuaState {
 
 					callFrame.restoreTop = false;
 
-					Object fun = prepareMetatableCall(callFrame.get(a));
-
+					Object funObject = callFrame.get(a);
+					Object fun = prepareMetatableCall(funObject);
+					
+					// If it's a metatable __call, prepend the caller as the first argument 
+					if (fun != funObject) {
+						throw new Error("NYI");
+					}
+					
+					
 					currentThread.stackCopy(base + a, returnBase, nArguments2 + 1);
 					currentThread.setTop(returnBase + nArguments2 + 1);
 
@@ -678,7 +694,7 @@ public final class LuaState {
 						callFrame.init();
 
 					} else if (fun instanceof JavaFunction) {
-						callJava((JavaFunction) fun, returnBase, nArguments2);
+						callJava((JavaFunction) fun, returnBase + 1, returnBase, nArguments2);
 
 						currentThread.popCallFrame();
 						if (callFrame.fromLua) {
