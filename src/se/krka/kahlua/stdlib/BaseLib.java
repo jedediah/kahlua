@@ -379,6 +379,11 @@ public final class BaseLib implements JavaFunction {
 	}
 
 	public static Object getOptArg(LuaCallFrame callFrame, int n, String type) {
+		// Outside of stack
+		if (n - 1 >= callFrame.getTop()) {
+			return null;
+		}
+		
 		Object o = callFrame.get(n-1);
 		if (o == null) {
 			return null;
