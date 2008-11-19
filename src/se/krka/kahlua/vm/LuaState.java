@@ -678,23 +678,25 @@ public final class LuaState {
 					Object funObject = callFrame.get(a);
 					Object fun = prepareMetatableCall(funObject);
 					
+					int localBase2 = returnBase + 1;
+					
 					// If it's a metatable __call, prepend the caller as the first argument 
 					if (fun != funObject) {
-						throw new Error("NYI");
+						localBase2 = returnBase;
+						nArguments2++;
 					}
-					
-					
+
 					currentThread.stackCopy(base + a, returnBase, nArguments2 + 1);
 					currentThread.setTop(returnBase + nArguments2 + 1);
 
 					if (fun instanceof LuaClosure) {
-						callFrame.localBase = returnBase + 1;
+						callFrame.localBase = localBase2;
 						callFrame.nArguments = nArguments2;
 						callFrame.closure = (LuaClosure) fun;
 						callFrame.init();
 
 					} else if (fun instanceof JavaFunction) {
-						callJava((JavaFunction) fun, returnBase + 1, returnBase, nArguments2);
+						callJava((JavaFunction) fun, localBase2, returnBase, nArguments2);
 
 						currentThread.popCallFrame();
 						if (callFrame.fromLua) {
