@@ -54,17 +54,19 @@ public class LuaCallFrame {
 		return thread.objectStack[localBase + index];
 	}
 
-	public void push(Object x) {
+	public int push(Object x) {
 		int top = getTop();
 		setTop(top + 1);
 		set(top, x);
+		return 1; // returns how much we pushed onto the stack for return value purposes
 	}
 
-	public void push(Object x, Object y) {
+	public int push(Object x, Object y) {
 		int top = getTop();
 		setTop(top + 2);
 		set(top, x);
 		set(top + 1, y);
+		return 2; // returns how much we pushed onto the stack for return value purposes
 	}
 	
 	public final void stackCopy(int startIndex, int destIndex, int len) {

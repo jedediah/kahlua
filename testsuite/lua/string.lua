@@ -1,14 +1,18 @@
+function assertEqual(actual, expected, msg)
+	assert(expected == actual, msg or "expected " .. tostring(expected) .. ", actual " .. tostring(actual)) 
+end
+
 -- test concatenation
 do
 	local s1, s2 = "hello", "world"
 	local s = s1 .. s2
-	assert(s == "helloworld")
+	assertEqual(s,"helloworld")
 end
 
 do
 	local s1, s2, s3, s4 = "this", "is", "a", "test"
 	local s = s1 .. s2 .. s3 .. s4
-	assert(s == "thisisatest")
+	assertEqual(s,"thisisatest")
 end
 
 do
@@ -25,7 +29,7 @@ do
 	local t2 = setmetatable({" "}, meta)
 	local t3 = setmetatable({"world"}, meta)
 	local s = t1 .. t2 .. t3
-	assert(s == "hello world")
+	assertEqual(s,"hello world")
 end
 
 do
@@ -38,14 +42,14 @@ do
 end
 
 do
-	assert(type(string) == "table")
-	assert(type(string.sub) == "function")
-	assert(type(string.byte) == "function")
-	assert(type(string.len) == "function")
-	assert(type(string.char) == "function")
-	assert(type(string.lower) == "function")
-	assert(type(string.upper) == "function")
-	assert(type(string.reverse) == "function")
+	assertEqual(type(string),"table")
+	assertEqual(type(string.sub),"function")
+	assertEqual(type(string.byte),"function")
+	assertEqual(type(string.len),"function")
+	assertEqual(type(string.char),"function")
+	assertEqual(type(string.lower),"function")
+	assertEqual(type(string.upper),"function")
+	assertEqual(type(string.reverse),"function")
 
 	-- testing handling of not enough parameters
 	assert(not pcall(string.sub))
@@ -71,8 +75,8 @@ end
 
 do
 	local function testReverse(s)
-		assert(#s == #(s:reverse()))
-		assert(s:reverse():reverse() == s)
+		assertEqual(#(s:reverse()),#s)
+		assertEqual(s:reverse():reverse(),s)
 	end 
 	testReverse"hello world"
 	testReverse""
@@ -83,58 +87,105 @@ end
 
 s = "Hello world"
 
-assert(#s == 11)
-assert(s:sub(1, 5) == "Hello")
-assert(s:sub(1, -1) == "Hello world")
-assert(s:sub(1, -5) == "Hello w")
-assert(s:sub(1, -7) == "Hello")
-assert(s:sub(1, 0) == "")
-assert(s:sub(1, -25) == "")
+assertEqual(#s,11)
+assertEqual(s:sub(1, 5),"Hello")
+assertEqual(s:sub(1, -1),"Hello world")
+assertEqual(s:sub(1, -5),"Hello w")
+assertEqual(s:sub(1, -7),"Hello")
+assertEqual(s:sub(1, 0),"")
+assertEqual(s:sub(1, -25),"")
 
-assert(s.sub == string.sub)
+assertEqual(s.sub,string.sub)
 
 assert("ape" < "banana")
 
 assert("xyz" <= "xyz")
 
-assert(s:byte(1) == 72)
+assertEqual(s:byte(1),72)
 
-assert(string.char(65) == "A")
+assertEqual(string.char(65),"A")
 
-assert(s:lower() == "hello world")
-assert(s:upper() == "HELLO WORLD")
+assertEqual(s:lower(),"hello world")
+assertEqual(s:upper(),"HELLO WORLD")
 
-assert(s:match("Hello") == "Hello")
-assert(s:match("H.l%D%w") == "Hello")
+assertEqual(s:match("Hello"),"Hello")
+assertEqual(s:match("H.l%D%w"),"Hello")
 
-assert(s:find("worl") == 7)
-assert(not s:find("worlld"))
+assertEqual(s:find("worl"),7)
+assertEqual(s:find("worlld"),nil)
 
-assert(not s:find("%w%w%w%w%w%w"))
-assert(s:find("%w%w%w%w%w") == 1)
-assert(s:find("%w%w%w%w%w",5) == 7)
-assert(not s:find("%w%w%w%w%w",8))
+assertEqual(s:find("%w%w%w%w%w"),1)
+assertEqual(s:find("%w%w%w%w%w",5),7)
+assertEqual(s:find("%w%w%w%w%w%w"),nil)
+assertEqual(s:find("%w%w%w%w%w",8),nil)
 
 do
 	local s2 = "abcdabcd"
-	assert(s2:find("bc") == 2)
-	assert(s2:match("bc") == "bc")
-	assert(s2:match("%wc") == "bc")
-	assert(not s2:find("cd",10))
-	assert(s2:find("cd",-4) == 7)
-	assert(s2:find("cd",-8) == 3)
+	assertEqual(s2:find("bc"),2)
+	assertEqual(s2:match("bc"),"bc")
+	assertEqual(s2:match("%wc"),"bc")
+	assertEqual(s2:find("cd",10),nil)
+	assertEqual(s2:find("cd",-4),7)
+	assertEqual(s2:find("cd",-8),3)
 	
-	assert(s2:find("bcd$") == 6)
-	assert(not s2:find("abc$"))
-	assert(s2:find("^abcdabcd$") == 1)
-	assert(not s2:find("^abcd$"))
+	assertEqual(s2:find("bcd$"),6)
+	assertEqual(s2:find("abc$"),nil)
+	assertEqual(s2:find("^abcdabcd$"),1)
+	assertEqual(s2:find("^abcd$"),nil)
 end	
+
+do
+	local s = "12345abcdef"
+	local si, ei, cap1 = s:find("(45ab)")
+	assertEqual(si,4)
+	assertEqual(ei,7)
+	assertEqual(cap1,"45ab")
+	assertEqual(s:match("(45ab)"),"45ab")
+	
+	si, ei, cap1 = s:find("cd()")
+	assertEqual(si,8)
+	assertEqual(ei,9)
+	assertEqual(cap1,10)
+	assertEqual(s:match("cd()"),10)
+	
+	local cap2, cap3, cap4 = nil, nil, nil
+	si, ei, cap1, cap2 = s:find("(23)%d%d%a(bc)")
+	assertEqual(si,2)
+	assertEqual(ei,8)
+	assertEqual(cap1,"23")
+	assertEqual(cap2,"bc")
+	cap1, cap2 = s:match("(23)%d%d%a(bc)")
+	assertEqual(cap1,"23")
+	assertEqual(cap2,"bc")
+	
+	si,ei,cap1,cap2 = s:find("%d(%d%d(%a%a)%a)%a")
+	assertEqual(si,3)
+	assertEqual(ei,9)
+	assertEqual(cap1,"45abc")
+	assertEqual(cap2,"ab")
+	cap1,cap2 = s:match("%d(%d%d(%a%a)%a)%a")
+	assertEqual(cap1,"45abc")
+	assertEqual(cap2,"ab")
+	
+	si,ei,cap1,cap2,cap3,cap4 = s:find("%d(%d%a(%a)())%a(%x%a)")
+	assertEqual(si,4)
+	assertEqual(ei,10)
+	assertEqual(cap1,"5ab")
+	assertEqual(cap2,"b")
+	assertEqual(cap3,8)
+	assertEqual(cap4,"de")
+	cap1,cap2,cap3,cap4 = s:match("%d(%d%a(%a)())%a(%x%a)")
+	assertEqual(cap1,"5ab")
+	assertEqual(cap2,"b")
+	assertEqual(cap3,8)
+	assertEqual(cap4,"de")
+end
 
 function concattest(...)
 	local t = {test = "world"}
 	local tmp = ...
 	local s = "hello" .. t.test
-	assert(s == "helloworld")
+	assertEqual(s,"helloworld")
 end
 concattest()
 
@@ -142,7 +193,7 @@ function concattest2(...)
 	local function t() return "world" end
 	local tmp = ...
 	local s = "hello" .. t()
-	assert(s == "helloworld")
+	assertEqual(s,"helloworld")
 end
 concattest2()
 
@@ -150,7 +201,7 @@ function concattest3(...)
 	local t = setmetatable({}, {__index = function() return "world" end})
 	local tmp = ...
 	local s = "hello" .. t.test
-	assert(s == "helloworld")
+	assertEqual(s,"helloworld")
 end
 concattest3()
 
@@ -158,7 +209,6 @@ function concattest4(...)
 	local t = setmetatable({}, {__index = function() return "world" end})
 	local tmp = ...
 	local s = tmp .. t.test
-	assert(s == "helloworld")
+	assertEqual(s,"helloworld")
 end
 concattest4("hello")
-

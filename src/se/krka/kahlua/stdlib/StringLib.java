@@ -39,11 +39,15 @@ public final class StringLib implements JavaFunction {
 	private static final int MATCH = 8;
 
 	private static final int NUM_FUNCTIONS = 9;
-	
+
+	private static final int CAP_UNFINISHED =	-1;
+	private static final int CAP_POSITION = -2;
 	private static final int MAXCAPTURES = 32;
 	private static final String SPECIALS = "^$*+?.([%-";
 	private static final String PUNCTUATION = "!\"§$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 	private static final String HEXCHARS = "0123456789abcdefABCDEF";
+	
+	private static final int MINCAPLOC = 0;
 	
 	private static final String[] names;
 	
@@ -102,6 +106,8 @@ public final class StringLib implements JavaFunction {
 		case FORMAT: return format(callFrame, nArguments);
 		case FIND: return findAux(callFrame, nArguments, true);
 		case MATCH: return findAux(callFrame, nArguments, false);
+		//case FIND: return Strlib.str_find(callFrame, nArguments);
+		//case MATCH: return Strlib.str_match(callFrame, nArguments);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
@@ -317,7 +323,7 @@ public final class StringLib implements JavaFunction {
 	// Pattern Matching
 	
 	private int findAux(LuaCallFrame callFrame, int nArguments, boolean find) {
-		String f = find?"find":"match";
+		String f = find ? "find" : "match";
 		String source = (String) BaseLib.getArg(callFrame, 1, BaseLib.TYPE_STRING, f);
 		String pattern = (String) BaseLib.getArg(callFrame, 2, BaseLib.TYPE_STRING, f);
 		Double i = (Double)(BaseLib.getOptArg(callFrame, 3, BaseLib.TYPE_NUMBER));
@@ -331,8 +337,7 @@ public final class StringLib implements JavaFunction {
 			} else if (init > 0) { 
 				// lua strings reference characters starting at 1, so subtract 1 to translate to java
 				init--;
-			} 
-			// fall through case is if init = 0, in which case we leave it as is.
+			} // fall through case is if init = 0, in which case we leave it as is.
 		}
 		
 		if (plain || noSpecialChars(pattern)) {  
@@ -340,11 +345,9 @@ public final class StringLib implements JavaFunction {
 			int pos = source.indexOf(pattern, init);
 			if (pos > -1) {
 				if (find) { // if find is called, return the start and end pos of the pattern in the source string.
-					callFrame.push(LuaState.toDouble(pos + 1), LuaState.toDouble(pos + pattern.length()));
-					return 2;
+					return callFrame.push(LuaState.toDouble(pos + 1), LuaState.toDouble(pos + pattern.length()));
 				} else { // if match is called, return the pattern itself since there's no special chars to parse.
-					callFrame.push(pattern);
-					return 1;
+					return callFrame.push(pattern);
 				}
 			}
 		} else {
@@ -357,23 +360,25 @@ public final class StringLib implements JavaFunction {
 			}
 			do {
 				int[][] captures = createCaptures();
-				int level = match(source, pattern, sIndex, pIndex, captures);
+				int level = match(captures, source, pattern, sIndex, pIndex);
 				if (level > -1) {
 					if (find) {
-						int[] indices = captures[0];
-						callFrame.push(new Double(indices[0]), new Double(indices[0] + indices[1] - 1));
+						int[] indices = captures[MAXCAPTURES];
 						// shift base right by 2, add the 2 later
-						return 2 + pushCaptures(callFrame, source, captures, level, 1);
+						return callFrame.push(new Double(indices[0]+1), new Double(indices[1])) + 
+							pushCaptures(callFrame, source, captures, level, false);
 					} else {
-						return pushCaptures(callFrame, source, captures, level, 0);
+						boolean maincap = true;
+						if (level > 1) // don't push the main match if there are captures in the pattern.
+							maincap = false;
+						return pushCaptures(callFrame, source, captures, level, maincap);
 					}
 				}
 				sIndex++;
 			} while (source.length() > sIndex && !anchor);
 		}
 		// find unsuccessful, return nil.
-		callFrame.push(null);
-		return 1; 
+		return callFrame.push(null);
 	}
 	
 	private boolean matchClass(char classIdentifier, char c) {
@@ -383,11 +388,11 @@ public final class StringLib implements JavaFunction {
 	    case 'c': res = (int)(c) < 32; break;
 	    case 'd': res = Character.isDigit(c); break;
 	    case 'l': res = Character.isLowerCase(c); break;
-	    case 'p': res = (PUNCTUATION.indexOf(c) > -1); break;
+	    case 'p': res = c > 32 && matchClass('W',c); break;
+	    //(PUNCTUATION.indexOf(c) > -1); break;
 	    case 's': res = (c == 32 || (c > 8 && c < 14)); break;
 	    case 'u': res = Character.isUpperCase(c); break;
-	    case 'w': res = Character.isDigit(c) || Character.isLowerCase(c) ||
-				Character.isUpperCase(c); break;
+	    case 'w': res = matchClass('a',c) || matchClass('d',c); break;
 	    case 'x': res = (HEXCHARS.indexOf(c) > -1); break;
 	    case 'z': res = (c == 0); break;
 	    default: return (classIdentifier == c);
@@ -423,16 +428,8 @@ public final class StringLib implements JavaFunction {
 		return sig ? -1 : p.indexOf(']', index);
 	}
 
-	private int singleMatch(String source, String pattern, int sIndex, int pIndex) {
+	private int singleMatch(char sc, String pattern,  int pIndex) {
 		char pc = pattern.charAt(pIndex);
-		if (sIndex == source.length()) {
-			if (pIndex == pattern.length()-1 && pc == '$') {
-				return pIndex + 1; // match the end of string pattern char if we passed the end of the source.
-			} else {
-				return -1;
-			}
-		}
-		char sc = source.charAt(sIndex);
 		switch (pc) {
 			case '.': return pIndex + 1;
 			case '%': 
@@ -447,24 +444,61 @@ public final class StringLib implements JavaFunction {
 		}
 	}
 	
-	private int match(String source, String pattern,
-			int sIndex, int pIndex, int[][] captures) {
-		int level = 1;
+	private int match(int[][] captures, String source,
+			String pattern, int sIndex, int pIndex) {
+		int level = 0;
 		int si = sIndex;
+		int caplevel = 0;
 		while (pIndex < pattern.length() && si <= source.length()) {
-			//TODO: captures, etc.  Currently supports regular escape patterns
-			pIndex = singleMatch(source, pattern, si, pIndex);
-			if (pIndex < 0) return -1;
-			si++;
+			//TODO: captures, accumulators.  Currently supports regular escape patterns
+
+			switch (pattern.charAt(pIndex)) {
+		    case '(':   // start capture
+				BaseLib.luaAssert(level < MAXCAPTURES, "too many captures");
+		    	if (pattern.charAt(pIndex+1) == ')') {  //position capture?
+		    		captures[level][0] = si;
+		    		captures[level][1] = si;
+		    		pIndex += 2;
+		    	} else {
+		    		captures[level][0] = si;
+		    		caplevel++;
+		    		pIndex++;
+		    	}
+	    		level++;
+		    	continue;
+		    case ')':  //end capture
+		    	if (caplevel > 0) {
+		    		captures[captureToClose(captures, level)][1] = si;
+		    		caplevel--;
+		    		pIndex++;
+		    		continue;
+		    	}
+		    case '$': 
+				if (pIndex == pattern.length()-1 && si == source.length()) {
+					// match the end of string pattern char if we passed the end of the source.
+					pIndex++;
+					break;
+				} // don't break since we want to check the $ normally too.
+		    default:
+		    	if (si >= source.length())
+		    		return -1;
+		    	pIndex = singleMatch(source.charAt(si), pattern, pIndex);
+				if (pIndex < 0) 
+					return -1;
+				si++;
+		    	break;
+			}
 		}
-		// if the pattern isn't finished when the loop finishes, the pattern doesn't match
-		if (pIndex < pattern.length()) 
+		// if the pattern isn't finished when the loop finishes, the pattern doesn't match or
+		// if there are any open captures, don't match.
+		if (pIndex < pattern.length() || caplevel > 0) 
 			return -1; 
-		captures[0][0] = sIndex + 1;
-		captures[0][1] = si;
+		// store the full match for find and if we didnt have any other captures.
+		captures[MAXCAPTURES][0] = sIndex; 
+		captures[MAXCAPTURES][1] = si;
 		return level;
 	}
-
+		
 	private int[][] createCaptures() {
 		int[][] result = new int[MAXCAPTURES + 1][2];// +1 for the initial search
 		for (int i = 0; i < result.length; i++) {
@@ -474,22 +508,44 @@ public final class StringLib implements JavaFunction {
 		return result;
 	}
 	
+	private int captureToClose (int[][] captures, int level) {
+		// if there are captures that are started but not finished, find the latest one
+		int[] capture;
+		for (int i = level; i >= MINCAPLOC; i--) {
+			capture = captures[i];
+			if (capture[0] != 0 && capture[1] == -1)
+				return i;
+		}
+		return level;
+	}
+	
 	private int pushCaptures(LuaCallFrame callFrame, String source, int[][] caps, 
-			int level, int i) {
+			int level, boolean maincap) {
 		int pushed = 0;
-		for (int j = 0; j < level; j++) {
+		int i = 0;
+		for (int j = 0; j <= level; j++) {
 			int from = caps[i][0];
 			int to = caps[i++][1];
-			if (from == to) {
-				// location capture
-				callFrame.push(new Double(from));
-				pushed++;
-			} else if (from < to) {
-				callFrame.push(source.substring(from - 1, to).intern());
-				pushed++;
-			}
+			pushed += pushCapture(callFrame, source, from, to);
+		}
+		if (maincap) {
+			int from = caps[MAXCAPTURES][0];
+			int to = caps[MAXCAPTURES][1];
+						
+			pushed += pushCapture(callFrame, source, from, to);
 		}
 		return pushed;
+	}
+
+	private int pushCapture(LuaCallFrame callFrame, String source, int from,
+			int to) {
+		if (from == to) {
+			// location capture
+			return callFrame.push(new Double(from+1));
+		} else if (from < to) {
+			return callFrame.push(source.substring(from, to).intern());
+		}
+		return 0;
 	}
 	
 	private boolean noSpecialChars(String pattern) {
