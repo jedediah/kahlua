@@ -40,11 +40,8 @@ public final class StringLib implements JavaFunction {
 
 	private static final int NUM_FUNCTIONS = 9;
 
-	private static final int CAP_UNFINISHED =	-1;
-	private static final int CAP_POSITION = -2;
 	private static final int MAXCAPTURES = 32;
 	private static final String SPECIALS = "^$*+?.([%-";
-	private static final String PUNCTUATION = "!\"§$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 	private static final String HEXCHARS = "0123456789abcdefABCDEF";
 	
 	private static final int MINCAPLOC = 0;
@@ -418,14 +415,14 @@ public final class StringLib implements JavaFunction {
 				return -1;
 			} else if (index + 2 < len && p.charAt(index + 1) == '-') {
 				if (c >= pc && c <= p.charAt(index + 2)) {
-					return sig ? p.indexOf(']', index) : -1;
+					return sig ? p.indexOf(']', index)+1 : -1;
 				}
 			} else if (c == pc) {
-					return sig ? p.indexOf(']', index) : -1;
+					return sig ? p.indexOf(']', index)+1 : -1;
 			}
 			index++;
 		}
-		return sig ? -1 : p.indexOf(']', index);
+		return sig ? -1 : p.indexOf(']', index)+1;
 	}
 
 	private int singleMatch(char sc, String pattern,  int pIndex) {
@@ -438,7 +435,7 @@ public final class StringLib implements JavaFunction {
 				} else {
 					return -1;
 				}
-			case '[': return matchBracketClass(sc, pattern, pIndex);
+			case '[': return matchBracketClass(sc, pattern, pIndex+1);
 			
 			default: return (pc == sc) ? (pIndex + 1) : -1;
 		}
@@ -450,10 +447,9 @@ public final class StringLib implements JavaFunction {
 		int si = sIndex;
 		int caplevel = 0;
 		while (pIndex < pattern.length() && si <= source.length()) {
-			//TODO: captures, accumulators.  Currently supports regular escape patterns
-
+			//TODO: capture references (%0-%9), balanced matches
 			switch (pattern.charAt(pIndex)) {
-		    case '(':   // start capture
+		    case '(':   // start a capture
 				BaseLib.luaAssert(level < MAXCAPTURES, "too many captures");
 		    	if (pattern.charAt(pIndex+1) == ')') {  //position capture?
 		    		captures[level][0] = si;
@@ -466,25 +462,43 @@ public final class StringLib implements JavaFunction {
 		    	}
 	    		level++;
 		    	continue;
-		    case ')':  //end capture
+		    case ')':  //end a capture
 		    	if (caplevel > 0) {
 		    		captures[captureToClose(captures, level)][1] = si;
 		    		caplevel--;
 		    		pIndex++;
 		    		continue;
-		    	}
+		    	} // don't break here since we want to check the ) normally too.
 		    case '$': 
 				if (pIndex == pattern.length()-1 && si == source.length()) {
 					// match the end of string pattern char if we passed the end of the source.
 					pIndex++;
 					break;
-				} // don't break since we want to check the $ normally too.
+				} // don't break here since we want to check the $ normally too.
 		    default:
 		    	if (si >= source.length())
 		    		return -1;
-		    	pIndex = singleMatch(source.charAt(si), pattern, pIndex);
+		    
+		    	int pi = classend(pattern,pIndex);
+		    	//boolean m = si < source.length() && singleMatch(source.charAt(si), pattern, pi) > -1;
+				//TODO: accumulators (*,+,-,?)
+				if (pi < pattern.length()) {
+					switch (pattern.charAt(pi)) {
+					case '?':
+					case '*':
+					case '+':
+					case '-':
+					default:
+						pIndex = singleMatch(source.charAt(si), pattern, pIndex);
+						break;
+					}
+				} else {
+					pIndex = singleMatch(source.charAt(si), pattern, pIndex);
+				}
+				
 				if (pIndex < 0) 
 					return -1;
+				
 				si++;
 		    	break;
 			}
@@ -497,6 +511,45 @@ public final class StringLib implements JavaFunction {
 		captures[MAXCAPTURES][0] = sIndex; 
 		captures[MAXCAPTURES][1] = si;
 		return level;
+	}
+	
+	private int matchOptional(String source, int si, String pattern,
+			int pIndex, boolean m) {
+		
+		return pIndex;
+	}
+
+	private int minExpand (int[][] captures, String source, int s,
+            String pattern, int ep) {
+		for (;;) {
+		    int res = match(captures, source, pattern, s, ep+1);
+		    if (res != -1)
+		    	return res;
+		    else if (s<source.length() && singleMatch(source.charAt(s), pattern, ep) > -1)
+		    	s++;  // try with one more repetition
+		    else 
+		    	return -1;
+		}
+	}
+	
+	private int classend(String pattern, int pIndex) {
+		switch (pattern.charAt(pIndex)) {
+	    case '%': 
+	    	pIndex++;
+	        BaseLib.luaAssert(pIndex < pattern.length(), "malformed pattern (ends with %)");
+	        return pIndex+1;
+	    case '[': 
+	    	pIndex++;
+	    	if (pattern.charAt(pIndex) == '^') pIndex++;
+	    	do {  // look for a `]' 
+	    		BaseLib.luaAssert(pIndex < pattern.length(), "malformed pattern (missing ])");
+	    		if (pattern.charAt(pIndex++) == '%' && pIndex != pattern.length())
+	    			pIndex++;  // skip escapes (e.g. `%]') 
+	    	} while (pattern.charAt(pIndex) != ']');
+	    	return pIndex+1;
+	    default: 
+	    	return pIndex;
+		}
 	}
 		
 	private int[][] createCaptures() {

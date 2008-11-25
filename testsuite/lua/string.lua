@@ -105,6 +105,10 @@ assertEqual(s:byte(1),72)
 
 assertEqual(string.char(65),"A")
 
+assertEqual(s:match("H[e][lo][lo][lo]"),"Hello")
+assertEqual(s:find("[Hello][Hello][Hello]"),1)
+
+
 assertEqual(s:lower(),"hello world")
 assertEqual(s:upper(),"HELLO WORLD")
 
@@ -132,6 +136,9 @@ do
 	assertEqual(s2:find("abc$"),nil)
 	assertEqual(s2:find("^abcdabcd$"),1)
 	assertEqual(s2:find("^abcd$"),nil)
+	
+	local s3 = "123$^xy"
+	assertEqual(s3:find("3$^x"),3)
 end	
 
 do
@@ -179,6 +186,20 @@ do
 	assertEqual(cap2,"b")
 	assertEqual(cap3,8)
 	assertEqual(cap4,"de")
+	
+	assertEqual(s:find("%d(%u%l)"),nil)
+	assertEqual(s:match("%d(%u%l)"),nil)
+end
+
+do
+	local s = "wxyzabcd1111;.,"
+	local si,ei = s:find("bce?d11")
+	--assertEqual(si,6)
+	--assertEqual(ei,10)
+	
+	si, ei = s:find("1-")
+	--assertEqual(si,1)
+	--assertEqual(ei,0)
 end
 
 function concattest(...)
