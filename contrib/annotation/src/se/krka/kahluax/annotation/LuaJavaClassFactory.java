@@ -47,12 +47,14 @@ public class LuaJavaClassFactory {
 			if (method.isAnnotationPresent(LuaMethod.class)) {
 				LuaMethod luaMethod = method.getAnnotation(LuaMethod.class);
 
-				String methodName = method.getName();
-				if (!luaMethod.alias().equals("[unassigned]")) {
+				String methodName;
+				if (luaMethod.alias().equals(LuaMethod.UNASSIGNED)) {
+					methodName = method.getName();
+				} else {
 					methodName = luaMethod.alias();
 				}
-				
-				indextable.rawset(methodName, new MethodObject(method));
+
+				indextable.rawset(methodName.intern(), new MethodObject(method));
 			}
 		}
 	}
@@ -137,9 +139,9 @@ public class LuaJavaClassFactory {
 					returnObject = method.invoke(owner);
 				}
 			} catch (IllegalAccessException e) {
-				throw new RuntimeException("Illegal access to method, " + e);
+				throw new RuntimeException(e);
 			} catch (InvocationTargetException e) {
-				throw new RuntimeException("Illegal invocation of method, " + e);
+				throw new RuntimeException(e);
 			}
 			Object d = toDouble(returnObject);
 			if (d != null) {

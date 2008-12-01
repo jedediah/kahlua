@@ -8,7 +8,7 @@ public class SimpleAnnotatedClass {
 		
 	}
 
-	@LuaMethod
+	@LuaMethod(alias="MWA")
 	public void methodWithArgs(int foo, String bar) {
 		
 	}

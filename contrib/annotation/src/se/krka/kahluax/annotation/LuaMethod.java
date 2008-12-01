@@ -8,6 +8,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface LuaMethod {
-	public String alias() default "[unassigned]";
+	String UNASSIGNED = "[unassigned]";
+
+	public String alias() default UNASSIGNED;
 
 }

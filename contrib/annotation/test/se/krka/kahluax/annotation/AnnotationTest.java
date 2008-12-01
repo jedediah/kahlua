@@ -11,6 +11,11 @@ public class AnnotationTest extends TestCase {
 		LuaState state = new LuaState(System.out);
 		LuaJavaClassFactory factory = new LuaJavaClassFactory(state);
 		factory.exposeClass(SimpleAnnotatedClass.class);
+		SimpleAnnotatedClass aClass = new SimpleAnnotatedClass();
+		LuaTable metatable = (LuaTable) state.getmetatable(aClass, true);
+		LuaTable indexTable = (LuaTable) metatable.rawget("__index");
+		JavaFunction func = (JavaFunction) indexTable.rawget("MWA");
+		assertNotNull(func);
 	}
 
 	public void testInheritedAnnotation() {
