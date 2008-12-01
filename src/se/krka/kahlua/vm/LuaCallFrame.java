@@ -69,6 +69,10 @@ public class LuaCallFrame {
 		return 2; // returns how much we pushed onto the stack for return value purposes
 	}
 	
+	public int pushNil() {
+		return push(null);
+	}
+	
 	public final void stackCopy(int startIndex, int destIndex, int len) {
 		thread.stackCopy(localBase + startIndex, localBase + destIndex, len);
 	}

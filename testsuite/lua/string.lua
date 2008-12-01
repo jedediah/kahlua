@@ -105,15 +105,15 @@ assertEqual(s:byte(1),72)
 
 assertEqual(string.char(65),"A")
 
-assertEqual(s:match("H[e][lo][lo][lo]"),"Hello")
-assertEqual(s:find("[Hello][Hello][Hello]"),1)
-
-
 assertEqual(s:lower(),"hello world")
 assertEqual(s:upper(),"HELLO WORLD")
 
 assertEqual(s:match("Hello"),"Hello")
 assertEqual(s:match("H.l%D%w"),"Hello")
+
+assertEqual(s:match("H[e][lo][lo][lo]"),"Hello")
+assertEqual(s:find("[Hello][Hello][Hello]"),1)
+assertEqual(s:find("[hello][hello][hello]"),2)
 
 assertEqual(s:find("worl"),7)
 assertEqual(s:find("worlld"),nil)
@@ -193,14 +193,34 @@ end
 
 do
 	local s = "wxyzabcd1111;.,"
+    local si,ei = s:find("cd1*")
+    assertEqual(si,7)
+    assertEqual(ei,12)
+    
 	local si,ei = s:find("bce?d11")
-	--assertEqual(si,6)
-	--assertEqual(ei,10)
+	assertEqual(si,6)
+	assertEqual(ei,10)
 	
 	si, ei = s:find("1-")
-	--assertEqual(si,1)
-	--assertEqual(ei,0)
+	assertEqual(si,1)
+	assertEqual(ei,0)
+	
+    si, ei = s:find("1-1")
+    assertEqual(si,9)
+    assertEqual(ei,9)
+    
+    si, ei = s:find("1*1")
+    assertEqual(si,9)
+    assertEqual(ei,12)
+    
+    si, ei = s:find("1+1")
+    assertEqual(si,9)
+    assertEqual(ei,12)
 end
+
+local b = "6 - (x + (y^2 - 3z) / 7xy)"
+assertEqual(b:find("%b()"),5)
+assertEqual(b:find("%b)("),nil)
 
 function concattest(...)
 	local t = {test = "world"}
