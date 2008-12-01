@@ -464,7 +464,7 @@ public final class LuaState {
 									}
 									concatBuffer.append(resStr);
 
-									res = concatBuffer.toString().intern();
+									res = concatBuffer.toString();
 
 									last = last - nStrings;
 								}
@@ -523,7 +523,7 @@ public final class LuaState {
 						}
 					} else if (bo instanceof String && co instanceof String) {
 						if (opcode == OP_EQ) {
-							if ((bo == co) == (a == 0)) {
+							if ((bo.equals(co)) == (a == 0)) {
 								callFrame.pc++;
 							}
 						} else {
@@ -913,8 +913,8 @@ public final class LuaState {
 							LuaCallFrame nextCallFrame = parent.currentCallFrame();
 
 							nextCallFrame.push(Boolean.FALSE);
-							nextCallFrame.push(e.getMessage().intern());
-							nextCallFrame.push(currentThread.stackTrace.intern());
+							nextCallFrame.push(e.getMessage());
+							nextCallFrame.push(currentThread.stackTrace);
 
 							currentThread.state.currentThread = parent;
 							currentThread = parent;
@@ -1178,12 +1178,12 @@ public final class LuaState {
 		}
 		currentThread.cleanCallFrames(currentCallFrame);
 		if (errorMessage instanceof String) {
-			errorMessage = ((String) errorMessage).intern();
+			errorMessage = ((String) errorMessage);
 		}
 		currentThread.setTop(oldBase + 4);
 		currentThread.objectStack[oldBase] = Boolean.FALSE;
 		currentThread.objectStack[oldBase + 1] = errorMessage;
-		currentThread.objectStack[oldBase + 2] = currentThread.stackTrace.intern();
+		currentThread.objectStack[oldBase + 2] = currentThread.stackTrace;
 		currentThread.objectStack[oldBase + 3] = exception;
 		currentThread.stackTrace = "";
 

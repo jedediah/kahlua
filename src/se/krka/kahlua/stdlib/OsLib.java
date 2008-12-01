@@ -138,7 +138,7 @@ public class OsLib implements JavaFunction {
 		} else {
 			// return a formatted string
 			// TODO: handle date formatting instead of just returning the date.toString()
-			return d.toString().intern();
+			return d.toString();
 		}
 	}
 

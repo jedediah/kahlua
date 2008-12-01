@@ -151,8 +151,20 @@ public final class LuaTable {
 			
 		}
 		
+		if (key instanceof String) {
+			while (true) {
+				if (key.equals(currentKey)) {
+					return index;
+				}
+				index = next[index];
+				if (index == -1) {
+					return -1;
+				}
+				currentKey = __getKey(index);
+			}
+		}
 		
-		// Assume equality == identity for all types except for doubles?
+		// Assume equality == identity for all types except for doubles and strings
 		while (true) {
 			if (key == currentKey) {
 				return index;
@@ -353,10 +365,8 @@ public final class LuaTable {
 			}
 			return ad.hashCode();
 		}
-		if (BuildSettings.TARGET_PLATFORM_J2ME_EMULATOR) {
-			if (a instanceof String) {
-				return a.hashCode();
-			}
+		if (a instanceof String) {
+			return a.hashCode();
 		}
 		return System.identityHashCode(a);
 	}

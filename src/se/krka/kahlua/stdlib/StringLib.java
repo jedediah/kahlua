@@ -210,7 +210,7 @@ public final class StringLib implements JavaFunction {
 				result.append(c);
 			}
 		}
-		callFrame.push(result.toString().intern());
+		callFrame.push(result.toString());
 		return 1;
 	}
 	
@@ -218,7 +218,7 @@ public final class StringLib implements JavaFunction {
 		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
 		String s = (String) callFrame.get(0);
 
-		callFrame.push(s.toLowerCase().intern());
+		callFrame.push(s.toLowerCase());
 		return 1;
 	}
 
@@ -226,7 +226,7 @@ public final class StringLib implements JavaFunction {
 		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
 		String s = (String) callFrame.get(0);
 
-		callFrame.push(s.toUpperCase().intern());
+		callFrame.push(s.toUpperCase());
 		return 1;
 	}
 	
@@ -234,7 +234,7 @@ public final class StringLib implements JavaFunction {
 		BaseLib.luaAssert(nArguments >= 1, "not enough arguments");
 		String s = (String) callFrame.get(0);
 		s = new StringBuffer(s).reverse().toString();
-		callFrame.push(s.intern());
+		callFrame.push(s);
 		return 1;
 	}
 	
@@ -283,7 +283,7 @@ public final class StringLib implements JavaFunction {
 			int num = (int) d;
 			sb.append((char) num);
 		}
-		callFrame.push(sb.toString().intern());
+		callFrame.push(sb.toString());
 		return 1;
 	}
 
@@ -311,7 +311,7 @@ public final class StringLib implements JavaFunction {
 			return 1;
 		}
 		res = s.substring(istart - 1, iend);
-		res = res.intern();
+		res = res;
 
 		callFrame.push(res);
 		return 1;
@@ -596,7 +596,7 @@ public final class StringLib implements JavaFunction {
 			// location capture
 			return callFrame.push(new Double(from+1));
 		} else if (from < to) {
-			return callFrame.push(source.substring(from, to).intern());
+			return callFrame.push(source.substring(from, to));
 		}
 		return 0;
 	}

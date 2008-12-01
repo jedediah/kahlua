@@ -348,6 +348,15 @@ public final class BaseLib implements JavaFunction {
 		return num.toString();
 	}
 
+	/**
+	 * 
+	 * @param callFrame
+	 * @param n
+	 * @param type must be "string" or "number". Note that they must be interned!
+	 * It's not valid to call it with new String("number").
+	 * @param function name of the function that calls this. Only for pretty exceptions.
+	 * @return variable with index n on the stack, returned as type "type".
+	 */
 	public static Object getArg(LuaCallFrame callFrame, int n, String type,
 				String function) {
 		Object o = callFrame.get(n - 1);
@@ -491,7 +500,7 @@ public final class BaseLib implements JavaFunction {
 	private static int tostring(LuaCallFrame callFrame, int nArguments) {
 		luaAssert(nArguments >= 1, "Not enough arguments");
 		Object o = callFrame.get(0);
-		Object res = tostring(o, callFrame.thread.state).intern();
+		Object res = tostring(o, callFrame.thread.state);
 		callFrame.push(res);
 		return 1;
 	}
@@ -580,12 +589,12 @@ public final class BaseLib implements JavaFunction {
 			option = callFrame.get(0);
 		}
 
-		if (option == null || option == "step" || option == "collect") {
+		if (option == null || option.equals("step") || option.equals("collect")) {
 			System.gc();
 			return 0;
 		}
 
-		if (option == "count") {
+		if (option.equals("count")) {
 			long freeMemory = RUNTIME.freeMemory();
 			long totalMemory = RUNTIME.totalMemory();
 			callFrame.setTop(3);
@@ -655,7 +664,7 @@ public final class BaseLib implements JavaFunction {
 			buffer.append(rawTostring(value));
 		}
 
-		callFrame.push(buffer.toString().intern());
+		callFrame.push(buffer.toString());
 		return 1;
 	}
 }

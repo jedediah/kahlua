@@ -171,7 +171,7 @@ public final class LuaPrototype {
 		loadAssert(stringData[2 + iLen] == 0);
 
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(stringData));
-		String s = dis.readUTF().intern();
+		String s = dis.readUTF();
 		dis.close();
 
 		return s;
