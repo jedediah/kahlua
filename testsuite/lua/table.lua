@@ -91,6 +91,9 @@ do
 end
 
 do
+    if tableconcat==nil then
+        tableconcat = table.concat
+    end
 	local t = {"Hello", "World"}
 	assert(tableconcat(t) == "HelloWorld")
 
@@ -119,3 +122,16 @@ do
 	assert(tableconcat(t, " ", 100, 99) == "")	
 end
 
+do
+    local t = {}
+    t[0]=0
+    t[1]=1000
+    t[2]=55
+    table.sort(t)
+    local lastval = nil;
+    for i,v in ipairs(t) do
+        if lastval ~= nil then
+            assert(lastval < v, tostring(lastval)..">="..tostring(v))
+        end
+    end
+end

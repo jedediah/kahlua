@@ -94,6 +94,46 @@ function table.maxn(t)
 	return maxIndex
 end
 
+function table.sort(tbl, comp) -- quicksort
+    if comp == nil then
+        comp = function(one,two) return one < two end
+    end
+    function partition(tbl, left, right, pivot)
+        local pval = tbl[pivot]
+        tbl[pivot],tbl[right] = tbl[right],tbl[pivot]
+        local store = left
+        for v = left, right-1, 1 do
+            if comp(tbl[v],pval) then
+                tbl[v],tbl[store] = tbl[store],tbl[v]
+                store = store + 1
+            end
+        end
+        tbl[store],tbl[right] = tbl[right],tbl[store]
+        return store
+    end
+    function quicksort(tbl, left, right)
+        if right > left then
+            local pivot = left
+            local newpivot = partition(tbl,left,right,pivot)
+            quicksort(tbl,left,newpivot-1)
+            quicksort(tbl,newpivot+1,right)
+        end
+    end
+    
+    function table.minn(t)
+        local minIndex = table.maxn(t)
+        for k, v in pairs(t) do
+            if minIndex > k then
+                minIndex = k
+            end
+        end
+        return minIndex
+    end
+    quicksort(tbl,table.minn(tbl),table.maxn(tbl))
+end
+
+table = table or {}
+table.concat = tableconcat
 
 do
 	local error = error
@@ -118,7 +158,3 @@ do
 		end
 	end
 end
-
-table = table or {}
-table.concat = tableconcat
-
