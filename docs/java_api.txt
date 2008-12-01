@@ -27,12 +27,6 @@ All metatable keys except for __gc are supported.
 __gc is unsupported because CLDC 1.1 doesn't have a way to report when an
 object gets garbage collected.
 
-Strings
--------
-Kahlua assumes the equality is identity for strings:
-In practice this means that all strings that you pass to Kahlua must
-have be interned. You may also assume that all strings that are values inside Kahlua are interned.
-
 Thread safety
 -------------
 Kahlua is not thread safe in any way. Do not attempt to use a LuaState concurrently from different threads.
