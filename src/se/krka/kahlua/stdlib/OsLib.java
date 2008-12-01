@@ -33,18 +33,18 @@ import se.krka.kahlua.vm.LuaTable;
 
 public class OsLib implements JavaFunction {
 	private static final int DATE = 0;
-	private static final int DATEDIFF = 1;
+	private static final int DIFFTIME = 1;
 	private static final int TIME = 2;
 
 	private static final int NUM_FUNCS = 3;
-
+	
 	private static String[] funcnames;
 	private static OsLib[] funcs;
 
 	static {
 		funcnames = new String[NUM_FUNCS];
 		funcnames[DATE] = "date";
-		funcnames[DATEDIFF] = "datediff";
+		funcnames[DIFFTIME] = "difftime";
 		funcnames[TIME] = "time";
 
 		funcs = new OsLib[NUM_FUNCS];
@@ -64,6 +64,9 @@ public class OsLib implements JavaFunction {
 
 	public static final long TIME_DIVIDEND = 1000; // number to divide by for converting from milliseconds.
 
+	private static final String TABLE_FORMAT = "*t";
+	private static final String DEFAULT_FORMAT = "%c";
+	
 	private static final String YEAR = "year";
 	private static final String MONTH = "month";
 	private static final String DAY = "day";
@@ -82,7 +85,7 @@ public class OsLib implements JavaFunction {
 	public int call(LuaCallFrame cf, int nargs) {
 		switch(methodId) {
 		case DATE: return date(cf, nargs);
-		case DATEDIFF: return datediff(cf, nargs);
+		case DIFFTIME: return difftime(cf, nargs);
 		case TIME: return time(cf, nargs);
 		default: throw new RuntimeException("Undefined method called on os.");
 		}
@@ -90,28 +93,25 @@ public class OsLib implements JavaFunction {
 
 	private int time(LuaCallFrame cf, int nargs) {
 		if (nargs == 0) {
-			cf.push(LuaState.toDouble(((Calendar.getInstance().getTime().getTime() / TIME_DIVIDEND))));
+			cf.push(LuaState.toDouble(((System.currentTimeMillis() / TIME_DIVIDEND))));
 		} else {
-			Object o = cf.get(0);
-			if (!(o instanceof LuaTable)) {
-				throw new RuntimeException("Argument given to time() is not a table");
-			}
-			Date d = getDateFromTable((LuaTable)o);
+			LuaTable t = (LuaTable)BaseLib.getArg(cf, 1, BaseLib.TYPE_TABLE, "time");
+			Date d = getDateFromTable(t);
 			cf.push(LuaState.toDouble(d.getTime() / TIME_DIVIDEND));
 		}
 		return 1;
 	}
 
-	private int datediff(LuaCallFrame cf, int nargs) {
-		long t1 = BaseLib.rawTonumber(cf.get(0)).longValue();
-		long t2 = BaseLib.rawTonumber(cf.get(1)).longValue();
+	private int difftime(LuaCallFrame cf, int nargs) {
+		long t2 = BaseLib.rawTonumber(cf.get(0)).longValue();
+		long t1 = BaseLib.rawTonumber(cf.get(1)).longValue();
 		cf.push(LuaState.toDouble(t2-t1));
 		return 1;
 	}
 
 	private int date(LuaCallFrame cf, int nargs) {
 		if (nargs == 0) {
-			return cf.push(getdate("%c"));
+			return cf.push(getdate(DEFAULT_FORMAT));
 		} else if (nargs == 1) {
 			return cf.push(getdate(BaseLib.rawTostring(cf.get(0))));
 		} else {
@@ -129,115 +129,95 @@ public class OsLib implements JavaFunction {
 		int si = 0;
         if (format.charAt(si) == '!') { // UTC?
             calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-            si++;  // skip `!'
+            si++;  // skip '!'
         } else {
-            calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+            calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC")); // TODO: user-defined timezone
         }
         calendar.setTime(new Date(time));
 
         if (calendar == null) { // invalid calendar?
             return null;
-        } else if (format.substring(si, 2 + si).equals("*t")) {
-        	return getTimeTable(calendar);
+        } else if (format.substring(si, 2 + si).equals(TABLE_FORMAT)) {
+        	return getTableFromDate(calendar);
         } else {
-            StringBuffer buffer = new StringBuffer();
-            for (int stringIndex = 0; stringIndex < format.length(); stringIndex ++) {
-                if (format.charAt(stringIndex) != '%' || 
-               		format.charAt(stringIndex + 1) == '\0') { // no conversion specifier?
-                    buffer.append(format.charAt(stringIndex));
-                }
-                else {
-                	++stringIndex;
-                    buffer.append(strftime(format.charAt(stringIndex), calendar));
-                }
-            }
-            return buffer.toString();
+        	return formatTime(format.substring(si), calendar);
         }
 	}
 	
-	public static String strftime(char format, Calendar cal) {
-		int dayOfMonth, month;
+	private static String[] shortDayNames = new String[] {
+		"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+	};
+	
+	private static String[] longDayNames = new String[] {
+		"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+	};
+	
+	private static String[] shortMonthNames = new String[] {
+		"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
+	};
+	
+	private static String[] longMonthNames = new String[] {
+		"January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December"
+	};
+	
+	public static String formatTime(String format, Calendar cal) {
+
+        StringBuffer buffer = new StringBuffer();
+        for (int stringIndex = 0; stringIndex < format.length(); stringIndex ++) {
+            if (format.charAt(stringIndex) != '%' || stringIndex + 1 >= format.length()) { // no conversion specifier?
+                buffer.append(format.charAt(stringIndex));
+            } else {
+            	++stringIndex;
+                buffer.append(strftime(format.charAt(stringIndex), cal));
+            }
+        }
+        return buffer.toString();
+    }
+	
+	private static String strftime(char format, Calendar cal) {
         switch(format) {
-            case 'a':
-            	dayOfMonth = cal.get(Calendar.DAY_OF_WEEK);
-            	switch(dayOfMonth) {
-            	case Calendar.MONDAY: return "Mon";
-            	case Calendar.TUESDAY: return "Tue";
-            	case Calendar.WEDNESDAY: return "Wed";
-            	case Calendar.THURSDAY: return "Thu";
-            	case Calendar.FRIDAY: return "Fri";
-            	case Calendar.SATURDAY: return "Sat";
-            	case Calendar.SUNDAY: return "Sun";	
-            	}
-            case 'A':
-                dayOfMonth = cal.get(Calendar.DAY_OF_WEEK);
-                switch(dayOfMonth) {
-                case Calendar.MONDAY: return "Monday";
-                case Calendar.TUESDAY: return "Tuesday";
-                case Calendar.WEDNESDAY: return "Wednesday";
-                case Calendar.THURSDAY: return "Thursday";
-                case Calendar.FRIDAY: return "Friday";
-                case Calendar.SATURDAY: return "Saturday";
-                case Calendar.SUNDAY: return "Sunday";	
-                }
-            case 'b':
-                month = cal.get(Calendar.MONTH);
-                switch(month) {
-                case Calendar.JANUARY: return "Jan";
-                case Calendar.FEBRUARY: return "Feb";
-                case Calendar.MARCH: return "Mar";
-                case Calendar.APRIL: return "Apr";
-                case Calendar.MAY: return "May";
-                case Calendar.JUNE: return "Jun";
-                case Calendar.JULY: return "Jul";
-                case Calendar.AUGUST: return "Aug";
-                case Calendar.SEPTEMBER: return "Sep";
-                case Calendar.OCTOBER: return "Oct";
-                case Calendar.NOVEMBER: return "Nov";
-                case Calendar.DECEMBER: return "Dec";	
-                }
-            case 'B':
-            	month = cal.get(Calendar.MONTH);
-            	switch(month) {
-            	case Calendar.JANUARY: return "January";
-            	case Calendar.FEBRUARY: return "February";
-            	case Calendar.MARCH: return "March";
-            	case Calendar.APRIL: return "April";            	
-            	case Calendar.MAY: return "May";
-            	case Calendar.JUNE: return "June";
-            	case Calendar.JULY: return "July";
-            	case Calendar.AUGUST: return "August";
-            	case Calendar.SEPTEMBER: return "September";
-            	case Calendar.OCTOBER: return "October";
-            	case Calendar.NOVEMBER: return "November";
-            	case Calendar.DECEMBER: return "December";	
-                }
+            case 'a': return shortDayNames[cal.get(Calendar.DAY_OF_WEEK)-1];
+            case 'A': return longDayNames[cal.get(Calendar.DAY_OF_WEEK)-1];
+            case 'b': return shortMonthNames[cal.get(Calendar.MONTH)];
+            case 'B': return longMonthNames[cal.get(Calendar.MONTH)];
             case 'c': return cal.getTime().toString();
+            case 'C': return Integer.toString(cal.get(Calendar.YEAR) / 100);
             case 'd': return Integer.toString(cal.get(Calendar.DAY_OF_MONTH));
+            case 'D': return formatTime("%m/%d/%y",cal);
+            case 'e': return cal.get(Calendar.DAY_OF_MONTH) < 10 ? 
+            					" " + strftime('d',cal) : strftime('d',cal);
+            case 'h': return strftime('b',cal);
             case 'H': return Integer.toString(cal.get(Calendar.HOUR_OF_DAY));
             case 'I': return Integer.toString(cal.get(Calendar.HOUR));
             case 'j': return Integer.toString(getDayOfYear(cal));
             case 'm': return Integer.toString(cal.get(Calendar.MONTH) + 1);
             case 'M': return Integer.toString(cal.get(Calendar.MINUTE));
+            case 'n': return "\n";
             case 'p': return cal.get(Calendar.AM_PM) == Calendar.AM ? "AM" : "PM";
+            case 'r': return formatTime("%I:%M:%S %p",cal);
+            case 'R': return formatTime("%H:%M",cal);
             case 'S': return Integer.toString(cal.get(Calendar.SECOND));
-            case 'U': return Integer.toString(getWeekOfYear(cal, true));
+            case 'U': return Integer.toString(getWeekOfYear(cal, true, false));
+            case 'V': return Integer.toString(getWeekOfYear(cal, false, true));
             case 'w': return Integer.toString(cal.get(Calendar.DAY_OF_WEEK) - 1);
-            case 'W': return Integer.toString(getWeekOfYear(cal, false));
+            case 'W': return Integer.toString(getWeekOfYear(cal, false, false));
+            /* commented out until a way to define locale and get locale formats working
             case 'x':
                 String str = Integer.toString(cal.get(Calendar.YEAR));
                 return Integer.toString(cal.get(Calendar.MONTH)) + "/" + Integer.toString(cal.get(Calendar.DAY_OF_MONTH)) +
             			"/" + str.substring(2, str.length());
             case 'X': return Integer.toString(cal.get(Calendar.HOUR_OF_DAY)) + ":" + Integer.toString(cal.get(Calendar.MINUTE)) +
                 		":" + Integer.toString(cal.get(Calendar.SECOND));
-            case 'y': return Integer.toString(cal.get(Calendar.YEAR)).substring(2);
+            */
+            case 'y': return Integer.toString(cal.get(Calendar.YEAR) % 100);
             case 'Y': return Integer.toString(cal.get(Calendar.YEAR));
             case 'Z': return cal.getTimeZone().getID();                    
         }
         return null; // bad input format.
-    }
+	}
 
-	public static LuaTable getTimeTable(Calendar c) {
+	public static LuaTable getTableFromDate(Calendar c) {
 		LuaTable time = new LuaTable();
 		time.rawset(YEAR, LuaState.toDouble(c.get(Calendar.YEAR)));
 		time.rawset(MONTH, LuaState.toDouble(c.get(Calendar.MONTH)+1));
@@ -266,33 +246,25 @@ public class OsLib implements JavaFunction {
         }
 	}
 	
-	public static int getWeekOfYear(Calendar c, boolean weekStartsSunday) {
+	public static int getWeekOfYear(Calendar c, boolean weekStartsSunday, boolean jan1midweek) {
         Calendar c2 = Calendar.getInstance();
         c2.setTime(c.getTime());
         c2.set(Calendar.MONTH, 0);
         c2.set(Calendar.DAY_OF_MONTH, 1);
         int dayOfWeek = c2.get(Calendar.DAY_OF_WEEK);
-        if (weekStartsSunday) {
-            if (dayOfWeek != Calendar.SUNDAY) {
-                c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek) + 1);
-            }
-        }
-        else {
-            if (dayOfWeek != Calendar.MONDAY) {
-                c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek + 1) + 1);
-            }
+        if (weekStartsSunday && dayOfWeek != Calendar.SUNDAY) {
+            c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek) + 1);
+        } else if (dayOfWeek != Calendar.MONDAY) {
+            c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek + 1) + 1);
         }
         long diff =(Calendar.getInstance().getTime().getTime() - c2.getTime().getTime());
-        
-        double g =(double) diff /(double)(1000 * 24 * 60 * 60 * 7);
 
-        Double d = new Double(g);
-        if (d.doubleValue() - d.intValue() != 0) {
-            return d.intValue() + 1;
+        long w = diff /(TIME_DIVIDEND * 24 * 60 * 60 * 7);
+        
+        if (jan1midweek && 7-dayOfWeek >= 4) {
+        	w++;
         }
-        else {
-            return d.intValue();
-        }
+        return (int)w;
     }
 
 	/**
