@@ -352,7 +352,7 @@ public final class BaseLib implements JavaFunction {
 	 * 
 	 * @param callFrame
 	 * @param n
-	 * @param type must be "string" or "number". Note that they must be interned!
+	 * @param type must be "string" or "number" or one of the other built in types. Note that this parameter must be interned!
 	 * It's not valid to call it with new String("number").
 	 * @param function name of the function that calls this. Only for pretty exceptions.
 	 * @return variable with index n on the stack, returned as type "type".
