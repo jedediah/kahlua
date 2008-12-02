@@ -33,6 +33,21 @@ function string.rep(s, n)
 	return ret
 end
 
+function string.gmatch(str, pattern)
+	local init = 1
+	local function gmatch_it()
+		if init <= str:len() then 
+			local s, e = str:find(pattern, init)
+			if s then
+				local res = {str:match(pattern, init)}
+				init = e+1
+				return unpack(res)
+			end
+		end
+	end
+	return gmatch_it
+end
+
 function math.max(max, ...)
 	local select = select
 	for i = 1, select("#", ...) do
@@ -95,7 +110,7 @@ function table.maxn(t)
 end
 
 function table.sort(tbl, comp) -- quicksort
-    if comp == nil then
+    if not comp then
         comp = function(one,two) return one < two end
     end
     function partition(tbl, left, right, pivot)
@@ -120,7 +135,7 @@ function table.sort(tbl, comp) -- quicksort
         end
     end
     
-    function table.minn(t)
+    local function table.minn(t)
         local minIndex = table.maxn(t)
         for k, v in pairs(t) do
             if minIndex > k then

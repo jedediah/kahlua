@@ -222,6 +222,29 @@ local b = "6 - (x + (y^2 - 3z) / 7xy)"
 assertEqual(b:find("%b()"),5)
 assertEqual(b:find("%b)("),nil)
 
+do
+	local s2 = "hello world from Lua"
+	local t2 = {}
+    for w in string.gmatch(s2, "%w+") do
+        --table.insert(t2,w) -- table.insert doesnt work atm
+        t2[#t2+1] = w
+    end
+    
+    assertEqual(#t2,4)
+    assertEqual(t2[1],"hello")
+    assertEqual(t2[2],"world")
+    assertEqual(t2[3],"from")
+    assertEqual(t2[4],"Lua")
+	
+	local t = {}
+    local s = "from=world, to=Lua"
+    for k, v in string.gmatch(s, "(%w+)=(%w+)") do
+        t[k] = v
+    end
+	assertEqual(t.from, "world")
+	assertEqual(t.to, "Lua")
+end
+
 function concattest(...)
 	local t = {test = "world"}
 	local tmp = ...
