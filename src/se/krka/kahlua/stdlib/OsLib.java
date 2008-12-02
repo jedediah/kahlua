@@ -62,8 +62,6 @@ public class OsLib implements JavaFunction {
 		}
 	}
 
-	public static final long TIME_DIVIDEND = 1000; // number to divide by for converting from milliseconds.
-
 	private static final String TABLE_FORMAT = "*t";
 	private static final String DEFAULT_FORMAT = "%c";
 	
@@ -77,6 +75,13 @@ public class OsLib implements JavaFunction {
 	private static final String YDAY = "yday";
 	//private static final String ISDST = "isdst";
 
+	private static TimeZone tzone = TimeZone.getTimeZone("UTC");
+	
+	public static final int TIME_DIVIDEND = 1000; // number to divide by for converting from milliseconds.
+	private static final int MILLIS_PER_DAY = TIME_DIVIDEND * 60 * 60 * 24;
+	private static final int MILLIS_PER_WEEK = MILLIS_PER_DAY * 7;
+	
+	
 	private int methodId;
 	private OsLib(int methodId) {
 		this.methodId = methodId;
@@ -96,8 +101,7 @@ public class OsLib implements JavaFunction {
 			cf.push(LuaState.toDouble(((System.currentTimeMillis() / TIME_DIVIDEND))));
 		} else {
 			LuaTable t = (LuaTable)BaseLib.getArg(cf, 1, BaseLib.TYPE_TABLE, "time");
-			Date d = getDateFromTable(t);
-			cf.push(LuaState.toDouble(d.getTime() / TIME_DIVIDEND));
+			cf.push(LuaState.toDouble(getDateFromTable(t).getTime() / TIME_DIVIDEND));
 		}
 		return 1;
 	}
@@ -115,7 +119,8 @@ public class OsLib implements JavaFunction {
 		} else if (nargs == 1) {
 			return cf.push(getdate(BaseLib.rawTostring(cf.get(0))));
 		} else {
-			return cf.push(getdate(BaseLib.rawTostring(cf.get(0)), BaseLib.rawTonumber(cf.get(1)).longValue() * TIME_DIVIDEND));
+			return cf.push(getdate(BaseLib.rawTostring(cf.get(0)), 
+					               BaseLib.rawTonumber(cf.get(1)).longValue() * TIME_DIVIDEND));
 		}
 	}
 
@@ -131,7 +136,7 @@ public class OsLib implements JavaFunction {
             calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
             si++;  // skip '!'
         } else {
-            calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC")); // TODO: user-defined timezone
+            calendar = Calendar.getInstance(tzone); // TODO: user-defined timezone
         }
         calendar.setTime(new Date(time));
 
@@ -165,7 +170,7 @@ public class OsLib implements JavaFunction {
 
         StringBuffer buffer = new StringBuffer();
         for (int stringIndex = 0; stringIndex < format.length(); stringIndex ++) {
-            if (format.charAt(stringIndex) != '%' || stringIndex + 1 >= format.length()) { // no conversion specifier?
+            if (format.charAt(stringIndex) != '%' || stringIndex + 1 == format.length()) { // no conversion specifier?
                 buffer.append(format.charAt(stringIndex));
             } else {
             	++stringIndex;
@@ -186,7 +191,7 @@ public class OsLib implements JavaFunction {
             case 'd': return Integer.toString(cal.get(Calendar.DAY_OF_MONTH));
             case 'D': return formatTime("%m/%d/%y",cal);
             case 'e': return cal.get(Calendar.DAY_OF_MONTH) < 10 ? 
-            					" " + strftime('d',cal) : strftime('d',cal);
+            				" " + strftime('d',cal) : strftime('d',cal);
             case 'h': return strftime('b',cal);
             case 'H': return Integer.toString(cal.get(Calendar.HOUR_OF_DAY));
             case 'I': return Integer.toString(cal.get(Calendar.HOUR));
@@ -202,7 +207,7 @@ public class OsLib implements JavaFunction {
             case 'V': return Integer.toString(getWeekOfYear(cal, false, true));
             case 'w': return Integer.toString(cal.get(Calendar.DAY_OF_WEEK) - 1);
             case 'W': return Integer.toString(getWeekOfYear(cal, false, false));
-            /* commented out until a way to define locale and get locale formats working
+            /* commented out until we have a way to define locale and get locale formats working
             case 'x':
                 String str = Integer.toString(cal.get(Calendar.YEAR));
                 return Integer.toString(cal.get(Calendar.MONTH)) + "/" + Integer.toString(cal.get(Calendar.DAY_OF_MONTH)) +
@@ -230,50 +235,14 @@ public class OsLib implements JavaFunction {
 		//time.rawset(ISDST, null);
 		return time;
 	}
-
-	public static int getDayOfYear(Calendar c) {		
-		Calendar c2 = Calendar.getInstance();
-        c2.setTime(c.getTime());
-        c2.set(Calendar.MONTH, Calendar.JANUARY);
-        c2.set(Calendar.DAY_OF_MONTH, 1);
-        long diff =(c.getTime().getTime() - c2.getTime().getTime());
-
-        Double d = new Double((double) diff /(double)(1000 * 24 * 60 * 60));
-        if (d.doubleValue() - d.intValue() != 0) {
-            return d.intValue() + 1;
-        } else {
-            return d.intValue();
-        }
-	}
 	
-	public static int getWeekOfYear(Calendar c, boolean weekStartsSunday, boolean jan1midweek) {
-        Calendar c2 = Calendar.getInstance();
-        c2.setTime(c.getTime());
-        c2.set(Calendar.MONTH, 0);
-        c2.set(Calendar.DAY_OF_MONTH, 1);
-        int dayOfWeek = c2.get(Calendar.DAY_OF_WEEK);
-        if (weekStartsSunday && dayOfWeek != Calendar.SUNDAY) {
-            c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek) + 1);
-        } else if (dayOfWeek != Calendar.MONDAY) {
-            c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek + 1) + 1);
-        }
-        long diff =(Calendar.getInstance().getTime().getTime() - c2.getTime().getTime());
-
-        long w = diff /(TIME_DIVIDEND * 24 * 60 * 60 * 7);
-        
-        if (jan1midweek && 7-dayOfWeek >= 4) {
-        	w++;
-        }
-        return (int)w;
-    }
-
 	/**
 	 * converts the relevant fields in the given luatable to a Date object.
 	 * @param time LuaTable with entries for year month and day, and optionally hour/min/sec
 	 * @return a date object representing the date frim the luatable.
 	 */
 	public static Date getDateFromTable(LuaTable time) {
-		Calendar c = Calendar.getInstance();
+		Calendar c = Calendar.getInstance(tzone);
 		c.set(Calendar.YEAR,(int)LuaState.fromDouble(time.rawget(YEAR)));
 		c.set(Calendar.MONTH,(int)LuaState.fromDouble(time.rawget(MONTH))-1);
 		c.set(Calendar.DAY_OF_MONTH,(int)LuaState.fromDouble(time.rawget(DAY)));
@@ -299,4 +268,35 @@ public class OsLib implements JavaFunction {
 		// TODO: daylight savings support(is it possible?)
 		return c.getTime();
 	}
+
+	public static int getDayOfYear(Calendar c) {		
+		Calendar c2 = Calendar.getInstance(c.getTimeZone());
+        c2.setTime(c.getTime());
+        c2.set(Calendar.MONTH, Calendar.JANUARY);
+        c2.set(Calendar.DAY_OF_MONTH, 1);
+        long diff = c.getTime().getTime() - c2.getTime().getTime();
+
+        return (int)Math.ceil((double)diff / MILLIS_PER_DAY);        
+	}
+	
+	public static int getWeekOfYear(Calendar c, boolean weekStartsSunday, boolean jan1midweek) {
+        Calendar c2 = Calendar.getInstance(c.getTimeZone());
+        c2.setTime(c.getTime());
+        c2.set(Calendar.MONTH, Calendar.JANUARY);
+        c2.set(Calendar.DAY_OF_MONTH, 1);
+        int dayOfWeek = c2.get(Calendar.DAY_OF_WEEK);
+        if (weekStartsSunday && dayOfWeek != Calendar.SUNDAY) {
+            c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek) + 1);
+        } else if (dayOfWeek != Calendar.MONDAY) {
+            c2.set(Calendar.DAY_OF_MONTH,(7 - dayOfWeek + 1) + 1);
+        }
+        long diff = c.getTime().getTime() - c2.getTime().getTime();
+
+        int w = (int)(diff / MILLIS_PER_WEEK);
+        
+        if (jan1midweek && 7-dayOfWeek >= 4)
+        	w++;
+        
+        return w;
+    }
 }
