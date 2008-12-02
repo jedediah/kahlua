@@ -39,9 +39,9 @@ function string.gmatch(str, pattern)
 		if init <= str:len() then 
 			local s, e = str:find(pattern, init)
 			if s then
-				local res = {str:match(pattern, init)}
+				local oldInit = init
 				init = e+1
-				return unpack(res)
+				return str:match(pattern, oldInit)
 			end
 		end
 	end
