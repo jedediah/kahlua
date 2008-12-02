@@ -78,7 +78,7 @@ function table.insert(t, a, b)
 	for i = tlen, pos, -1 do
 		t[i + 1] = t[i]
 	end
-	t[pos] = v
+	t[pos] = value
 end
 
 function table.remove(t, pos)
@@ -166,3 +166,4 @@ do
 		end
 	end
 end
+

@@ -146,3 +146,26 @@ do
 	sortAndVerify{6, 5, 4, 3, 2, 1}
 end
 
+do
+	local t = {}
+	table.insert(t, 1)
+	assert(t[1] == 1)
+	assert(t[2] == nil)
+
+	table.insert(t, 1, 2)
+	assert(t[1] == 2)
+	assert(t[2] == 1)
+	assert(t[3] == nil)
+
+	table.insert(t, 2, 3)
+	assert(t[1] == 2)
+	assert(t[2] == 3)
+	assert(t[3] == 1)
+	assert(t[4] == nil)
+
+	table.remove(t, 1)
+	assert(t[1] == 3)
+	assert(t[2] == 1)
+	assert(t[3] == nil)
+end
+
