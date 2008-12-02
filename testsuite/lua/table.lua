@@ -123,15 +123,26 @@ do
 end
 
 do
-    local t = {}
-    t[0]=0
-    t[1]=1000
-    t[2]=55
-    table.sort(t)
-    local lastval = nil;
-    for i,v in ipairs(t) do
-        if lastval ~= nil then
-            assert(lastval < v, tostring(lastval)..">="..tostring(v))
-        end
-    end
+	local function sortAndVerify(t)
+		local len = #t
+		table.sort(t)
+		assert(len == #t)
+		if len > 1 then
+			local prev = t[1]
+			for i = 2, #t do
+				local cur = t[i]
+				assert(not (cur < prev))
+				prev = cur
+			end
+		end
+		
+	end
+	sortAndVerify{1000, 55, [0] = 0}
+	sortAndVerify{1000, 55, 10}
+	sortAndVerify{1000}
+	sortAndVerify{1000, 100, 2000, 200}
+	sortAndVerify{1000, 100, 2000, 200, 150}
+	sortAndVerify{1, 2, 3, 4, 5, 6}
+	sortAndVerify{6, 5, 4, 3, 2, 1}
 end
+
