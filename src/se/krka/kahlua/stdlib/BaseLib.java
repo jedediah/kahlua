@@ -353,7 +353,8 @@ public final class BaseLib implements JavaFunction {
 	 * @param callFrame
 	 * @param n
 	 * @param type must be "string" or "number" or one of the other built in types. Note that this parameter must be interned!
-	 * It's not valid to call it with new String("number").
+	 * It's not valid to call it with new String("number").  Use null if you don't care which type or expect 
+	 * more than one type for this argument.
 	 * @param function name of the function that calls this. Only for pretty exceptions.
 	 * @return variable with index n on the stack, returned as type "type".
 	 */
@@ -378,11 +379,13 @@ public final class BaseLib implements JavaFunction {
 			throw new RuntimeException("bad argument #" + n + " to '" + function +
 			"' (number expected, got string)");
 		}
-		// type checking
-		String isType = type(o);
-		luaAssert(type == isType,
-				"bad argument #" + n + " to '" + function +"' (" + type +
-				" expected, got " + isType + ")");
+		if (type != null) {
+			// type checking
+			String isType = type(o);
+			luaAssert(type == isType,
+					"bad argument #" + n + " to '" + function +"' (" + type +
+					" expected, got " + isType + ")");
+		}
 		return o;
 
 	}

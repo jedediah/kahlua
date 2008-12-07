@@ -1035,13 +1035,19 @@ public final class LuaState {
 	}
 
 	public final Object call(Object fun, Object arg1, Object arg2, Object arg3) {
+		return call(fun, new Object[] {arg1, arg2, arg3});
+	}
+	
+	public final Object call(Object fun, Object[] args) {
 		int oldTop = currentThread.getTop();
-		currentThread.setTop(oldTop + 4);
+		int argslen = args == null ? 0 : args.length;
+		currentThread.setTop(oldTop + 1 + argslen);
 		currentThread.objectStack[oldTop] = fun;
-		currentThread.objectStack[oldTop + 1] = arg1;
-		currentThread.objectStack[oldTop + 2] = arg2;
-		currentThread.objectStack[oldTop + 3] = arg3;
-		int nReturnValues = call(3);
+		
+		for (int i = 1; i <= argslen; i++) {
+			currentThread.objectStack[oldTop + i] = args[i-1];
+		}
+		int nReturnValues = call(argslen);
 
 		Object ret = null;
 		if (nReturnValues >= 1) {

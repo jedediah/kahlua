@@ -37,8 +37,9 @@ public final class StringLib implements JavaFunction {
     private static final int FORMAT = 6;
     private static final int FIND = 7;
     private static final int MATCH = 8;
+    private static final int GSUB = 9;
 
-    private static final int NUM_FUNCTIONS = 9;
+    private static final int NUM_FUNCTIONS = 10;
 
     private static final String SPECIALS = "^$*+?.([%-";
     private static final int LUA_MAXCAPTURES = 32;
@@ -63,6 +64,7 @@ public final class StringLib implements JavaFunction {
         names[FORMAT] = "format";
         names[FIND] = "find";
         names[MATCH] = "match";
+        names[GSUB] = "gsub";
 
         functions = new StringLib[NUM_FUNCTIONS];
         for (int i = 0; i < NUM_FUNCTIONS; i++) {
@@ -101,6 +103,7 @@ public final class StringLib implements JavaFunction {
         case FORMAT: return format(callFrame, nArguments);
         case FIND: return findAux(callFrame, true);
         case MATCH: return findAux(callFrame, false);
+        case GSUB: return gsub(callFrame, nArguments);
         default: return 0; // Should never happen.
         }
     }
@@ -330,6 +333,18 @@ public final class StringLib implements JavaFunction {
             public StringPointer init;
             public int len;
         }
+        
+        public Object[] getCaptures() {
+        	Object[] caps = new String[level];
+        	for (int i = 0; i < level; i++) {
+        		if (capture[i].len == CAP_POSITION) {
+        			caps[i] = new Double(src_init.length() - capture[i].init.length() + 1);
+        		} else {
+        			caps[i] = capture[i].init.getString().substring(0, capture[i].len);
+        		}
+        	}
+        	return caps;
+        }
     }
 
     public static class StringPointer {
@@ -418,10 +433,12 @@ public final class StringLib implements JavaFunction {
         }
     }
     
-    private static void push_onecapture ( MatchState ms, int i, StringPointer s, StringPointer e ) {
+    private static Object push_onecapture ( MatchState ms, int i, StringPointer s, StringPointer e ) {
         if (i >= ms.level) {
             if ( i == 0 ) { // ms->level == 0, too
-            	ms.callFrame.push(s.string.substring(s.index, e.index));
+            	String res = s.string.substring(s.index, e.index);
+            	ms.callFrame.push(res);
+            	return res;
             } else {
             	throw new RuntimeException("invalid capture index");
             }
@@ -430,10 +447,14 @@ public final class StringLib implements JavaFunction {
             if (l == CAP_UNFINISHED) {
             	throw new RuntimeException("unfinished capture");
             } else if (l == CAP_POSITION) {
-                ms.callFrame.push(new Double(ms.src_init.length() - ms.capture[i].init.length() + 1));
+            	Double res = new Double(ms.src_init.length() - ms.capture[i].init.length() + 1);
+                ms.callFrame.push(res);
+                return res;
             } else {
             	int index = ms.capture[i].init.index;
-            	ms.callFrame.push(ms.capture[i].init.string.substring(index, index+l));
+            	String res = ms.capture[i].init.string.substring(index, index+l);
+            	ms.callFrame.push(res);
+            	return res;
             }
         }
     }
@@ -457,7 +478,7 @@ public final class StringLib implements JavaFunction {
     }
 
     private static int findAux (LuaCallFrame callFrame, boolean find ) {
-    	String f = find ? "find" : "match";
+    	String f = find ? names[FIND] : names[MATCH];
         String source = (String) BaseLib.getArg(callFrame, 1, BaseLib.TYPE_STRING, f);
         String pattern = (String) BaseLib.getArg(callFrame, 2, BaseLib.TYPE_STRING, f);
         Double i = ((Double)(BaseLib.getOptArg(callFrame, 3, BaseLib.TYPE_NUMBER)));
@@ -868,5 +889,110 @@ public final class StringLib implements JavaFunction {
     
     private static boolean isHex(char c) {
     	return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' );
+    }
+    
+    private static int gsub(LuaCallFrame cf, int nargs) {
+    	
+    	String srcTemp = (String)BaseLib.getArg(cf, 1, BaseLib.TYPE_STRING, names[GSUB]);
+        String pTemp = (String)BaseLib.getArg(cf, 2, BaseLib.TYPE_STRING, names[GSUB]);
+        Object repl = BaseLib.getArg(cf, 3, null, names[GSUB]);
+        Double i = (Double)BaseLib.getOptArg(cf, 4, BaseLib.TYPE_NUMBER);
+        // if i isn't supplied, we want to substitute all occurrences of the pattern
+        int maxSubstitutions = (i == null) ? Integer.MAX_VALUE : i.intValue(); 
+        
+
+        StringPointer p = new StringPointer (pTemp);
+        StringPointer src = new StringPointer (srcTemp);
+        boolean anchor = false;
+        if (p.getChar() == '^') {
+            anchor = true;
+            p.postIncrString ( 1 );
+        }
+
+        int n = 0;
+        StringBuffer b = new StringBuffer();
+        String replType = BaseLib.type(repl);
+        BaseLib.luaAssert(replType == BaseLib.TYPE_FUNCTION ||
+        		          replType == BaseLib.TYPE_STRING || 
+        		          replType == BaseLib.TYPE_TABLE, 
+        		          "string/function/table expected, got "+replType);
+
+        MatchState ms = new MatchState ();
+        ms.callFrame = cf;
+        ms.src_init = src.getClone();
+        ms.endIndex = src.length();
+
+        StringPointer e = null;
+        while (n < maxSubstitutions) {
+            ms.level = 0;
+            e = match(ms, src, p);
+            if (e != null) {
+                n++;
+                addValue(ms, repl, b, src, e);
+            }
+            
+            if (e != null && e.getIndex() > src.getIndex()) { // non empty match?
+                src.setIndex (e.getIndex());  // skip it 
+            } else if (src.getIndex() < ms.endIndex) {
+            	b.append(src.postIncrString(1));
+            } else {
+                break;
+            }
+            
+            if (anchor) {
+                break;
+            }
+        }
+        return cf.push(b.append(src.getString()).toString(), new Double(n));
+    }
+    
+    private static void addValue ( MatchState ms, Object repl, StringBuffer b, StringPointer s, StringPointer e ) {
+        //lua_State thread = ms.thread;
+    	String type = BaseLib.type(repl);
+    	if (type == BaseLib.TYPE_NUMBER || type == BaseLib.TYPE_STRING) {
+            addString ( ms, repl, b, s, e );
+    	} else if (type == BaseLib.TYPE_FUNCTION) {
+            Object res = ms.callFrame.thread.state.call(repl,ms.getCaptures());
+            b.append(res);
+    	} else if (type == BaseLib.TYPE_TABLE) {
+            Object cap = ms.getCaptures()[0];
+            b.append(((LuaTable)repl).rawget(cap));
+    	}
+    }
+    
+    private static void addString ( MatchState ms, Object repl, StringBuffer b, StringPointer s, StringPointer e ) {
+        int i;
+        String newsTemp = BaseLib.tostring(repl, ms.callFrame.thread.state);
+        int iStrLen = newsTemp.length();
+        StringPointer news = new StringPointer (newsTemp);
+        for ( i = 0; i < iStrLen; i ++ ) {
+            if ( news.getChar ( i ) != L_ESC ) {
+                b.append(news.getChar(i));
+            } else {
+                i ++;  // skip ESC
+                if (!Character.isDigit(news.getChar(i))) {
+                    b.append(news.getChar(i));
+                } else if ( news.getChar ( i ) == '0' ) {
+                    String str = s.getString ();
+                    int len = s.length () - e.length ();
+                    if ( len > str.length () ) {
+                        len = str.length ();
+                    }
+                    b.append(str.substring(0, len));
+                } else {
+                    Object o = ms.getCaptures()[news.getChar ( i ) - '1'];
+                    if(o instanceof Double) {
+                    	Double doubleValue = ((Double)o);
+                    	if( doubleValue.doubleValue() - doubleValue.intValue() == 0 ) {
+                    		b.append(String.valueOf(((Double)o).intValue())); 
+                    	} else {
+                    		b.append(String.valueOf(((Double)o).doubleValue()));
+                    	}
+                    } else {
+                    	b.append(o);
+                    }
+                }
+            }
+        }
     }
 }

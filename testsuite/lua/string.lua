@@ -123,6 +123,22 @@ assertEqual(s:find("%w%w%w%w%w",5),7)
 assertEqual(s:find("%w%w%w%w%w%w"),nil)
 assertEqual(s:find("%w%w%w%w%w",8),nil)
 
+assertEqual(s:gsub("(%w+)","la"),"la la")
+assertEqual(s:gsub("(%w+)", "%1 %1"),"Hello Hello world world")
+assertEqual(string.gsub(s, "%w+", "%0 %0", 1), "Hello Hello world")
+assertEqual(string.gsub("Hello world from Lua", "(%w+)%s*(%w+)", "%2 %1"),"world Hello Lua from")
+
+do
+	local function f(s) 
+		return s..s 
+	end
+	assertEqual(string.gsub("$repeatme$", "%$(.-)%$", f),"repeatmerepeatme")
+     
+    local t = {name="lua", version="5.1"}
+	assertEqual(string.gsub("$name-$version.tar.gz", "%$(%w+)", t),"lua-5.1.tar.gz")
+end
+
+
 do
 	local s2 = "abcdabcd"
 	assertEqual(s2:find("bc"),2)
