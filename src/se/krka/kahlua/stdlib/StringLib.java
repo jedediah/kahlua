@@ -892,7 +892,6 @@ public final class StringLib implements JavaFunction {
     }
     
     private static int gsub(LuaCallFrame cf, int nargs) {
-    	
     	String srcTemp = (String)BaseLib.getArg(cf, 1, BaseLib.TYPE_STRING, names[GSUB]);
         String pTemp = (String)BaseLib.getArg(cf, 2, BaseLib.TYPE_STRING, names[GSUB]);
         Object repl = BaseLib.getArg(cf, 3, null, names[GSUB]);
@@ -901,16 +900,15 @@ public final class StringLib implements JavaFunction {
         int maxSubstitutions = (i == null) ? Integer.MAX_VALUE : i.intValue(); 
         
 
-        StringPointer p = new StringPointer (pTemp);
+        StringPointer pattern = new StringPointer (pTemp);
         StringPointer src = new StringPointer (srcTemp);
         boolean anchor = false;
-        if (p.getChar() == '^') {
+        if (pattern.getChar() == '^') {
             anchor = true;
-            p.postIncrString ( 1 );
+            pattern.postIncrString ( 1 );
         }
 
         int n = 0;
-        StringBuffer b = new StringBuffer();
         String replType = BaseLib.type(repl);
         BaseLib.luaAssert(replType == BaseLib.TYPE_FUNCTION ||
         		          replType == BaseLib.TYPE_STRING || 
@@ -922,17 +920,18 @@ public final class StringLib implements JavaFunction {
         ms.src_init = src.getClone();
         ms.endIndex = src.length();
 
-        StringPointer e = null;
+        StringPointer result = null;
+        StringBuffer b = new StringBuffer();
         while (n < maxSubstitutions) {
             ms.level = 0;
-            e = match(ms, src, p);
-            if (e != null) {
+            result = match(ms, src, pattern);
+            if (result != null) {
                 n++;
-                addValue(ms, repl, b, src, e);
+                addValue(ms, repl, b, src, result);
             }
             
-            if (e != null && e.getIndex() > src.getIndex()) { // non empty match?
-                src.setIndex (e.getIndex());  // skip it 
+            if (result != null && result.getIndex() > src.getIndex()) { // non empty match?
+                src.setIndex (result.getIndex());  // skip it 
             } else if (src.getIndex() < ms.endIndex) {
             	b.append(src.postIncrString(1));
             } else {
@@ -946,53 +945,48 @@ public final class StringLib implements JavaFunction {
         return cf.push(b.append(src.getString()).toString(), new Double(n));
     }
     
-    private static void addValue ( MatchState ms, Object repl, StringBuffer b, StringPointer s, StringPointer e ) {
-        //lua_State thread = ms.thread;
+    private static void addValue (MatchState ms, Object repl, StringBuffer b, StringPointer src, StringPointer res) {
     	String type = BaseLib.type(repl);
     	if (type == BaseLib.TYPE_NUMBER || type == BaseLib.TYPE_STRING) {
-            addString ( ms, repl, b, s, e );
+            b.append(getReplacedString(ms, repl, src.getString(), src.length() - res.length()));
     	} else if (type == BaseLib.TYPE_FUNCTION) {
-            Object res = ms.callFrame.thread.state.call(repl,ms.getCaptures());
-            b.append(res);
+            Object returnVal = ms.callFrame.thread.state.call(repl,ms.getCaptures());
+            b.append(returnVal);
     	} else if (type == BaseLib.TYPE_TABLE) {
             Object cap = ms.getCaptures()[0];
             b.append(((LuaTable)repl).rawget(cap));
     	}
     }
     
-    private static void addString ( MatchState ms, Object repl, StringBuffer b, StringPointer s, StringPointer e ) {
-        int i;
-        String newsTemp = BaseLib.tostring(repl, ms.callFrame.thread.state);
-        int iStrLen = newsTemp.length();
-        StringPointer news = new StringPointer (newsTemp);
-        for ( i = 0; i < iStrLen; i ++ ) {
-            if ( news.getChar ( i ) != L_ESC ) {
-                b.append(news.getChar(i));
+    private static String getReplacedString(MatchState ms, Object repl, String srcStr, int len) {
+        String replTemp = BaseLib.tostring(repl, ms.callFrame.thread.state);
+        StringPointer replStr = new StringPointer(replTemp);
+        StringBuffer buf = new StringBuffer();
+        for (int i = 0; i < replTemp.length(); i ++ ) {
+            if (replStr.getChar(i) != L_ESC) {
+                buf.append(replStr.getChar(i));
             } else {
-                i ++;  // skip ESC
-                if (!Character.isDigit(news.getChar(i))) {
-                    b.append(news.getChar(i));
-                } else if ( news.getChar ( i ) == '0' ) {
-                    String str = s.getString ();
-                    int len = s.length () - e.length ();
-                    if ( len > str.length () ) {
-                        len = str.length ();
-                    }
-                    b.append(str.substring(0, len));
+                i++;  // skip ESC
+                if (!Character.isDigit(replStr.getChar(i))) {
+                    buf.append(replStr.getChar(i));
+                } else if (replStr.getChar(i) == '0') {
+                    len = Math.max(len, srcStr.length());
+                    buf.append(srcStr.substring(0, len));
                 } else {
-                    Object o = ms.getCaptures()[news.getChar ( i ) - '1'];
+                    Object o = ms.getCaptures()[replStr.getChar(i) - '1'];
                     if(o instanceof Double) {
                     	Double doubleValue = ((Double)o);
-                    	if( doubleValue.doubleValue() - doubleValue.intValue() == 0 ) {
-                    		b.append(String.valueOf(((Double)o).intValue())); 
+                    	if(doubleValue.doubleValue() - doubleValue.intValue() == 0) {
+                    		buf.append(String.valueOf(((Double)o).intValue())); 
                     	} else {
-                    		b.append(String.valueOf(((Double)o).doubleValue()));
+                    		buf.append(String.valueOf(((Double)o).doubleValue()));
                     	}
                     } else {
-                    	b.append(o);
+                    	buf.append(o);
                     }
                 }
             }
         }
+        return buf.toString();
     }
 }
