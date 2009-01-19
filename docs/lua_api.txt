@@ -49,6 +49,18 @@ string.sub
 string.lower
 string.upper
 string.reverse
+
+string.format
+	Handles the specifiers: c, d, i, f, o, s, u, x, X, %, and luas own q
+	Supports the flags:
+		- left justifies the output
+		+ forces the sign to be printed for d, i and f
+		(space) prints a space instead of + for positive numbers
+		#	adds 0, 0x and 0X in front of o, x and X.
+			forces a decimal point to f even if it doesn't need one.
+		0 uses a "0" as padding instead of space (" ") for numeric specificiers
+	Supports width and precision
+	
 math.*
 coroutine.*
 table.concat (as tableconcat)
@@ -85,7 +97,6 @@ In progress
 -----------
 string.find
 string.match
-string.format
 
 Not implemented
 ---------------

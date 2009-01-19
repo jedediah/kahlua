@@ -179,6 +179,29 @@ public final class MathLib implements JavaFunction {
 		callFrame.push(LuaState.toDouble(Math.floor(x)));
 		return 1;
 	}
+	
+	
+	/**
+	 * Rounds towards zero
+	 * @param x
+	 */
+	public static double round(double x) {
+		if (x < 0) {
+			return -round(-x);
+		}
+		return Math.ceil(x - 0.5);
+	}
+
+	/**
+	 * Rounds to keep _precision_ decimals.
+	 * @param x
+	 * @param precision
+	 * @return
+	 */
+	public static double roundToPrecision(double x, int precision) {
+		double roundingOffset = MathLib.ipow(10, precision);
+		return round(x * roundingOffset) / roundingOffset;
+	}
 
 	private static int modf(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
@@ -528,7 +551,7 @@ public final class MathLib implements JavaFunction {
 	}
 
     /* Thanks rici lake for ipow-implementation */
-	private static double ipow(double base, int exponent) {
+	public static double ipow(double base, int exponent) {
 		boolean inverse = false;
 		if (exponent < 0) {
 			exponent = -exponent;
