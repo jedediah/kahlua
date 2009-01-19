@@ -1,4 +1,5 @@
-* Implement e, E, g and G for string.format
+* Implement a more fine grained test system, i.e. test cases that are smaller than an entire file.
+* Implement g and G for string.format
 * Implement require, module and loading of bytecode files
 * Try to get metalua to work with kahlua
 * Add a license.txt

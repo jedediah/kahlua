@@ -264,20 +264,36 @@ public final class StringLib implements JavaFunction {
 					case 'i':
 						Double v = getDoubleArg(callFrame, argc);
 						formatResult = Long.toString(v.longValue());
-						formatResult = handleSign(showPlus, spaceForSign, formatResult, v);
+						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
 					case 'e':
 					case 'E':
-						throw new RuntimeException("Not yet implemented %e or %E");
+						formatResult = getScientificFormat(getDoubleArg(callFrame, argc), precision, repr, c);
+						formatResult = handleSign(showPlus, spaceForSign, formatResult);
+						break;
+						//throw new RuntimeException("Not yet implemented %e or %E");
 					case 'f':
 						v = getDoubleArg(callFrame, argc);
-						formatResult = toPrecision(v, precision, repr);
-						formatResult = handleSign(showPlus, spaceForSign, formatResult, v);
+						formatResult = toPrecision(v.doubleValue(), precision, repr);
+						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
-					case 'G':
 					case 'g':
-						throw new RuntimeException("Not yet implemented %g or %G");
-						//break;
+					case 'G':
+					{
+						throw new RuntimeException("%g is not implemented");
+						/*
+						v = getDoubleArg(callFrame, argc);
+						String fVersion = toPrecision(v.doubleValue(), precision, repr);
+						String eVersion = getScientificFormat(getDoubleArg(callFrame, argc), precision, repr, (char) (c - 2));
+						if (fVersion.length() <= eVersion.length()) {
+							formatResult = fVersion;
+						} else {
+							formatResult = eVersion;
+						}
+						formatResult = handleSign(showPlus, spaceForSign, formatResult);
+						break;
+						*/
+					}
 					case 's': {
 						padCharacter = ' ';
 						String s = getStringArg(callFrame, argc);
@@ -323,7 +339,32 @@ public final class StringLib implements JavaFunction {
 		return 1;
 	}
 
-	private String handleSign(boolean showPlus, boolean spaceForSign, String formatResult, Double v) {
+	private String getScientificFormat(Double value, int precision, boolean repr, char expChar) {
+		if (value.isInfinite() || value.isNaN()) {
+			return value.toString();
+		}
+		double x = value.doubleValue();
+		
+		int exponent = 0;
+		char expSign;
+		if (x >= 1.0) {
+			while (x >= 10.0) {
+				x /= 10.0;
+				exponent++;
+			}
+			expSign = '+';
+		} else {
+			while (x < 1.0) {
+				x *= 10.0;
+				exponent--;
+			}
+			expSign = '-';
+		}
+		int absExponent = Math.abs(exponent);
+		return toPrecision(x, precision, repr) + expChar + expSign + (absExponent < 10 ? "0" : "") + absExponent; 
+	}
+
+	private String handleSign(boolean showPlus, boolean spaceForSign, String formatResult) {
 		if (formatResult.length() > 0 && formatResult.charAt(0) != '-') {
 			if (showPlus) {
 				return "+" + formatResult;
@@ -335,12 +376,11 @@ public final class StringLib implements JavaFunction {
 		return formatResult;
 	}
 
-	private String toPrecision(Double number, int precision, boolean requirePeriod) {
-		double newNumber = number.doubleValue();
+	private String toPrecision(double number, int precision, boolean requirePeriod) {
 		if (precision != -1) {
-			newNumber = MathLib.roundToPrecision(number.doubleValue(), Math.min(MAX_DOUBLE_PRECISION, precision));
+			number = MathLib.roundToPrecision(number, Math.min(MAX_DOUBLE_PRECISION, precision));
 		}
-		String s = Double.toString(newNumber);
+		String s = Double.toString(number);
 		int currentPrecision = getPrecision(s);
 		
 		if (currentPrecision == -1) {
