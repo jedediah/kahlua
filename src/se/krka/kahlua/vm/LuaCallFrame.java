@@ -41,16 +41,20 @@ public class LuaCallFrame {
 	boolean restoreTop;
 	
 	public void set(int index, Object o) {
+		/*
 		if (index > getTop()) {
 			throw new LuaException("Tried to access index outside of stack, top: " + getTop() + ", index: " + index);
 		}
+		*/
 		thread.objectStack[localBase + index] = o;
 	}
 
 	public Object get(int index) {
+		/*
 		if (index > getTop()) {
 			throw new LuaException("Tried to access index outside of stack, top: " + getTop() + ", index: " + index);
 		}
+		*/
 		return thread.objectStack[localBase + index];
 	}
 
