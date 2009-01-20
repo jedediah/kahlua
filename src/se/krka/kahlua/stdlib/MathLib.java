@@ -182,14 +182,19 @@ public final class MathLib implements JavaFunction {
 	
 	
 	/**
-	 * Rounds towards zero
+	 * Rounds towards even numbers
 	 * @param x
 	 */
 	public static double round(double x) {
 		if (x < 0) {
 			return -round(-x);
 		}
-		return Math.ceil(x - 0.5);
+		x += 0.5;
+		double x2 = Math.floor(x);
+		if (x2 == x) {
+			return x2 - ((long) x2 & 1); 
+		}
+		return x2;
 	}
 
 	/**

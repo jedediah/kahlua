@@ -238,13 +238,15 @@ public final class StringLib implements JavaFunction {
 						break;
 					case 'o':
 						formatResult = formatNumberByBase(getDoubleArg(callFrame, argc), 8);
-						if (repr && !formatResult.equals("0")) {
+						formatResult = pad(formatResult, precision, false, '0');
+						if (repr && formatResult.charAt(0) != '0') {
 							formatResult = "0" + formatResult;
 						}
 						break;
 					case 'x':
 					case 'X':
 						formatResult = formatNumberByBase(getDoubleArg(callFrame, argc), 16);
+						formatResult = pad(formatResult, precision, false, '0');
 						if (repr && !formatResult.equals("0")) {
 							formatResult = "0" + c + formatResult;
 						}
@@ -255,11 +257,21 @@ public final class StringLib implements JavaFunction {
 					case 'u':
 						formatResult = Long.toString(unsigned(
 								getDoubleArg(callFrame, argc)));
+						formatResult = pad(formatResult, precision, false, '0');
 						break;
 					case 'd':
 					case 'i':
+						if (!hasPrecision) {
+							precision = 1;
+						}
+						
 						Double v = getDoubleArg(callFrame, argc);
-						formatResult = Long.toString(v.longValue());
+						long vLong = v.longValue();
+						formatResult = "";
+						if (vLong != 0 || precision > 0) {
+							formatResult = Long.toString(vLong);
+						}
+						formatResult = pad(formatResult, (vLong < 0 ? 1 : 0) + precision, false, '0');
 						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
 					case 'e':
@@ -418,14 +430,18 @@ public final class StringLib implements JavaFunction {
 		double iPart = Math.floor(absNumber);
 		String iPartString = Long.toString((long) iPart);
 		
-		double fPart = absNumber - iPart;
+		double fPart = MathLib.roundToSignificantNumbers(absNumber - iPart, significantDecimals);
 		
-		boolean hasNotStarted = iPartString.equals("0") && fPart != 0;
+		boolean hasNotStarted = iPart == 0 && fPart != 0;
 		int zeroPaddingBefore = 0;
-		for (int i = 0; i < zeroPaddingBefore + significantDecimals; i++) {
+		int scanLength = significantDecimals;
+		for (int i = 0; i < scanLength; i++) {
 			fPart *= 10.0;
-			if (hasNotStarted && Math.floor(fPart) == 0) {
+			if (Math.floor(fPart) == 0 && fPart != 0) {
 				zeroPaddingBefore++;
+				if (hasNotStarted) {
+					scanLength++;
+				}
 			}
 		}
 		long fPartLong = (long) Math.ceil(fPart - 0.5);
@@ -443,9 +459,10 @@ public final class StringLib implements JavaFunction {
 		} else {
 			fPartString = Long.toString(fPartLong);
 		}
-		
+
 		if (includeTrailingZeros && fPartString.length() < significantDecimals) {
-			fPartString = pad(fPartString, significantDecimals, true, '0');
+			int padRightSize = significantDecimals - (hasNotStarted ? 0 : zeroPaddingBefore);
+			fPartString = pad(fPartString, padRightSize, true, '0');
 		}
 		fPartString = pad(fPartString, zeroPaddingBefore + fPartString.length(), false, '0');
 		
@@ -460,21 +477,29 @@ public final class StringLib implements JavaFunction {
 	private String getScientificFormat(double x, int precision, boolean repr, char expChar, boolean useSignificantNumbers) {
 		double xAbs = Math.abs(x);
 		int exponent = 0;
-		char expSign;
-		if (xAbs >= 1.0) {
-			while (xAbs >= 10.0) {
-				xAbs /= 10.0;
-				exponent++;
+		
+		// Run two passes to handle cases such as %.2e with the value 95.
+		for (int i = 0; i < 2; i++) {
+			if (xAbs >= 1.0) {
+				while (xAbs >= 10.0) {
+					xAbs /= 10.0;
+					exponent++;
+				}
+			} else {
+				while (xAbs < 1.0) {
+					xAbs *= 10.0;
+					exponent--;
+				}
 			}
-			expSign = '+';
-		} else {
-			while (xAbs < 1.0) {
-				xAbs *= 10.0;
-				exponent--;
-			}
-			expSign = '-';
+			xAbs = MathLib.roundToPrecision(xAbs, precision);
 		}
 		int absExponent = Math.abs(exponent);
+		char expSign;
+		if (exponent >= 0) {
+			expSign = '+';
+		} else {
+			expSign = '-';
+		}
 		return
 		(x < 0 ? "-" : "") +
 		(useSignificantNumbers ? toSignificantNumbers(xAbs, precision, repr) : toPrecision(xAbs, precision, repr)) +

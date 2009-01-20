@@ -38,6 +38,10 @@ testformat("!12.3456!", "!%.4f!", 12.3456)
 testformat("!12.34560!", "!%.5f!", 12.3456)
 testformat("!12.345600!", "!%.6f!", 12.3456)
 
+testformat("0173", "%.4o", 123)
+testformat("2322", "%.4o", 1234)
+testformat("0173", "%#.4o", 123)
+testformat("02322", "%#.4o", 1234)
 
 testformat("-0.1", "%+1.1f", -0.1)
 
@@ -78,9 +82,18 @@ testformat("100", "%.4g", 100)
 testformat("1e+07", "%.4g", 10000000)
 testformat("1.000e+07", "%#.4g", 10000000)
 
+testformat("1.09692", "%#g", 1.0969153711619073)
+testformat("5.1", "%#.2g", 5.061974531368081)
 testformat("1.23e+06", "%g", 1230000)
 testformat("1.23000e+06", "%#g", 1230000)
 
+testformat("                -025", "%#20.3d", -25.66494878296039)
+testformat("             -1.e+02", "%#20.0e", -95.05946110773807)
+testformat("2", "%.0f", 2.5)
+testformat("4", "%.0f", 3.5)
+testformat("4", "%.0f", 4.5)
+testformat("6", "%.0f", 5.5)
+testformat("1.0e+2", "%#.2g", 99.9)
 
 -- %, s, q, c, d, E, e, f, g, G, i, o, u, X, and x
 testcases = {
