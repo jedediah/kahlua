@@ -38,6 +38,7 @@
 	<target name="clean" description="Removes old build files">
 		<delete dir="${build.dir}" failonerror="false"/>
 		<delete dir="${test.build.dir}" failonerror="false"/>
+		<delete dir="${test.classes.dir}" failonerror="false"/>
 	</target>
 
 	<target name="setup">
@@ -88,7 +89,7 @@
 	</target>
 
 	<!-- Test stuff -->
-	<target name="compile-test" depends="setup" description="Compile test classes">
+	<target name="compile-test" depends="setup, compile" description="Compile test classes">
 		<javac
 			destdir="${test.classes.dir}"
 			debug="true"
@@ -126,11 +127,13 @@
 	</target>
 
 	<target name="emma" depends="clean-emma, test-depend" description="Run Emma to get code coverage">
+		<property name="test.file" value="" />
 		<emmajava enabled="true" libclasspathref="emma.lib"
 			classname="Test"
 			classpathref="test.classpath"
 		>
 			<arg value="${test.lua.output.dir}" />
+			<arg value="${test.file}" />
 
 			<filter includes="se.krka.kahlua.*" />
 			<sourcepath>
