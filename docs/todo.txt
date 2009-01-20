@@ -2,7 +2,6 @@
 * Implement g and G for string.format
 * Implement require, module and loading of bytecode files
 * Try to get metalua to work with kahlua
-* Add a license.txt
 * Create a proper manual
 * Add array part of lua table
 * Implement a lua compiler
