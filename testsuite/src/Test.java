@@ -65,13 +65,17 @@ public class Test {
 
 		File[] children = null;
 		for (int i = 1; i < args.length; i++) {
-			File f = new File(dir, args[i]);
-			if (f.exists() && f.isFile()) {
-				if (children == null) {
-					children = new File[args.length];
+			if (args[i].length() > 0) {
+				File f = new File(dir, args[i]);
+				if (f.exists() && f.isFile()) {
+					if (children == null) {
+						children = new File[args.length];
+					}
+					children[i] =  f;
+				} else {
+					System.err.println(f + " is not a valid file.");
+					System.exit(1);
 				}
-				children[i] =  f;
-			} else {
 			}
 		}
 		if (children == null) {
