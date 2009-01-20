@@ -136,7 +136,7 @@ public final class StringLib implements JavaFunction {
 		for (int i = 0; i < paddingNeeded; i++) {
 			sb.append(pad);
 		}
-		if (!leftJustify) {
+		if (!leftJustify && value.length() > 0) {
 			
 			// Annoying hack to avoid printing numbers as 0000+12.34 instead of
 			// the more appropiate +000012.34
@@ -223,10 +223,6 @@ public final class StringLib implements JavaFunction {
 						}
 					}
 					
-					if (!hasPrecision) {
-						precision = -1;
-					}
-					
 					if (leftJustify) {
 						zeroPadding = false;
 					}
@@ -268,31 +264,81 @@ public final class StringLib implements JavaFunction {
 						break;
 					case 'e':
 					case 'E':
-						formatResult = getScientificFormat(getDoubleArg(callFrame, argc), precision, repr, c);
+						if (!hasPrecision) {
+							precision = 6;
+						}
+						v = getDoubleArg(callFrame, argc);
+						if (v.isInfinite() || v.isNaN()) {
+							formatResult = v.toString();
+						} else {
+							formatResult = getScientificFormat(v.doubleValue(), precision, repr, c, false);
+						}
 						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
-						//throw new RuntimeException("Not yet implemented %e or %E");
 					case 'f':
+						if (!hasPrecision) {
+							precision = 6;
+						}
 						v = getDoubleArg(callFrame, argc);
-						formatResult = toPrecision(v.doubleValue(), precision, repr);
+						if (v.isInfinite() || v.isNaN()) {
+							formatResult = v.toString();
+						} else {
+							formatResult = toPrecision(v.doubleValue(), precision, repr);
+						}
 						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
 					case 'g':
 					case 'G':
 					{
-						throw new RuntimeException("%g is not implemented");
-						/*
+						// Default precision
+						if (!hasPrecision) {
+							precision = 6;
+						}
+						
+						// Precision is significant digits for %g
+						if (precision <= 0) {
+							precision = 1;
+						}
+						
+						// first round to correct significant digits (precision),
+						// then check which formatting to be used.
 						v = getDoubleArg(callFrame, argc);
-						String fVersion = toPrecision(v.doubleValue(), precision, repr);
-						String eVersion = getScientificFormat(getDoubleArg(callFrame, argc), precision, repr, (char) (c - 2));
-						if (fVersion.length() <= eVersion.length()) {
-							formatResult = fVersion;
+						if (v.isInfinite() || v.isNaN()) {
+							formatResult = v.toString();
 						} else {
-							formatResult = eVersion;
+							double x = MathLib.roundToSignificantNumbers(v.doubleValue(), precision);
+
+							/*
+							 * Choose %f version if:
+							 *     |v| >= 10^(-4)
+							 * AND
+							 *     |v| < 10^(precision)
+							 *     
+							 * otherwise, choose %e
+							 */ 
+							double xAbs = Math.abs(x);
+							if (xAbs >= 1e-4 && xAbs < MathLib.ipow(10, precision)) {
+								long longValue = (long) xAbs;
+								int iPartSize;
+								if (longValue == 0) {
+									iPartSize = 0;
+								} else {
+									iPartSize = 1;
+									while (longValue >= 10) {
+										longValue /= 10;
+										iPartSize++;
+									}
+								}
+								// format with %f, with precision significant numbers
+								formatResult = toSignificantNumbers(x, precision - iPartSize, repr);								
+							} else {
+								// format with %g, with precision significant numbers, i.e. precision -1 digits
+								// but skip trailing zeros unless repr
+								formatResult = getScientificFormat(x, precision - 1, repr, (char) (c - 2), true);
+							}
 						}
 						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
-						*/
 					}
 					case 's': {
 						padCharacter = ' ';
@@ -339,29 +385,100 @@ public final class StringLib implements JavaFunction {
 		return 1;
 	}
 
-	private String getScientificFormat(Double value, int precision, boolean repr, char expChar) {
-		if (value.isInfinite() || value.isNaN()) {
-			return value.toString();
-		}
-		double x = value.doubleValue();
+	private String toPrecision(double number, int precision, boolean requirePeriod) {
+		number = MathLib.roundToPrecision(number, Math.min(MAX_DOUBLE_PRECISION, precision));
 		
+		double absNumber = Math.abs(number);
+		double iPart = Math.floor(absNumber);
+		double fPart = absNumber - iPart;
+		for (int i = 0; i < precision; i++) {
+			fPart *= 10.0;
+		}
+		long fPartLong = (long) Math.ceil(fPart - 0.5);
+
+		String iPartString = Long.toString((long) iPart);
+		String fPartString;
+		if (fPartLong == 0) {
+			fPartString = "";
+		} else {
+			fPartString = Long.toString(fPartLong);
+		}
+		fPartString = pad(fPartString, precision, false, '0');
+		
+		String negative = (number < 0) ? "-" : "";
+		if (precision == 0) {
+			return negative + iPartString + (requirePeriod ? "." : "");
+		} else {
+			return negative + iPartString + "." + fPartString;
+		}
+	}
+
+	private String toSignificantNumbers(double number, int significantDecimals, boolean includeTrailingZeros) {
+		double absNumber = Math.abs(number);
+		double iPart = Math.floor(absNumber);
+		String iPartString = Long.toString((long) iPart);
+		
+		double fPart = absNumber - iPart;
+		
+		boolean hasNotStarted = iPartString.equals("0") && fPart != 0;
+		int zeroPaddingBefore = 0;
+		for (int i = 0; i < zeroPaddingBefore + significantDecimals; i++) {
+			fPart *= 10.0;
+			if (hasNotStarted && Math.floor(fPart) == 0) {
+				zeroPaddingBefore++;
+			}
+		}
+		long fPartLong = (long) Math.ceil(fPart - 0.5);
+
+		if (!includeTrailingZeros) {
+			while (fPartLong > 0 && (fPartLong % 10) == 0) {
+				fPartLong /= 10;
+				significantDecimals--;
+			}
+		}
+		
+		String fPartString;
+		if (fPartLong == 0) {
+			fPartString = "";
+		} else {
+			fPartString = Long.toString(fPartLong);
+		}
+		
+		if (includeTrailingZeros && fPartString.length() < significantDecimals) {
+			fPartString = pad(fPartString, significantDecimals, true, '0');
+		}
+		fPartString = pad(fPartString, zeroPaddingBefore + fPartString.length(), false, '0');
+		
+		String negative = (number < 0) ? "-" : "";
+		if (fPartString.equals("")) {
+			return negative + iPartString + (includeTrailingZeros ? "." : "");
+		} else {
+			return negative + iPartString + "." + fPartString;
+		}
+	}
+
+	private String getScientificFormat(double x, int precision, boolean repr, char expChar, boolean useSignificantNumbers) {
+		double xAbs = Math.abs(x);
 		int exponent = 0;
 		char expSign;
-		if (x >= 1.0) {
-			while (x >= 10.0) {
-				x /= 10.0;
+		if (xAbs >= 1.0) {
+			while (xAbs >= 10.0) {
+				xAbs /= 10.0;
 				exponent++;
 			}
 			expSign = '+';
 		} else {
-			while (x < 1.0) {
-				x *= 10.0;
+			while (xAbs < 1.0) {
+				xAbs *= 10.0;
 				exponent--;
 			}
 			expSign = '-';
 		}
 		int absExponent = Math.abs(exponent);
-		return toPrecision(x, precision, repr) + expChar + expSign + (absExponent < 10 ? "0" : "") + absExponent; 
+		return
+		(x < 0 ? "-" : "") +
+		(useSignificantNumbers ? toSignificantNumbers(xAbs, precision, repr) : toPrecision(xAbs, precision, repr)) +
+		expChar + expSign + (absExponent < 10 ? "0" : "") + absExponent; 
 	}
 
 	private String handleSign(boolean showPlus, boolean spaceForSign, String formatResult) {
@@ -374,44 +491,6 @@ public final class StringLib implements JavaFunction {
 			}
 		}
 		return formatResult;
-	}
-
-	private String toPrecision(double number, int precision, boolean requirePeriod) {
-		if (precision != -1) {
-			number = MathLib.roundToPrecision(number, Math.min(MAX_DOUBLE_PRECISION, precision));
-		}
-		String s = Double.toString(number);
-		int currentPrecision = getPrecision(s);
-		
-		if (currentPrecision == -1) {
-			return s;
-		}
-
-		if (precision == -1) {
-			precision = currentPrecision;
-		}
-		
-		if (precision == 0) {
-			return s.substring(0, s.length() - (currentPrecision + (requirePeriod ? 0 : 1)));
-		} else {
-			int diff = currentPrecision - precision;
-			if (diff > 0) {
-				return s.substring(0, s.length() - diff);
-			} else if (diff < 0) {
-				return pad(s, s.length() - diff, true, '0');
-			} else {
-				return s;
-			}
-		}
-	}
-
-	private int getPrecision(String number) {
-		int decimalPoint = number.indexOf('.');
-		if (decimalPoint >= 0) {
-			return number.length() - decimalPoint - 1;
-		}
-		// This could happen if the number is "nan" or "inf". 
-		return -1;
 	}
 
 	private String getStringArg(LuaCallFrame callFrame, int argc) {

@@ -202,6 +202,22 @@ public final class MathLib implements JavaFunction {
 		double roundingOffset = MathLib.ipow(10, precision);
 		return round(x * roundingOffset) / roundingOffset;
 	}
+	
+	public static double roundToSignificantNumbers(double x, int precision) {
+		if (x < 0) {
+			return -roundToSignificantNumbers(-x, precision);
+		}
+		double lowerLimit = MathLib.ipow(10.0, precision - 1);
+		double upperLimit = lowerLimit * 10.0;
+		double multiplier = 1.0;
+		while (multiplier * x < lowerLimit) {
+			multiplier *= 10.0;
+		}
+		while (multiplier * x >= upperLimit) {
+			multiplier /= 10.0;
+		}
+		return round(x * multiplier) / multiplier;
+	}
 
 	private static int modf(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
