@@ -112,6 +112,35 @@ testformat("1", "%#.0i", 1.4)
 
 assert(string.format("%.0x", -1):sub(1, 8) == "ffffffff")
 
+do
+	local zero = 0
+	local one = 1
+	local inf = one / zero
+	local plusinf = inf
+	local neginf = -plusinf
+	local nan = zero / zero
+	assert(tostring(plusinf) == "inf", "expected inf, got " .. tostring(plusinf))
+	assert(tostring(neginf) == "-inf", "expected -inf, got " .. tostring(neginf))
+	assert(tostring(nan) == "nan", "expected nan, got " .. tostring(nan))
+	testformat("inf", "%f", plusinf)
+	testformat("-inf", "%f", neginf)
+	testformat("nan", "%f", nan)
+
+	testformat("+inf", "%+f", plusinf)
+	testformat("+inf", "%+e", plusinf)
+	testformat("+INF", "%+E", plusinf)
+	testformat("+inf", "%+g", plusinf)
+	testformat("+INF", "%+G", plusinf)
+
+	testformat("-inf", "%+f", neginf)
+	testformat("-inf", "%+e", neginf)
+	testformat("-INF", "%+E", neginf)
+	testformat("-inf", "%+g", neginf)
+	testformat("-INF", "%+G", neginf)
+
+end
+
+-- this fails in some libc implementations
 testformat("1.0e+02", "%#.2g", 99.9)
 
 
@@ -144,3 +173,17 @@ for t, c in pairs(testcases) do
 		--print(string.format("string.format(%q, %q) == %q", template, k, result))
 	end
 end
+function verifyinvalidpattern(pattern)
+	local status, err = pcall(function() string.format(pattern) end)
+	assert(not status)
+end
+
+function verifyinvalidpatterns(first, ...)
+	if first then
+		verifyinvalidpattern(first)
+		return verifyinvalidpatterns(...)
+	end
+end
+
+verifyinvalidpatterns("%", "% ", "%.", "%..f", "%...f", "%111", "%111.111")
+

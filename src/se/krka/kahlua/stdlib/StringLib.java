@@ -289,6 +289,7 @@ public final class StringLib implements JavaFunction {
 						"' to 'format'");
 					}
 					
+					char expChar = upperCase ? 'E' : 'e';
 					// Set precision
 					if (!hasPrecision) {
 						precision = defaultPrecision;
@@ -337,12 +338,15 @@ public final class StringLib implements JavaFunction {
 					case 'f':
 						Double v = getDoubleArg(callFrame, argc);
 						if (v.isInfinite() || v.isNaN()) {
-							formatResult = v.toString();
+							formatResult = BaseLib.numberToString(v);
+							if (upperCase) {
+								formatResult = formatResult.toUpperCase();
+							}
 						} else {
 							if (c == 'f') {
 								formatResult = toPrecision(v.doubleValue(), precision, repr);
 							} else {
-								formatResult = getScientificFormat(v.doubleValue(), precision, repr, c, false);
+								formatResult = getScientificFormat(v.doubleValue(), precision, repr, expChar, false);
 							}
 						}
 						formatResult = handleSign(showPlus, spaceForSign, formatResult);
@@ -359,7 +363,10 @@ public final class StringLib implements JavaFunction {
 						// then check which formatting to be used.
 						v = getDoubleArg(callFrame, argc);
 						if (v.isInfinite() || v.isNaN()) {
-							formatResult = v.toString();
+							formatResult = BaseLib.numberToString(v);
+							if (upperCase) {
+								formatResult = formatResult.toUpperCase();
+							}
 						} else {
 							double x = MathLib.roundToSignificantNumbers(v.doubleValue(), precision);
 
@@ -389,7 +396,7 @@ public final class StringLib implements JavaFunction {
 							} else {
 								// format with %g, with precision significant numbers, i.e. precision -1 digits
 								// but skip trailing zeros unless repr
-								formatResult = getScientificFormat(x, precision - 1, repr, (char) (c - 2), true);
+								formatResult = getScientificFormat(x, precision - 1, repr, expChar, true);
 							}
 						}
 						formatResult = handleSign(showPlus, spaceForSign, formatResult);
