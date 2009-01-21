@@ -93,7 +93,26 @@ testformat("2", "%.0f", 2.5)
 testformat("4", "%.0f", 3.5)
 testformat("4", "%.0f", 4.5)
 testformat("6", "%.0f", 5.5)
+
+testformat("0", "%d", 0.2)
+testformat("0", "%d", 0.9)
+testformat("1", "%d", 1.9)
+testformat("", "%.0u", 0.4)
+testformat("", "%.0o", 0.4)
+testformat("", "%.0x", 0.4)
+testformat("", "%.0X", 0.4)
+testformat("", "%.0d", 0.4)
+testformat("", "%.0i", 0.4)
+testformat("1", "%#.0u", 1.4)
+testformat("01", "%#.0o", 1.4)
+testformat("0x1", "%#.0x", 1.4)
+testformat("0X1", "%#.0X", 1.4)
+testformat("1", "%#.0d", 1.4)
+testformat("1", "%#.0i", 1.4)
+
+
 testformat("1.0e+02", "%#.2g", 99.9)
+
 
 -- %, s, q, c, d, E, e, f, g, G, i, o, u, X, and x
 testcases = {

@@ -237,7 +237,12 @@ public final class StringLib implements JavaFunction {
 						padCharacter = ' ';
 						break;
 					case 'o':
-						formatResult = formatNumberByBase(getDoubleArg(callFrame, argc), 8);
+						long vLong = unsigned(getDoubleArg(callFrame, argc));
+						formatResult = "";
+						if (vLong != 0 || precision > 0) {
+							formatResult = Long.toString(vLong, 8);
+						}
+
 						formatResult = pad(formatResult, precision, false, '0');
 						if (repr && formatResult.charAt(0) != '0') {
 							formatResult = "0" + formatResult;
@@ -245,7 +250,12 @@ public final class StringLib implements JavaFunction {
 						break;
 					case 'x':
 					case 'X':
-						formatResult = formatNumberByBase(getDoubleArg(callFrame, argc), 16);
+						vLong = unsigned(getDoubleArg(callFrame, argc));
+						formatResult = "";
+						if (vLong != 0 || precision > 0) {
+							formatResult = Long.toString(vLong, 16);
+						}
+						
 						formatResult = pad(formatResult, precision, false, '0');
 						if (repr && !formatResult.equals("0")) {
 							formatResult = "0" + c + formatResult;
@@ -255,8 +265,11 @@ public final class StringLib implements JavaFunction {
 						}
 						break;
 					case 'u':
-						formatResult = Long.toString(unsigned(
-								getDoubleArg(callFrame, argc)));
+						vLong = unsigned(getDoubleArg(callFrame, argc));
+						formatResult = "";
+						if (vLong != 0 || precision > 0) {
+							formatResult = Long.toString(vLong);
+						}
 						formatResult = pad(formatResult, precision, false, '0');
 						break;
 					case 'd':
@@ -266,7 +279,7 @@ public final class StringLib implements JavaFunction {
 						}
 						
 						Double v = getDoubleArg(callFrame, argc);
-						long vLong = v.longValue();
+						vLong = v.longValue();
 						formatResult = "";
 						if (vLong != 0 || precision > 0) {
 							formatResult = Long.toString(vLong);
