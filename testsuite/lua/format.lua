@@ -110,6 +110,7 @@ testformat("0X1", "%#.0X", 1.4)
 testformat("1", "%#.0d", 1.4)
 testformat("1", "%#.0i", 1.4)
 
+assert(string.format("%.0x", -1):sub(1, 8) == "ffffffff")
 
 testformat("1.0e+02", "%#.2g", 99.9)
 

@@ -110,16 +110,11 @@ public final class StringLib implements JavaFunction {
 		}
 	}
 
-	private long unsigned(Double o) {
-		if (o == null) return 0;
-		long v = o.longValue();
-		if (v < 0L) v += (1L << 32);
+	private long unsigned(long v) {
+		if (v < 0L) {
+			v += (1L << 32);
+		}
 		return v;
-	}
-
-	private String formatNumberByBase(Double num, int base) {
-		long number = unsigned(num);
-		return Long.toString(number, base);
 	}
 
 	private String pad(String value, int width, boolean leftJustify, char pad) {
@@ -226,100 +221,135 @@ public final class StringLib implements JavaFunction {
 					if (leftJustify) {
 						zeroPadding = false;
 					}
+					
 					// This will be overriden to space for the appropiate specifiers
-					char padCharacter = zeroPadding ? '0' : ' ';
 
+					// Pass 1: set up various variables needed for each specifier
+					// This simplifies the second pass by being able to combine several specifiers.
+					
+					int base = 10;
+					boolean upperCase = false;
+					int defaultPrecision = 6; // This is the default for all float numerics
+					char padCharacter = zeroPadding ? '0' : ' ';
+					String basePrepend = "";
+					boolean isUnsigned = false;
+					switch (c) {
+					// Simple character
+					case 'c':
+						padCharacter = ' ';
+						break;
+					// change base
+					case 'o': 
+						base = 8;
+						defaultPrecision = 1;
+						basePrepend = "0";
+						isUnsigned = true;
+						break;
+					case 'x':
+						base = 16;
+						defaultPrecision = 1;
+						basePrepend = "0x";
+						isUnsigned = true;
+						break;
+					case 'X':
+						base = 16;
+						defaultPrecision = 1;
+						upperCase = true;
+						basePrepend = "0X";
+						isUnsigned = true;
+						break;
+					// unsigned integer and signed integer
+					case 'u':
+						defaultPrecision = 1;
+						isUnsigned = true;
+						break;
+					case 'd':
+					case 'i':
+						defaultPrecision = 1;
+						break;
+					case 'e':
+						break;
+					case 'E':
+						upperCase = true;
+						break;
+					case 'g':
+						break;
+					case 'G':
+						upperCase = true;
+						break;
+					case 'f':
+						break;
+					case 's':
+						padCharacter = ' ';
+						break;
+					case 'q':
+						break;
+					default:
+						throw new RuntimeException("invalid option '%" + c +
+						"' to 'format'");
+					}
+					
+					// Set precision
+					if (!hasPrecision) {
+						precision = defaultPrecision;
+					}
+					
 					// Detect specifier and compute result
 					String formatResult;
 					switch (c) {
 					case 'c':
 						formatResult = String.valueOf((char)(getDoubleArg(callFrame, argc)).intValue());
-						padCharacter = ' ';
 						break;
 					case 'o':
-						long vLong = unsigned(getDoubleArg(callFrame, argc));
-						formatResult = "";
-						if (vLong != 0 || precision > 0) {
-							formatResult = Long.toString(vLong, 8);
-						}
-
-						formatResult = pad(formatResult, precision, false, '0');
-						if (repr && formatResult.charAt(0) != '0') {
-							formatResult = "0" + formatResult;
-						}
-						break;
 					case 'x':
 					case 'X':
-						vLong = unsigned(getDoubleArg(callFrame, argc));
+					case 'u':
+					case 'd':
+					case 'i': {
+						long vLong = getDoubleArg(callFrame, argc).longValue();
+						if (isUnsigned) {
+							vLong = unsigned(vLong);
+						}
 						formatResult = "";
 						if (vLong != 0 || precision > 0) {
-							formatResult = Long.toString(vLong, 16);
+							formatResult = Long.toString(vLong, base);
 						}
 						
 						formatResult = pad(formatResult, precision, false, '0');
-						if (repr && !formatResult.equals("0")) {
-							formatResult = "0" + c + formatResult;
+
+						formatResult = pad(formatResult, (vLong < 0 ? 1 : 0) + precision, false, '0');
+						
+						if (base != 10) {
+							if (repr && formatResult.charAt(0) != '0') {
+								formatResult = basePrepend + formatResult;
+							}
 						}
-						if (c == 'X') {
+						if (upperCase) {
 							formatResult = formatResult.toUpperCase();
 						}
-						break;
-					case 'u':
-						vLong = unsigned(getDoubleArg(callFrame, argc));
-						formatResult = "";
-						if (vLong != 0 || precision > 0) {
-							formatResult = Long.toString(vLong);
+						if (!isUnsigned) {
+							formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						}
-						formatResult = pad(formatResult, precision, false, '0');
 						break;
-					case 'd':
-					case 'i':
-						if (!hasPrecision) {
-							precision = 1;
-						}
-						
-						Double v = getDoubleArg(callFrame, argc);
-						vLong = v.longValue();
-						formatResult = "";
-						if (vLong != 0 || precision > 0) {
-							formatResult = Long.toString(vLong);
-						}
-						formatResult = pad(formatResult, (vLong < 0 ? 1 : 0) + precision, false, '0');
-						formatResult = handleSign(showPlus, spaceForSign, formatResult);
-						break;
+					}
 					case 'e':
 					case 'E':
-						if (!hasPrecision) {
-							precision = 6;
-						}
-						v = getDoubleArg(callFrame, argc);
-						if (v.isInfinite() || v.isNaN()) {
-							formatResult = v.toString();
-						} else {
-							formatResult = getScientificFormat(v.doubleValue(), precision, repr, c, false);
-						}
-						formatResult = handleSign(showPlus, spaceForSign, formatResult);
-						break;
 					case 'f':
-						if (!hasPrecision) {
-							precision = 6;
-						}
-						v = getDoubleArg(callFrame, argc);
+						Double v = getDoubleArg(callFrame, argc);
 						if (v.isInfinite() || v.isNaN()) {
 							formatResult = v.toString();
 						} else {
-							formatResult = toPrecision(v.doubleValue(), precision, repr);
+							if (c == 'f') {
+								formatResult = toPrecision(v.doubleValue(), precision, repr);
+							} else {
+								formatResult = getScientificFormat(v.doubleValue(), precision, repr, c, false);
+							}
 						}
 						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
 					case 'g':
 					case 'G':
 					{
-						// Default precision
-						if (!hasPrecision) {
-							precision = 6;
-						}
-						
 						// Precision is significant digits for %g
 						if (precision <= 0) {
 							precision = 1;
@@ -366,7 +396,6 @@ public final class StringLib implements JavaFunction {
 						break;
 					}
 					case 's': {
-						padCharacter = ' ';
 						String s = getStringArg(callFrame, argc);
 						if (hasPrecision) {
 							s = s.substring(0, Math.min(precision, s.length()));
@@ -380,7 +409,6 @@ public final class StringLib implements JavaFunction {
 						
 						// Write directly to the buffer instead, since %q does not support any options
 						formatResult = "";
-						//padCharacter = ' '; // This one isn't needed since padding does not occur for %q
 						
 						result.append('"');
 						for (int j = 0; j < q.length(); j++) {
@@ -397,8 +425,7 @@ public final class StringLib implements JavaFunction {
 						argc++;
 						break;
 					default:
-						throw new RuntimeException("invalid option '%" + c +
-						"' to 'format'");
+						throw new RuntimeException("Internal error");
 					}
 					result.append(pad(formatResult,	width, leftJustify, padCharacter));
 				}
