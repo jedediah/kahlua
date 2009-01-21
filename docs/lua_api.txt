@@ -51,7 +51,7 @@ string.upper
 string.reverse
 
 string.format
-	Handles the specifiers: c, d, e, E, i, f, o, s, u, x, X, %, and luas own q
+	Handles the specifiers: c, d, e, E, g, G, i, f, o, s, u, x, X, %, and luas own q
 	Supports the flags:
 		- left justifies the output
 		+ forces the sign to be printed for d, i and f
