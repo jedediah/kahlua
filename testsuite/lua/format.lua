@@ -103,12 +103,34 @@ testformat("", "%.0x", 0.4)
 testformat("", "%.0X", 0.4)
 testformat("", "%.0d", 0.4)
 testformat("", "%.0i", 0.4)
+testformat("0", "%#.0o", 0)
+testformat("", "%#.0x", 0)
+testformat("", "%#.0X", 0)
+
 testformat("1", "%#.0u", 1.4)
 testformat("01", "%#.0o", 1.4)
 testformat("0x1", "%#.0x", 1.4)
 testformat("0X1", "%#.0X", 1.4)
 testformat("1", "%#.0d", 1.4)
 testformat("1", "%#.0i", 1.4)
+
+testformat("0x07", "%#.2x", 7)
+testformat("0X07", "%#.2X", 7)
+testformat("07", "%#.2o", 7)
+
+testformat("0x7", "%#x", 7)
+testformat("0X7", "%#X", 7)
+testformat("07", "%#o", 7)
+testformat("000", "%#.3x", 0)
+
+testformat("0000000001", "%#010o", 1)
+testformat("        01", "%#010.0o", 1)
+testformat("     00001", "%#010.5o", 1)
+
+testformat("   0x00001", "%#010.5x", 1)
+testformat("   0x00001", "%#10.5x", 1)
+testformat("     00001", "%010.5x", 1)
+testformat("     00001", "%10.5x", 1)
 
 assert(string.format("%.0x", -1):sub(1, 8) == "ffffffff")
 

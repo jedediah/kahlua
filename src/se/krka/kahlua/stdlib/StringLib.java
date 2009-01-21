@@ -230,13 +230,12 @@ public final class StringLib implements JavaFunction {
 					int base = 10;
 					boolean upperCase = false;
 					int defaultPrecision = 6; // This is the default for all float numerics
-					char padCharacter = zeroPadding ? '0' : ' ';
 					String basePrepend = "";
 					boolean isUnsigned = false;
 					switch (c) {
 					// Simple character
 					case 'c':
-						padCharacter = ' ';
+						zeroPadding = false;
 						break;
 					// change base
 					case 'o': 
@@ -280,7 +279,7 @@ public final class StringLib implements JavaFunction {
 					case 'f':
 						break;
 					case 's':
-						padCharacter = ' ';
+						zeroPadding = false;
 						break;
 					case 'q':
 						break;
@@ -294,6 +293,11 @@ public final class StringLib implements JavaFunction {
 					if (!hasPrecision) {
 						precision = defaultPrecision;
 					}
+
+					if (hasPrecision && base != 10) {
+						zeroPadding = false;
+					}
+					char padCharacter = zeroPadding ? '0' : ' ';
 					
 					// Detect specifier and compute result
 					String formatResult;
@@ -314,19 +318,23 @@ public final class StringLib implements JavaFunction {
 						formatResult = "";
 						if (vLong != 0 || precision > 0) {
 							formatResult = Long.toString(vLong, base);
+							if (upperCase) {
+								formatResult = formatResult.toUpperCase();
+							}
 						}
-						
-						formatResult = pad(formatResult, precision, false, '0');
 
 						formatResult = pad(formatResult, (vLong < 0 ? 1 : 0) + precision, false, '0');
 						
-						if (base != 10) {
-							if (repr && formatResult.charAt(0) != '0') {
-								formatResult = basePrepend + formatResult;
+						if (repr) {
+							if (base == 8) {
+								if (!formatResult.startsWith("0")) {
+									formatResult = basePrepend + formatResult;
+								}
+							} else if (base == 16) {
+								if (vLong != 0) {
+									formatResult = basePrepend + formatResult;
+								}
 							}
-						}
-						if (upperCase) {
-							formatResult = formatResult.toUpperCase();
 						}
 						if (!isUnsigned) {
 							formatResult = handleSign(showPlus, spaceForSign, formatResult);
