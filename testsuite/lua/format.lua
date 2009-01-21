@@ -93,7 +93,7 @@ testformat("2", "%.0f", 2.5)
 testformat("4", "%.0f", 3.5)
 testformat("4", "%.0f", 4.5)
 testformat("6", "%.0f", 5.5)
-testformat("1.0e+2", "%#.2g", 99.9)
+testformat("1.0e+02", "%#.2g", 99.9)
 
 -- %, s, q, c, d, E, e, f, g, G, i, o, u, X, and x
 testcases = {
