@@ -341,6 +341,15 @@ public final class BaseLib implements JavaFunction {
 	}
 
 	public static String numberToString(Double num) {
+		if (num.isNaN()) {
+			return "nan";
+		}
+		if (num.isInfinite()) {
+			if (num.doubleValue() < 0) {
+				return "-inf";
+			}
+			return "inf";
+		}
 		double n = num.doubleValue();
 		if (Math.floor(n) == n) {
 			return String.valueOf(num.longValue());
