@@ -17,6 +17,10 @@
 	<property name="test.lua.input.dir"     value="${test.dir}/lua"/>
 	<property name="test.emma.coverage.dir"     value="${test.dir}/coverage"/>
 
+	<path id="main.dependencies">
+		<pathelement location="${basedir}/lib/cldcapi11.jar" />
+	</path>
+
 	<path id="main.classpath">
 		<pathelement path="${classes.dir}"/>
 	</path>
@@ -52,7 +56,15 @@
 
 	<target name="compile" depends="setup" description="Compiles Kahlua">
 		<javac
-			destdir="${classes.dir}" debug="true" target="1.4" source="1.4">
+			destdir="${classes.dir}"
+			debug="true"
+			target="1.4"
+			source="1.4"
+			classpathref="main.dependencies"
+		>
+			<compilerarg value="-bootclasspath" />
+			<compilerarg value="" />
+
 			<src path="${src.dir}"/>
 		</javac>
 	</target>
