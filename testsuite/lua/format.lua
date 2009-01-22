@@ -1,28 +1,16 @@
 function testformat(expected, template, ...)
+	local output, memDiff = "", -1
+	
+	output = string.format(template, ...)
+
 	local t = {...}
 	local inputs = ""
 	for i = 1, #t do
 		inputs = string.format("%s, %q", inputs, t[i])
 	end
-	
-	local output, memDiff = "", -1
-	while memDiff < 0 do
-		local memUsedBefore, memFreeBefore, memTotalBefore = collectgarbage"count"
-		output = string.format(template, ...)
-		local memUsedAfter, memFreeAfter, memTotalAfter = collectgarbage"count"
-		memDiff = (memUsedAfter - memUsedBefore) * 1024.0
-	end
 
 	local msg = string.format("string.format(%q%s) == %q, expected %q", template, inputs, output, expected)
 	assert(output == expected, msg)
-
-	-- this limit should probably be lowered when string.format is more optimized
-	local memLimit = 100000
-	local memErrorMessage = string.format("expected string.format(%q%s) == %q to consume less than %d bytes, actually consumed %d", template, inputs, output, memLimit, memDiff)
-	assert(memDiff < memLimit, memErrorMessage)
-	assert(memDiff >= 0, memErrorMessage)
-
-
 end
 
 testformat("5,8,13,21", "%d,%d,%d,%d", 5,8,13,21)

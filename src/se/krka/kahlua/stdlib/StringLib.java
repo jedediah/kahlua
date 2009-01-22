@@ -231,7 +231,6 @@ public final class StringLib implements JavaFunction {
 					boolean upperCase = false;
 					int defaultPrecision = 6; // This is the default for all float numerics
 					String basePrepend = "";
-					boolean isUnsigned = false;
 					switch (c) {
 					// Simple character
 					case 'c':
@@ -242,25 +241,21 @@ public final class StringLib implements JavaFunction {
 						base = 8;
 						defaultPrecision = 1;
 						basePrepend = "0";
-						isUnsigned = true;
 						break;
 					case 'x':
 						base = 16;
 						defaultPrecision = 1;
 						basePrepend = "0x";
-						isUnsigned = true;
 						break;
 					case 'X':
 						base = 16;
 						defaultPrecision = 1;
 						upperCase = true;
 						basePrepend = "0X";
-						isUnsigned = true;
 						break;
 					// unsigned integer and signed integer
 					case 'u':
 						defaultPrecision = 1;
-						isUnsigned = true;
 						break;
 					case 'd':
 					case 'i':
@@ -282,13 +277,14 @@ public final class StringLib implements JavaFunction {
 						zeroPadding = false;
 						break;
 					case 'q':
+						// %q neither needs nor supports width
+						width = 0;
 						break;
 					default:
 						throw new RuntimeException("invalid option '%" + c +
 						"' to 'format'");
 					}
 					
-					char expChar = upperCase ? 'E' : 'e';
 					// Set precision
 					if (!hasPrecision) {
 						precision = defaultPrecision;
@@ -298,67 +294,92 @@ public final class StringLib implements JavaFunction {
 						zeroPadding = false;
 					}
 					char padCharacter = zeroPadding ? '0' : ' ';
+
+					// extend the string by "width" characters, and delete a subsection of them later to get the correct padding width
+					int resultStartLength = result.length();
+					if (!leftJustify) {
+						extendStringBuffer(result, width, padCharacter);
+					}
 					
 					// Detect specifier and compute result
-					String formatResult;
 					switch (c) {
 					case 'c':
-						formatResult = String.valueOf((char)(getDoubleArg(callFrame, argc)).intValue());
+						result.append((char)(getDoubleArg(callFrame, argc)).shortValue());
 						break;
 					case 'o':
 					case 'x':
 					case 'X':
-					case 'u':
-					case 'd':
-					case 'i': {
+					case 'u': {
 						long vLong = getDoubleArg(callFrame, argc).longValue();
-						if (isUnsigned) {
-							vLong = unsigned(vLong);
-						}
-						formatResult = "";
-						if (vLong != 0 || precision > 0) {
-							formatResult = Long.toString(vLong, base);
-							if (upperCase) {
-								formatResult = formatResult.toUpperCase();
-							}
-						}
+						vLong = unsigned(vLong);
 
-						formatResult = pad(formatResult, (vLong < 0 ? 1 : 0) + precision, false, '0');
-						
 						if (repr) {
 							if (base == 8) {
-								if (!formatResult.startsWith("0")) {
-									formatResult = basePrepend + formatResult;
+								int digits = 0;
+								long vLong2 = vLong;
+								while (vLong2 > 0) {
+									vLong2 /= 8;
+									digits++;
+								}
+								if (precision <= digits) {
+									result.append(basePrepend);
 								}
 							} else if (base == 16) {
 								if (vLong != 0) {
-									formatResult = basePrepend + formatResult;
+									result.append(basePrepend);
 								}
 							}
 						}
-						if (!isUnsigned) {
-							formatResult = handleSign(showPlus, spaceForSign, formatResult);
+						
+						if (vLong != 0 || precision > 0) {
+							stringBufferAppend(result, vLong, base, false, precision);
+						}
+						break;
+					}
+					case 'd':
+					case 'i': {
+						long vLong = getDoubleArg(callFrame, argc).longValue();
+						if (vLong < 0) {
+							result.append('-');
+							vLong = -vLong;
+						} else if (showPlus) {
+							result.append('+');
+						} else if (spaceForSign) {
+							result.append(' ');
+						}
+						if (vLong != 0 || precision > 0) {
+							stringBufferAppend(result, vLong, base, false, precision);
 						}
 						break;
 					}
 					case 'e':
 					case 'E':
-					case 'f':
+					case 'f': {
 						Double v = getDoubleArg(callFrame, argc);
-						if (v.isInfinite() || v.isNaN()) {
-							formatResult = BaseLib.numberToString(v);
-							if (upperCase) {
-								formatResult = formatResult.toUpperCase();
+						boolean isNaN = v.isInfinite() || v.isNaN();
+						
+						double vDouble = v.doubleValue();
+						if (vDouble < 0) {
+							if (!isNaN) {
+								result.append('-');
 							}
+							vDouble = -vDouble;
+						} else if (showPlus) {
+							result.append('+');
+						} else if (spaceForSign) {
+							result.append(' ');
+						}
+						if (isNaN) {
+							result.append(BaseLib.numberToString(v));
 						} else {
 							if (c == 'f') {
-								formatResult = toPrecision(v.doubleValue(), precision, repr);
+								result.append(toPrecision(vDouble, precision, repr));
 							} else {
-								formatResult = getScientificFormat(v.doubleValue(), precision, repr, expChar, false);
+								result.append(getScientificFormat(vDouble, precision, repr, false));
 							}
 						}
-						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
+					}
 					case 'g':
 					case 'G':
 					{
@@ -369,14 +390,23 @@ public final class StringLib implements JavaFunction {
 						
 						// first round to correct significant digits (precision),
 						// then check which formatting to be used.
-						v = getDoubleArg(callFrame, argc);
-						if (v.isInfinite() || v.isNaN()) {
-							formatResult = BaseLib.numberToString(v);
-							if (upperCase) {
-								formatResult = formatResult.toUpperCase();
+						Double v = getDoubleArg(callFrame, argc);
+						boolean isNaN = v.isInfinite() || v.isNaN();
+						double vDouble = v.doubleValue();
+						if (vDouble < 0) {
+							if (!isNaN) {
+								result.append('-');
 							}
+							vDouble = -vDouble;
+						} else if (showPlus) {
+							result.append('+');
+						} else if (spaceForSign) {
+							result.append(' ');
+						}
+						if (isNaN) {
+							result.append(BaseLib.numberToString(v));
 						} else {
-							double x = MathLib.roundToSignificantNumbers(v.doubleValue(), precision);
+							double x = MathLib.roundToSignificantNumbers(vDouble, precision);
 
 							/*
 							 * Choose %f version if:
@@ -386,9 +416,8 @@ public final class StringLib implements JavaFunction {
 							 *     
 							 * otherwise, choose %e
 							 */ 
-							double xAbs = Math.abs(x);
-							if (xAbs >= 1e-4 && xAbs < MathLib.ipow(10, precision)) {
-								long longValue = (long) xAbs;
+							if (x >= 1e-4 && x < MathLib.ipow(10, precision)) {
+								long longValue = (long) x;
 								int iPartSize;
 								if (longValue == 0) {
 									iPartSize = 0;
@@ -400,30 +429,26 @@ public final class StringLib implements JavaFunction {
 									}
 								}
 								// format with %f, with precision significant numbers
-								formatResult = toSignificantNumbers(x, precision - iPartSize, repr);								
+								result.append(toSignificantNumbers(x, precision - iPartSize, repr));								
 							} else {
 								// format with %g, with precision significant numbers, i.e. precision -1 digits
 								// but skip trailing zeros unless repr
-								formatResult = getScientificFormat(x, precision - 1, repr, expChar, true);
+								result.append(getScientificFormat(x, precision - 1, repr, true));
 							}
 						}
-						formatResult = handleSign(showPlus, spaceForSign, formatResult);
 						break;
 					}
 					case 's': {
 						String s = getStringArg(callFrame, argc);
+						int n = s.length();
 						if (hasPrecision) {
-							s = s.substring(0, Math.min(precision, s.length()));
+							n = Math.min(precision, s.length());
 						}
-						formatResult = s;
+						stringBufferAppend(result, s, 0, n);
 						break;
 					}
 					case 'q':
 						String q = getStringArg(callFrame, argc);
-						
-						// Write directly to the buffer instead, since %q does not support any options
-						formatResult = "";
-						
 						result.append('"');
 						for (int j = 0; j < q.length(); j++) {
 							char d = q.charAt(j);
@@ -440,7 +465,31 @@ public final class StringLib implements JavaFunction {
 					default:
 						throw new RuntimeException("Internal error");
 					}
-					result.append(pad(formatResult,	width, leftJustify, padCharacter));
+					if (leftJustify) {
+						int currentResultLength = result.length();
+						int d = width - (currentResultLength - resultStartLength);
+						if (d > 0) {
+							extendStringBuffer(result, d, ' ');
+						}
+					} else {
+						int currentResultLength = result.length();
+						int d = currentResultLength - resultStartLength - width;
+						d = Math.min(d, width);
+						if (d > 0) {
+							result.delete(resultStartLength, resultStartLength + d);
+						}
+						if (zeroPadding) {
+							int signPos = resultStartLength + (width - d);
+							char ch = result.charAt(signPos);
+							if (ch == '+' || ch == '-' || ch == ' ') {
+								result.setCharAt(resultStartLength, ch);
+								result.setCharAt(signPos, '0');
+							}
+						}
+					}
+					if (upperCase) {
+						stringBufferUpperCase(result, resultStartLength);
+					}
 					argc++;
 				}
 			} else {
@@ -450,6 +499,30 @@ public final class StringLib implements JavaFunction {
 		callFrame.push(result.toString());
 		return 1;
 	}
+
+	private void stringBufferAppend(StringBuffer result, String s, int start, int end) {
+		for (int i = start; i < end; i++) {
+			result.append(s.charAt(i));
+		}
+	}
+
+	private void extendStringBuffer(StringBuffer buffer, int width, char padCharacter) {
+		int preLength = buffer.length();		
+		buffer.setLength(preLength + width);
+		for (int i = width - 1; i >= 0; i--) {
+			buffer.setCharAt(preLength + i, padCharacter);
+		}
+	}
+
+	private void stringBufferUpperCase(StringBuffer stringBuffer, int start) {
+		int length = stringBuffer.length();
+		for (int i = start; i < length; i++) {
+			char c = stringBuffer.charAt(i);
+			if (c >= 'a' && c <= 'z') {
+				stringBuffer.setCharAt(i, (char) (c - 32));
+			}
+		}
+	}
 	
 	private static final char[] digits = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 	/**
@@ -458,14 +531,16 @@ public final class StringLib implements JavaFunction {
 	 * @param sb the stringbuffer to append to
 	 * @param value the value to append
 	 * @param base the base to use when formatting (typically 8, 10 or 16)
+	 * @param minDigits 
 	 * @param zeroIsEmpty if the value is 0, should the zero be printed or not?
 	 */
-	private static void stringBufferAppend(StringBuffer sb, long value, int base, boolean printZero) {
+	private static void stringBufferAppend(StringBuffer sb, long value, int base, boolean printZero, int minDigits) {
 		int startPos = sb.length();
-		while (value > 0) {
+		while (value > 0 || minDigits > 0) {
 			long newValue = value / base;
 			sb.append(digits[(int) (value - (newValue * base))]);
 			value = newValue;
+			minDigits--;
 		}
 		int endPos = sb.length() - 1;
 		if (startPos > endPos && printZero) {
@@ -563,24 +638,23 @@ public final class StringLib implements JavaFunction {
 		}
 	}
 
-	private String getScientificFormat(double x, int precision, boolean repr, char expChar, boolean useSignificantNumbers) {
-		double xAbs = Math.abs(x);
+	private String getScientificFormat(double x, int precision, boolean repr, boolean useSignificantNumbers) {
 		int exponent = 0;
 		
 		// Run two passes to handle cases such as %.2e with the value 95.
 		for (int i = 0; i < 2; i++) {
-			if (xAbs >= 1.0) {
-				while (xAbs >= 10.0) {
-					xAbs /= 10.0;
+			if (x >= 1.0) {
+				while (x >= 10.0) {
+					x /= 10.0;
 					exponent++;
 				}
 			} else {
-				while (xAbs < 1.0) {
-					xAbs *= 10.0;
+				while (x < 1.0) {
+					x *= 10.0;
 					exponent--;
 				}
 			}
-			xAbs = MathLib.roundToPrecision(xAbs, precision);
+			x = MathLib.roundToPrecision(x, precision);
 		}
 		int absExponent = Math.abs(exponent);
 		char expSign;
@@ -590,21 +664,8 @@ public final class StringLib implements JavaFunction {
 			expSign = '-';
 		}
 		return
-		(x < 0 ? "-" : "") +
-		(useSignificantNumbers ? toSignificantNumbers(xAbs, precision, repr) : toPrecision(xAbs, precision, repr)) +
-		expChar + expSign + (absExponent < 10 ? "0" : "") + absExponent; 
-	}
-
-	private String handleSign(boolean showPlus, boolean spaceForSign, String formatResult) {
-		if (formatResult.length() > 0 && formatResult.charAt(0) != '-') {
-			if (showPlus) {
-				return "+" + formatResult;
-			}
-			if (spaceForSign) {
-				return " " + formatResult;
-			}
-		}
-		return formatResult;
+		(useSignificantNumbers ? toSignificantNumbers(x, precision, repr) : toPrecision(x, precision, repr)) +
+		'e' + (expSign + (absExponent < 10 ? "0" : "") + absExponent); 
 	}
 
 	private String getStringArg(LuaCallFrame callFrame, int argc) {
