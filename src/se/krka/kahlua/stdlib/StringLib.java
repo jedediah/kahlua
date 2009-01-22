@@ -416,7 +416,6 @@ public final class StringLib implements JavaFunction {
 							s = s.substring(0, Math.min(precision, s.length()));
 						}
 						formatResult = s;
-						argc++;
 						break;
 					}
 					case 'q':
@@ -437,12 +436,12 @@ public final class StringLib implements JavaFunction {
 							}
 						}
 						result.append('"');
-						argc++;
 						break;
 					default:
 						throw new RuntimeException("Internal error");
 					}
 					result.append(pad(formatResult,	width, leftJustify, padCharacter));
+					argc++;
 				}
 			} else {
 				result.append(c);
