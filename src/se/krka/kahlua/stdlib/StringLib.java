@@ -451,7 +451,42 @@ public final class StringLib implements JavaFunction {
 		callFrame.push(result.toString());
 		return 1;
 	}
-
+	
+	private static final char[] digits = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+	/**
+	 * Precondition: value >= 0
+	 * Precondition: 2 <= base <= 16 
+	 * @param sb the stringbuffer to append to
+	 * @param value the value to append
+	 * @param base the base to use when formatting (typically 8, 10 or 16)
+	 * @param zeroIsEmpty if the value is 0, should the zero be printed or not?
+	 */
+	private static void stringBufferAppend(StringBuffer sb, long value, int base, boolean printZero) {
+		int startPos = sb.length();
+		while (value > 0) {
+			long newValue = value / base;
+			sb.append(digits[(int) (value - (newValue * base))]);
+			value = newValue;
+		}
+		int endPos = sb.length() - 1;
+		if (startPos > endPos && printZero) {
+			sb.append('0');
+		} else {
+			// Note that the digits are in reverse order now, so we need to correct it.
+			// We can't use StringBuffer.reverse because that reverses the entire string
+			
+			int swapCount = (1 + endPos - startPos) / 2;
+			for (int i = swapCount - 1; i >= 0; i--) {
+				int leftPos = startPos + i;
+				int rightPos = endPos - i;
+				char left = sb.charAt(leftPos);
+				char right = sb.charAt(rightPos);
+				sb.setCharAt(leftPos, right);
+				sb.setCharAt(rightPos, left);
+			}
+		}
+	}
+	
 	private String toPrecision(double number, int precision, boolean requirePeriod) {
 		number = MathLib.roundToPrecision(number, Math.min(MAX_DOUBLE_PRECISION, precision));
 		
