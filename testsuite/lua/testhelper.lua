@@ -1,8 +1,7 @@
--- global variables:
--- suite - name of the current test suite
 local tests = {}
-function test(name, f)
-	local suite = suite or "default"
+function runtest(name, f)
+	local oldSuite = suite
+	suite = suite or name
 	local status, msg, stacktrace = pcall(f)
 	tests[suite] = tests[suite] or {}
 	
@@ -12,9 +11,15 @@ function test(name, f)
 		testcase.stacktrace = stacktrace
 	end
 	table.insert(tests[suite], testcase)
+	
+	suite = oldSuite
 end
 
 local template, template_suite, template_test
+
+function string:gsubplain(pattern, repl, n)
+	return self:gsub(pattern, string.gsub(tostring(repl), "%%", "%%%%"), n)
+end
 
 function generatereport()
 	local suitesTotal, suitesSuccess = 0, 0
@@ -30,9 +35,9 @@ function generatereport()
 		local testFailOutput = ""
 		for i, test in ipairs(suite) do
 			local text = template_test:
-				gsub("@@NAME@@", test.name or "<unnamed>"):
-				gsub("@@ERROR@@", test.error or ""):
-				gsub("@@STACKTRACE@@", test.stacktrace or "")
+				gsubplain("@@NAME@@", test.name or "<unnamed>"):
+				gsubplain("@@ERROR@@", test.error or ""):
+				gsubplain("@@STACKTRACE@@", test.stacktrace or "")
 
 			if test.status then
 				testSuccessOutput = testSuccessOutput .. text
@@ -42,15 +47,16 @@ function generatereport()
 			
 			suiteTotal = suiteTotal + 1
 			suiteSuccess = suiteSuccess + (test.status and 1 or 0)
-			
-			suiteOutput = suiteOutput .. template_suite:
-				gsub("@@NAME@@", suiteName or "<unnamed>"):
-				gsub("@@TOTAL@@", suiteTotal):
-				gsub("@@SUCCESS@@", suiteSuccess):
-				gsub("@@TESTS_OK@@", testSuccessOutput):
-				gsub("@@TESTS_FAIL@@", testFailOutput)
 		end
-		
+
+					
+		suiteOutput = suiteOutput .. template_suite:
+			gsubplain("@@NAME@@", suiteName or "<unnamed>"):
+			gsubplain("@@TOTAL@@", suiteTotal):
+			gsubplain("@@SUCCESS@@", suiteSuccess):
+			gsubplain("@@TESTS_OK@@", testSuccessOutput):
+			gsubplain("@@TESTS_FAIL@@", testFailOutput)
+
 		if suiteSuccess == suiteTotal then
 			suitesSuccess = suitesSuccess + 1
 		end
@@ -59,21 +65,22 @@ function generatereport()
 		testsSuccess = testsSuccess + suiteSuccess
 	end
 	
-	return template:
-		gsub("@@SUITE_TOTAL@@", suitesTotal):
-		gsub("@@SUITE_SUCCESS@@", suitesSuccess):
-		gsub("@@SUITE_FAIL@@", suitesTotal - suitesSuccess):
-		gsub("@@TESTS_TOTAL@@", testsTotal):
-		gsub("@@TESTS_SUCCESS@@", testsSuccess):
-		gsub("@@TESTS_FAIL@@", testsTotal - testsSuccess):
-		gsub("@@SUITES@@", suiteOutput)
+	local report = template:
+		gsubplain("@@SUITE_TOTAL@@", suitesTotal):
+		gsubplain("@@SUITE_SUCCESS@@", suitesSuccess):
+		gsubplain("@@SUITE_FAIL@@", suitesTotal - suitesSuccess):
+		gsubplain("@@TESTS_TOTAL@@", testsTotal):
+		gsubplain("@@TESTS_SUCCESS@@", testsSuccess):
+		gsubplain("@@TESTS_FAIL@@", testsTotal - testsSuccess):
+		gsubplain("@@SUITES@@", suiteOutput)
+	return report, suitesTotal, suitesSuccess, testsTotal, testsSuccess
 end
 
 template = [[
 <html>
 	<body>
 		<h1>Test results</h1>
-		<table>
+		<table border="1">
 			<thead>
 				<tr>
 					<th>&nbsp;</th><th>Number total</th><th>Number of successful</th><th>Number of failures</th>
@@ -101,17 +108,17 @@ template_suite = [[
 		<p>Number of successful tests: @@SUCCESS@@</p>
 
 		<h4>Failed tests</h4>
-		<table>
+		<table border="1">
 			<thead>
 				<tr><th>Name</th><th>Error message</th><th>Stack trace</th></tr>
 			</thead>
 			<tbody>
 				@@TESTS_FAIL@@
 			</tbody>
-		</table>
+		</table border="1">
 		
 		<h4>Successful tests</h4>
-		<table>
+		<table border="1">
 			<thead>
 				<tr><th>Name</th><th>&nbsp;</th><th>&nbsp;</th></tr>
 			</thead>
@@ -122,7 +129,7 @@ template_suite = [[
 ]]
 
 template_test = [[
-	<tr><td>@@NAME@@</td><td>@@ERROR@@</td><td><pre>@@STACKTRACE@@</pre></td></tr>
+	<tr><td>@@NAME@@</td><td><pre>@@ERROR@@</pre></td><td><pre>@@STACKTRACE@@</pre></td></tr>
 ]]
 
 --[[

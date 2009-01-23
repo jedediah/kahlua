@@ -1,3 +1,5 @@
+* Add testing for gsub - especially for invalid repl (i.e. bad usage of %)
+
 * Implement a more fine grained test system, i.e. test cases that are smaller than an entire file.
 * Implement require, module and loading of bytecode files
 * Try to get metalua to work with kahlua

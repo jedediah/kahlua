@@ -22,21 +22,22 @@ THE SOFTWARE.
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
-
+import java.util.HashSet;
 import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.stdlib.CoroutineLib;
 import se.krka.kahlua.stdlib.MathLib;
-import se.krka.kahlua.stdlib.StringLib;
 import se.krka.kahlua.stdlib.OsLib;
+import se.krka.kahlua.stdlib.StringLib;
 import se.krka.kahlua.test.UserdataArray;
 import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaPrototype;
 import se.krka.kahlua.vm.LuaState;
 
 public class Test {
+	private static HashSet excludedFiles = new HashSet();
 	private static LuaState getState(File dir) throws FileNotFoundException, IOException {
-		File stdlib = new File(dir, "stdlib.lbc");
 
 		LuaState state = new LuaState(System.out);
 		
@@ -47,6 +48,15 @@ public class Test {
 		CoroutineLib.register(state);
 		OsLib.register(state);
 
+		state = runLua(dir, state, new File(dir, "stdlib.lbc"));
+		state = runLua(dir, state, new File(dir, "testhelper.lbc"));
+		return state;
+	}
+
+	private static LuaState runLua(File dir, LuaState state, File file)
+			throws IOException, FileNotFoundException {
+		excludedFiles.add(file);
+		File stdlib = file;
 		LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
 		Object[] results = state.pcall(closure);
 		if (results[0] != Boolean.TRUE) {
@@ -62,6 +72,9 @@ public class Test {
 		File dir = new File(args[0]);
 
 		LuaState state = getState(dir);
+		
+		Object runTest = state.environment.rawget("runtest");
+		Object generateReportClosure = state.environment.rawget("generatereport");
 
 		File[] children = null;
 		for (int i = 1; i < args.length; i++) {
@@ -81,26 +94,35 @@ public class Test {
 		if (children == null) {
 			children = dir.listFiles();
 		}
-		
-		int successful = 0;
-		int total = 0;
+
 		for (int i = 0; i < children.length; i++) {
 			File child = children[i];
-			if (child != null && !child.getName().equals("stdlib.lbc") && child.getName().endsWith(".lbc")) {
-				total++;
-				
+			if (child != null && !excludedFiles.contains(child) && child.getName().endsWith(".lbc")) {
 				LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.environment);
-				Object[] results = state.pcall(closure);
-				if (results[0] == Boolean.TRUE) {
-					System.out.println("Ok:     " + child);
-					successful++;
-				} else {
-					System.out.println("Failed: " + child + ": " +  results[1]);
+				System.out.println("Running " + child + "...");
+				Object[] results = state.pcall(runTest, new Object[] {child.getName(), closure});
+				if (results[0] != Boolean.TRUE) {
+					System.out.println("Crash at " + child + ": " +  results[1]);
 					((Throwable) (results[3])).printStackTrace();
 					System.out.println(results[2]);
 				}
 			}
 		}
-		System.out.println(successful + " of " + total + " tests were ok!");
+		Object[] results = state.pcall(generateReportClosure);
+		if (results[0] == Boolean.TRUE) {
+			FileWriter writer = new FileWriter("testsuite/testreport.html");
+			writer.append((String) results[1]);
+			writer.close();
+			Long suitesTotal = new Long(((Double) results[2]).longValue());
+			Long suitesSuccess = new Long(((Double) results[3]).longValue());
+			Long testsTotal = new Long(((Double) results[4]).longValue());
+			Long testsSuccess = new Long(((Double) results[5]).longValue());
+			System.out.println(String.format("%d of %d suites ok. (%d of %d tests)", new Object[] { suitesTotal, suitesSuccess, testsTotal, testsSuccess}));
+			System.out.println("Detailed test results can be read at testsuite/testreport.html");
+		} else {
+			System.out.println("Could not generate reports: " +  results[1]);
+			((Throwable) (results[3])).printStackTrace();
+			System.out.println(results[2]);
+		}
 	}
 }

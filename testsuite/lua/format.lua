@@ -1,16 +1,16 @@
 function testformat(expected, template, ...)
-	local output, memDiff = "", -1
-	
-	output = string.format(template, ...)
-
 	local t = {...}
-	local inputs = ""
-	for i = 1, #t do
-		inputs = string.format("%s, %q", inputs, t[i])
-	end
+	runtest("string.format: " .. template, function()
+		local output = string.format(template, unpack(t))
 
-	local msg = string.format("string.format(%q%s) == %q, expected %q", template, inputs, output, expected)
-	assert(output == expected, msg)
+		local inputs = ""
+		for i = 1, #t do
+			inputs = string.format("%s, %q", inputs, t[i])
+		end
+
+		local msg = string.format("string.format(%q%s) == %q, expected %q", template, inputs, output, expected)
+		assert(output == expected, msg)
+	end)
 end
 
 testformat("5,8,13,21", "%d,%d,%d,%d", 5,8,13,21)
