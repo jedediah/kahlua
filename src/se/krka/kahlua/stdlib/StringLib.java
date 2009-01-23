@@ -1341,6 +1341,12 @@ public final class StringLib implements JavaFunction {
 		String srcTemp = (String)BaseLib.getArg(cf, 1, BaseLib.TYPE_STRING, names[GSUB]);
 		String pTemp = (String)BaseLib.getArg(cf, 2, BaseLib.TYPE_STRING, names[GSUB]);
 		Object repl = BaseLib.getArg(cf, 3, null, names[GSUB]);
+		{
+			String tmp = BaseLib.rawTostring(repl);
+			if (tmp != null) {
+				repl = tmp;
+			}
+		}			
 		Double num = (Double)BaseLib.getOptArg(cf, 4, BaseLib.TYPE_NUMBER);
 		// if i isn't supplied, we want to substitute all occurrences of the pattern
 		int maxSubstitutions = (num == null) ? Integer.MAX_VALUE : num.intValue(); 
