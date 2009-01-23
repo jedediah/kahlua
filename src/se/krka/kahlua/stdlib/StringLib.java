@@ -116,35 +116,6 @@ public final class StringLib implements JavaFunction {
 		}
 		return v;
 	}
-
-	private String pad(String value, int width, boolean leftJustify, char pad) {
-		int paddingNeeded = width - value.length();
-		if (paddingNeeded <= 0) {
-			return value;
-		}
-		// NOTE: this could be optimized similar to how integer power is implemented.
-		StringBuffer sb = new StringBuffer();
-		
-		if (leftJustify) {
-			sb.append(value);
-		}
-		for (int i = 0; i < paddingNeeded; i++) {
-			sb.append(pad);
-		}
-		if (!leftJustify && value.length() > 0) {
-			
-			// Annoying hack to avoid printing numbers as 0000+12.34 instead of
-			// the more appropiate +000012.34
-			char c = value.charAt(0);
-			if (pad == '0' && (c == '-' || c == '+' || c == ' ')) {
-				sb.insert(0, c);
-				sb.append(value.substring(1));
-			} else {
-				sb.append(value);
-			}
-		}
-		return sb.toString();
-	}
 	
 	private int format(LuaCallFrame callFrame, int nArguments) {
 		String f = (String) BaseLib.getArg(callFrame, 1, BaseLib.TYPE_STRING, "format");
@@ -298,7 +269,7 @@ public final class StringLib implements JavaFunction {
 					// extend the string by "width" characters, and delete a subsection of them later to get the correct padding width
 					int resultStartLength = result.length();
 					if (!leftJustify) {
-						extendStringBuffer(result, width, padCharacter);
+						extend(result, width, padCharacter);
 					}
 					
 					// Detect specifier and compute result
@@ -373,9 +344,9 @@ public final class StringLib implements JavaFunction {
 							result.append(BaseLib.numberToString(v));
 						} else {
 							if (c == 'f') {
-								result.append(toPrecision(vDouble, precision, repr));
+								appendPrecisionNumber(result, vDouble, precision, repr);
 							} else {
-								result.append(getScientificFormat(vDouble, precision, repr, false));
+								appendScientificNumber(result, vDouble, precision, repr, false);
 							}
 						}
 						break;
@@ -429,11 +400,11 @@ public final class StringLib implements JavaFunction {
 									}
 								}
 								// format with %f, with precision significant numbers
-								result.append(toSignificantNumbers(x, precision - iPartSize, repr));								
+								appendSignificantNumber(result, x, precision - iPartSize, repr);								
 							} else {
 								// format with %g, with precision significant numbers, i.e. precision -1 digits
 								// but skip trailing zeros unless repr
-								result.append(getScientificFormat(x, precision - 1, repr, true));
+								appendScientificNumber(result, x, precision - 1, repr, true);
 							}
 						}
 						break;
@@ -444,7 +415,7 @@ public final class StringLib implements JavaFunction {
 						if (hasPrecision) {
 							n = Math.min(precision, s.length());
 						}
-						stringBufferAppend(result, s, 0, n);
+						append(result, s, 0, n);
 						break;
 					}
 					case 'q':
@@ -469,7 +440,7 @@ public final class StringLib implements JavaFunction {
 						int currentResultLength = result.length();
 						int d = width - (currentResultLength - resultStartLength);
 						if (d > 0) {
-							extendStringBuffer(result, d, ' ');
+							extend(result, d, ' ');
 						}
 					} else {
 						int currentResultLength = result.length();
@@ -500,26 +471,26 @@ public final class StringLib implements JavaFunction {
 		return 1;
 	}
 
-	private void stringBufferAppend(StringBuffer result, String s, int start, int end) {
+	private void append(StringBuffer buffer, String s, int start, int end) {
 		for (int i = start; i < end; i++) {
-			result.append(s.charAt(i));
+			buffer.append(s.charAt(i));
 		}
 	}
 
-	private void extendStringBuffer(StringBuffer buffer, int width, char padCharacter) {
+	private void extend(StringBuffer buffer, int extraWidth, char padCharacter) {
 		int preLength = buffer.length();		
-		buffer.setLength(preLength + width);
-		for (int i = width - 1; i >= 0; i--) {
+		buffer.setLength(preLength + extraWidth);
+		for (int i = extraWidth - 1; i >= 0; i--) {
 			buffer.setCharAt(preLength + i, padCharacter);
 		}
 	}
 
-	private void stringBufferUpperCase(StringBuffer stringBuffer, int start) {
-		int length = stringBuffer.length();
+	private void stringBufferUpperCase(StringBuffer buffer, int start) {
+		int length = buffer.length();
 		for (int i = start; i < length; i++) {
-			char c = stringBuffer.charAt(i);
+			char c = buffer.charAt(i);
 			if (c >= 'a' && c <= 'z') {
-				stringBuffer.setCharAt(i, (char) (c - 32));
+				buffer.setCharAt(i, (char) (c - 32));
 			}
 		}
 	}
@@ -561,7 +532,14 @@ public final class StringLib implements JavaFunction {
 		}
 	}
 	
-	private String toPrecision(double number, int precision, boolean requirePeriod) {
+	/**
+	 * Only works with non-negative numbers
+	 * @param buffer
+	 * @param number
+	 * @param precision
+	 * @param requirePeriod
+	 */
+	private void appendPrecisionNumber(StringBuffer buffer, double number, int precision, boolean requirePeriod) {
 		number = MathLib.roundToPrecision(number, Math.min(MAX_DOUBLE_PRECISION, precision));
 		
 		double absNumber = Math.abs(number);
@@ -572,29 +550,28 @@ public final class StringLib implements JavaFunction {
 		}
 		long fPartLong = (long) Math.ceil(fPart - 0.5);
 
-		String iPartString = Long.toString((long) iPart);
-		String fPartString;
-		if (fPartLong == 0) {
-			fPartString = "";
-		} else {
-			fPartString = Long.toString(fPartLong);
-		}
-		fPartString = pad(fPartString, precision, false, '0');
+		stringBufferAppend(buffer, (long) iPart, 10, true, 0);
 		
-		String negative = (number < 0) ? "-" : "";
-		if (precision == 0) {
-			return negative + iPartString + (requirePeriod ? "." : "");
-		} else {
-			return negative + iPartString + "." + fPartString;
+		if (requirePeriod || precision > 0) {
+			buffer.append('.');
 		}
+		
+		stringBufferAppend(buffer, fPartLong, 10, false, precision);
 	}
 
-	private String toSignificantNumbers(double number, int significantDecimals, boolean includeTrailingZeros) {
-		double absNumber = Math.abs(number);
-		double iPart = Math.floor(absNumber);
-		String iPartString = Long.toString((long) iPart);
+	/**
+	 * Only works with non-negative numbers
+	 * @param buffer
+	 * @param number
+	 * @param significantDecimals
+	 * @param includeTrailingZeros
+	 */
+	private void appendSignificantNumber(StringBuffer buffer, double number, int significantDecimals, boolean includeTrailingZeros) {
+		long iPart = (long) number;
 		
-		double fPart = MathLib.roundToSignificantNumbers(absNumber - iPart, significantDecimals);
+		stringBufferAppend(buffer, iPart, 10, true, 0);
+		
+		double fPart = MathLib.roundToSignificantNumbers(number - iPart, significantDecimals);
 		
 		boolean hasNotStarted = iPart == 0 && fPart != 0;
 		int zeroPaddingBefore = 0;
@@ -617,28 +594,25 @@ public final class StringLib implements JavaFunction {
 			}
 		}
 		
-		String fPartString;
-		if (fPartLong == 0) {
-			fPartString = "";
-		} else {
-			fPartString = Long.toString(fPartLong);
-		}
+		buffer.append('.');
+		int periodPos = buffer.length();
+		extend(buffer, zeroPaddingBefore, '0');
+		int prePos = buffer.length();
+		stringBufferAppend(buffer, fPartLong, 10, false, 0);
+		int postPos = buffer.length();
 
-		if (includeTrailingZeros && fPartString.length() < significantDecimals) {
-			int padRightSize = significantDecimals - (hasNotStarted ? 0 : zeroPaddingBefore);
-			fPartString = pad(fPartString, padRightSize, true, '0');
+		int len = postPos - prePos;
+		if (includeTrailingZeros && len < significantDecimals) {
+			int padRightSize = significantDecimals - len - zeroPaddingBefore;
+			extend(buffer, padRightSize, '0');
 		}
-		fPartString = pad(fPartString, zeroPaddingBefore + fPartString.length(), false, '0');
 		
-		String negative = (number < 0) ? "-" : "";
-		if (fPartString.equals("")) {
-			return negative + iPartString + (includeTrailingZeros ? "." : "");
-		} else {
-			return negative + iPartString + "." + fPartString;
+		if (!includeTrailingZeros && periodPos == buffer.length()) {
+			buffer.delete(periodPos - 1, buffer.length());
 		}
 	}
 
-	private String getScientificFormat(double x, int precision, boolean repr, boolean useSignificantNumbers) {
+	private void appendScientificNumber(StringBuffer buffer, double x, int precision, boolean repr, boolean useSignificantNumbers) {
 		int exponent = 0;
 		
 		// Run two passes to handle cases such as %.2e with the value 95.
@@ -663,9 +637,14 @@ public final class StringLib implements JavaFunction {
 		} else {
 			expSign = '-';
 		}
-		return
-		(useSignificantNumbers ? toSignificantNumbers(x, precision, repr) : toPrecision(x, precision, repr)) +
-		'e' + (expSign + (absExponent < 10 ? "0" : "") + absExponent); 
+		if (useSignificantNumbers) {
+			appendSignificantNumber(buffer, x, precision, repr);
+		} else {
+			appendPrecisionNumber(buffer, x, precision, repr);
+		}
+		buffer.append('e');
+		buffer.append(expSign);
+		stringBufferAppend(buffer, absExponent, 10, true, 2);
 	}
 
 	private String getStringArg(LuaCallFrame callFrame, int argc) {
