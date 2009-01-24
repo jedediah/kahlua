@@ -377,7 +377,8 @@ public final class LuaState {
 					if ((bd = BaseLib.rawTonumber(bo)) == null || (cd = BaseLib.rawTonumber(co)) == null) {
 						String meta_op = meta_ops[opcode];
 
-						Object metafun = getMetaOp(bo, co, meta_op);
+						Object metafun = getBinMetaOp(bo, co, meta_op);
+						BaseLib.luaAssert(metafun != null, meta_op + " not defined for operands");
 						res = call(metafun, bo, co, null);
 					} else {
 						res = primitiveMath(bd, cd, opcode);
@@ -396,6 +397,7 @@ public final class LuaState {
 						res = toDouble(-fromDouble(aDouble));
 					} else {
 						Object metafun = getMetaOp(aObj, "__unm");
+						BaseLib.luaAssert(metafun != null, "__unm not defined for operand");
 						res = call(metafun, aObj, null, null);
 					}
 					callFrame.set(a, res);
@@ -422,7 +424,7 @@ public final class LuaState {
 						res = toDouble(s.length());
 					} else {
 						Object f = getMetaOp(o, "__len");
-
+						BaseLib.luaAssert(f != null, "__len not defined for operand");
 						res = call(f, o, null, null);
 					}
 					callFrame.set(a, res);
@@ -473,13 +475,8 @@ public final class LuaState {
 						if (first <= last) {
 							Object leftConcat = callFrame.get(last);
 
-							Object metafun = getMetaOp(leftConcat, "__concat");
-							if (metafun == null) {
-								metafun = getMetaOp(res, "__concat");
-							}
-							if (metafun == null) {
-								throw new RuntimeException("missing __concat for " + leftConcat + " and " + res);
-							}
+							Object metafun = getBinMetaOp(leftConcat, res, "__concat");
+							BaseLib.luaAssert(metafun != null, "__concat not defined for operands");
 							res = call(metafun, leftConcat, res, null);
 							last--;
 						}
@@ -546,14 +543,14 @@ public final class LuaState {
 
 						String meta_op = meta_ops[opcode];
 
-						Object metafun = getMetaOp(bo, co, meta_op);
+						Object metafun = getCompMetaOp(bo, co, meta_op);
 
 						/* Special case:
 						 * OP_LE uses OP_LT if __le is not defined.
 						 * a <= b is then translated to not (b < a)
 						 */
 						if (metafun == null && opcode == OP_LE) {
-							metafun = getMetaOp(bo, co, "__lt");
+							metafun = getCompMetaOp(bo, co, "__lt");
 
 							// Swap the objects
 							Object tmp = bo;
@@ -568,6 +565,7 @@ public final class LuaState {
 						if (metafun == null && opcode == OP_EQ) {
 							resBool = LuaState.luaEquals(bo, co);
 						} else {
+							BaseLib.luaAssert(metafun != null, meta_op + " not defined for operand");
 							Object res = call(metafun, bo, co, null);
 							resBool = boolEval(res);
 						}
@@ -950,13 +948,21 @@ public final class LuaState {
 		return meta.rawget(meta_op);
 	}
 
-	public final Object getMetaOp(Object a, Object b, String meta_op) {
+	public final Object getCompMetaOp(Object a, Object b, String meta_op) {
 		LuaTable meta1 = (LuaTable) getmetatable(a, true);
 		LuaTable meta2 = (LuaTable) getmetatable(b, true);
 		if (meta1 != meta2 || meta1 == null) {
 			return null;
 		}
 		return meta1.rawget(meta_op);
+	}
+
+	public final Object getBinMetaOp(Object a, Object b, String meta_op) {
+		Object op = getMetaOp(a, meta_op);
+		if (op != null) {
+			return op;
+		}
+		return getMetaOp(b, meta_op);
 	}
 
 	public void setUserdataMetatable(Class type, LuaTable metatable) {
