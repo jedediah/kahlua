@@ -539,39 +539,43 @@ public final class LuaState {
 							}
 						}
 					} else {
-						boolean invert = false;
-
-						String meta_op = meta_ops[opcode];
-
-						Object metafun = getCompMetaOp(bo, co, meta_op);
-
-						/* Special case:
-						 * OP_LE uses OP_LT if __le is not defined.
-						 * a <= b is then translated to not (b < a)
-						 */
-						if (metafun == null && opcode == OP_LE) {
-							metafun = getCompMetaOp(bo, co, "__lt");
-
-							// Swap the objects
-							Object tmp = bo;
-							bo = co;
-							co = tmp;
-
-							// Invert a (i.e. add the "not"
-							invert = true;
-						}
-
 						boolean resBool;
-						if (metafun == null && opcode == OP_EQ) {
-							resBool = LuaState.luaEquals(bo, co);
-						} else {
-							BaseLib.luaAssert(metafun != null, meta_op + " not defined for operand");
-							Object res = call(metafun, bo, co, null);
-							resBool = boolEval(res);
-						}
+						if (bo == co) {
+							resBool = true;
+						} else { 						
+							boolean invert = false;
 
-						if (invert) {
-							resBool = !resBool;
+							String meta_op = meta_ops[opcode];
+
+							Object metafun = getCompMetaOp(bo, co, meta_op);
+
+							/* Special case:
+							 * OP_LE uses OP_LT if __le is not defined.
+							 * a <= b is then translated to not (b < a)
+							 */
+							if (metafun == null && opcode == OP_LE) {
+								metafun = getCompMetaOp(bo, co, "__lt");
+
+								// Swap the objects
+								Object tmp = bo;
+								bo = co;
+								co = tmp;
+
+								// Invert a (i.e. add the "not"
+								invert = true;
+							}
+
+							if (metafun == null && opcode == OP_EQ) {
+								resBool = LuaState.luaEquals(bo, co);
+							} else {
+								BaseLib.luaAssert(metafun != null, meta_op + " not defined for operand");
+								Object res = call(metafun, bo, co, null);
+								resBool = boolEval(res);
+							}
+
+							if (invert) {
+								resBool = !resBool;
+							}
 						}
 						if (resBool == (a == 0)) {
 							callFrame.pc++;
