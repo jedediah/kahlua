@@ -53,8 +53,6 @@ public final class StringLib implements JavaFunction {
 	// NOTE: String.class won't work in J2ME - so this is used as a workaround
 	private static final Class STRING_CLASS = "".getClass();
 	
-	private static final int MAX_DOUBLE_PRECISION = 10;
-
 	static {
 		names = new String[NUM_FUNCTIONS];
 		names[SUB] = "sub";
@@ -309,7 +307,8 @@ public final class StringLib implements JavaFunction {
 					}
 					case 'd':
 					case 'i': {
-						long vLong = getDoubleArg(callFrame, argc).longValue();
+						Double v = getDoubleArg(callFrame, argc);
+						long vLong = v.longValue();
 						if (vLong < 0) {
 							result.append('-');
 							vLong = -vLong;
@@ -387,22 +386,24 @@ public final class StringLib implements JavaFunction {
 							 *     
 							 * otherwise, choose %e
 							 */ 
-							if (x >= 1e-4 && x < MathLib.ipow(10, precision)) {
-								long longValue = (long) x;
+							if (x == 0 || (x >= 1e-4 && x < MathLib.ipow(10, precision))) {
 								int iPartSize;
-								if (longValue == 0) {
+								if (x == 0) {
+									iPartSize = 1;
+								} else if (Math.floor(x) == 0) {
 									iPartSize = 0;
 								} else {
+									double longValue = x;
 									iPartSize = 1;
-									while (longValue >= 10) {
-										longValue /= 10;
+									while (longValue >= 10.0) {
+										longValue /= 10.0;
 										iPartSize++;
 									}
 								}
 								// format with %f, with precision significant numbers
 								appendSignificantNumber(result, x, precision - iPartSize, repr);								
 							} else {
-								// format with %g, with precision significant numbers, i.e. precision -1 digits
+								// format with %e, with precision significant numbers, i.e. precision -1 digits
 								// but skip trailing zeros unless repr
 								appendScientificNumber(result, x, precision - 1, repr, true);
 							}
@@ -453,8 +454,8 @@ public final class StringLib implements JavaFunction {
 							int signPos = resultStartLength + (width - d);
 							char ch = result.charAt(signPos);
 							if (ch == '+' || ch == '-' || ch == ' ') {
-								result.setCharAt(resultStartLength, ch);
 								result.setCharAt(signPos, '0');
+								result.setCharAt(resultStartLength, ch);
 							}
 						}
 					}
@@ -505,10 +506,10 @@ public final class StringLib implements JavaFunction {
 	 * @param minDigits 
 	 * @param zeroIsEmpty if the value is 0, should the zero be printed or not?
 	 */
-	private static void stringBufferAppend(StringBuffer sb, long value, int base, boolean printZero, int minDigits) {
+	private static void stringBufferAppend(StringBuffer sb, double value, int base, boolean printZero, int minDigits) {
 		int startPos = sb.length();
 		while (value > 0 || minDigits > 0) {
-			long newValue = value / base;
+			double newValue = Math.floor(value / base);
 			sb.append(digits[(int) (value - (newValue * base))]);
 			value = newValue;
 			minDigits--;
@@ -540,23 +541,22 @@ public final class StringLib implements JavaFunction {
 	 * @param requirePeriod
 	 */
 	private void appendPrecisionNumber(StringBuffer buffer, double number, int precision, boolean requirePeriod) {
-		number = MathLib.roundToPrecision(number, Math.min(MAX_DOUBLE_PRECISION, precision));
+		number = MathLib.roundToPrecision(number, precision);
+		double iPart = Math.floor(number);
+		double fPart = number - iPart;
 		
-		double absNumber = Math.abs(number);
-		double iPart = Math.floor(absNumber);
-		double fPart = absNumber - iPart;
 		for (int i = 0; i < precision; i++) {
 			fPart *= 10.0;
 		}
-		long fPartLong = (long) Math.ceil(fPart - 0.5);
-
-		stringBufferAppend(buffer, (long) iPart, 10, true, 0);
+		fPart = MathLib.round(iPart + fPart) - iPart;
+			
+		stringBufferAppend(buffer, iPart, 10, true, 0);
 		
 		if (requirePeriod || precision > 0) {
 			buffer.append('.');
 		}
 		
-		stringBufferAppend(buffer, fPartLong, 10, false, precision);
+		stringBufferAppend(buffer, fPart, 10, false, precision);
 	}
 
 	/**
@@ -567,7 +567,7 @@ public final class StringLib implements JavaFunction {
 	 * @param includeTrailingZeros
 	 */
 	private void appendSignificantNumber(StringBuffer buffer, double number, int significantDecimals, boolean includeTrailingZeros) {
-		long iPart = (long) number;
+		double iPart = Math.floor(number);
 		
 		stringBufferAppend(buffer, iPart, 10, true, 0);
 		
@@ -585,11 +585,11 @@ public final class StringLib implements JavaFunction {
 				}
 			}
 		}
-		long fPartLong = (long) Math.ceil(fPart - 0.5);
+		fPart = MathLib.round(fPart);
 
 		if (!includeTrailingZeros) {
-			while (fPartLong > 0 && (fPartLong % 10) == 0) {
-				fPartLong /= 10;
+			while (fPart > 0 && (fPart % 10) == 0) {
+				fPart /= 10;
 				significantDecimals--;
 			}
 		}
@@ -598,7 +598,7 @@ public final class StringLib implements JavaFunction {
 		int periodPos = buffer.length();
 		extend(buffer, zeroPaddingBefore, '0');
 		int prePos = buffer.length();
-		stringBufferAppend(buffer, fPartLong, 10, false, 0);
+		stringBufferAppend(buffer, fPart, 10, false, 0);
 		int postPos = buffer.length();
 
 		int len = postPos - prePos;

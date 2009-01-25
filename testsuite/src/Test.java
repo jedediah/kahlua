@@ -34,6 +34,7 @@ import se.krka.kahlua.test.UserdataArray;
 import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaPrototype;
 import se.krka.kahlua.vm.LuaState;
+import se.krka.kahlua.vm.LuaTable;
 
 public class Test {
 	private static HashSet excludedFiles = new HashSet();
@@ -73,8 +74,12 @@ public class Test {
 
 		LuaState state = getState(dir);
 		
-		Object runTest = state.environment.rawget("runtest");
+		Object runTest = state.environment.rawget("testCall");
+		BaseLib.luaAssert(runTest != null, "Could not find testCall");
 		Object generateReportClosure = state.environment.rawget("generatereport");
+		BaseLib.luaAssert(generateReportClosure != null, "Could not find generatereport");
+		Object mergeTestsClosure = state.environment.rawget("mergetests");
+		BaseLib.luaAssert(mergeTestsClosure != null, "Could not find mergetests");
 
 		File[] children = null;
 		for (int i = 1; i < args.length; i++) {
@@ -95,6 +100,7 @@ public class Test {
 			children = dir.listFiles();
 		}
 
+		LuaTable testsuites = new LuaTable();
 		for (int i = 0; i < children.length; i++) {
 			File child = children[i];
 			if (child != null && !excludedFiles.contains(child) && child.getName().endsWith(".lbc")) {
@@ -105,20 +111,28 @@ public class Test {
 					System.out.println("Crash at " + child + ": " +  results[1]);
 					((Throwable) (results[3])).printStackTrace();
 					System.out.println(results[2]);
+				} else {
+					testsuites.rawset(new Double(testsuites.len() + 1.0), results[1]);
 				}
 			}
 		}
-		Object[] results = state.pcall(generateReportClosure);
+		Object[] results = state.pcall(mergeTestsClosure, new Object[] {"Kahlua", testsuites});
+		BaseLib.luaAssert(results[0] == Boolean.TRUE, "" + results[1]);
+		Object testParent = results[1];
+		
+		System.out.println("Generating report...");
+		results = state.pcall(generateReportClosure, new Object[] {testParent});
 		if (results[0] == Boolean.TRUE) {
 			FileWriter writer = new FileWriter("testsuite/testreport.html");
 			writer.append((String) results[1]);
 			writer.close();
-			Long suitesTotal = new Long(((Double) results[2]).longValue());
-			Long suitesSuccess = new Long(((Double) results[3]).longValue());
-			Long testsTotal = new Long(((Double) results[4]).longValue());
-			Long testsSuccess = new Long(((Double) results[5]).longValue());
-			System.out.println(String.format("%d of %d suites ok. (%d of %d tests)", new Object[] { suitesTotal, suitesSuccess, testsTotal, testsSuccess}));
+			Long testsOk = new Long(((Double) results[2]).longValue());
+			Long testsFail = new Long(((Double) results[3]).longValue());
+			System.out.println(String.format("Test result: %4d ok. %4d failed.", new Object[] { testsOk, testsFail}));
 			System.out.println("Detailed test results can be read at testsuite/testreport.html");
+			if (testsFail > 0) {
+				System.exit(1);
+			}
 		} else {
 			System.out.println("Could not generate reports: " +  results[1]);
 			((Throwable) (results[3])).printStackTrace();

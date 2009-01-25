@@ -15,8 +15,12 @@ function isNaN(x)
 end
 	
 
-assert(1 < 2, "1 must be less than 2")
-assert(not (2 < 1), "2 must not be less than 1")
+testCall(function() assert(tonumber("12345678e20") > 10e20, tonumber("12345678e20") .. " was not larger than " .. 10e20) end)
+
+testCall(function() assert(tonumber("12345678e20") > 10e20) end)
+
+testAssert(1 < 2, "1 must be less than 2")
+testAssert(not (2 < 1), "2 must not be less than 1")
 
 do
 	local value1 = 1.234567

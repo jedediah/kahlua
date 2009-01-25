@@ -1,6 +1,6 @@
 function testformat(expected, template, ...)
 	local t = {...}
-	runtest("string.format: " .. template, function()
+	testCall("string.format: " .. template, function()
 		local output = string.format(template, unpack(t))
 
 		local inputs = ""
@@ -12,6 +12,13 @@ function testformat(expected, template, ...)
 		assert(output == expected, msg)
 	end)
 end
+
+testformat("-0.0", "%.1f", tonumber("-0"))
+testformat("-inf", "%.1f", tonumber("-inf"))
+testformat("inf", "%.1f", tonumber("inf"))
+testformat("-inf", "%.1f", tonumber("-inF"))
+testformat("inf", "%.1f", tonumber("iNf"))
+testformat("nan", "%.1f", tonumber("nan"))
 
 testformat("5,8,13,21", "%d,%d,%d,%d", 5,8,13,21)
 testformat("     hello", "%10s", "hello")
