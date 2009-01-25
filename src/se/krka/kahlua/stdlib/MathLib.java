@@ -181,6 +181,11 @@ public final class MathLib implements JavaFunction {
 	}
 	
 	
+	public static boolean isNegative(double vDouble) {
+		return Double.doubleToLongBits(vDouble) < 0;
+	}
+
+
 	/**
 	 * Rounds towards even numbers
 	 * @param x
@@ -229,7 +234,7 @@ public final class MathLib implements JavaFunction {
 		double x = LuaState.fromDouble(callFrame.get(0));
 
 		boolean negate = false;
-		if (x < 0) {
+		if (MathLib.isNegative(x)) {
 			negate = true;
 			x = -x;
 		}
@@ -261,7 +266,7 @@ public final class MathLib implements JavaFunction {
 		} else {
 			v2 = Math.abs(v2);
 			boolean negate = false;
-			if (v1 < 0) {
+			if (MathLib.isNegative(v1)) {
 				negate = true;
 				v1 = -v1;
 			}
@@ -574,7 +579,7 @@ public final class MathLib implements JavaFunction {
     /* Thanks rici lake for ipow-implementation */
 	public static double ipow(double base, int exponent) {
 		boolean inverse = false;
-		if (exponent < 0) {
+		if (MathLib.isNegative(exponent)) {
 			exponent = -exponent;
 			inverse = true;
 		}
