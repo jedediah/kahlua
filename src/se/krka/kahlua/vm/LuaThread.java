@@ -222,7 +222,7 @@ public class LuaThread {
 			if (lines != null) {
 				frame.pc--;
 				if (frame.pc < lines.length) {
-					stackTrace += "at " + frame.closure.prototype + ": " + lines[frame.pc] + "(opcode index: " + frame.pc + ")\n";
+					stackTrace += "at " + frame.closure.prototype + ":" + lines[frame.pc] + " (opcode: " + frame.pc + ")\n";
 				}
 			}
 		}
