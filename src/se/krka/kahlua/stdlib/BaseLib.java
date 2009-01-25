@@ -345,7 +345,7 @@ public final class BaseLib implements JavaFunction {
 			return "nan";
 		}
 		if (num.isInfinite()) {
-			if (num.doubleValue() < 0) {
+			if (MathLib.isNegative(num.doubleValue())) {
 				return "-inf";
 			}
 			return "inf";
@@ -591,6 +591,16 @@ public final class BaseLib implements JavaFunction {
 				return LuaState.toDouble(Integer.parseInt(s, radix));
 			}
 		} catch (NumberFormatException e) {
+			s = s.toLowerCase();
+			if (s.endsWith("nan")) {
+				return LuaState.toDouble(Double.NaN);
+			}
+			if (s.endsWith("inf")) {
+				if (s.charAt(0) == '-') {
+					return LuaState.toDouble(Double.NEGATIVE_INFINITY);
+				}
+				return LuaState.toDouble(Double.POSITIVE_INFINITY);
+			}
 			return null;
 		}
 	}
