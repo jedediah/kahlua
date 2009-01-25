@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2007-2008 Kristofer Karlsson <kristofer.karlsson@gmail.com>
+Copyright (c) 2007-2009 Kristofer Karlsson <kristofer.karlsson@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,8 +50,9 @@ public final class BaseLib implements JavaFunction {
 	private static final int RAWGET = 15;
 	private static final int COLLECTGARBAGE = 16;
 	private static final int TABLECONCAT = 17;
+	private static final int DEBUGSTACKTRACE = 18;
 
-	private static final int NUM_FUNCTIONS = 18;
+	private static final int NUM_FUNCTIONS = 19;
 
 	private static final String[] names;
 	private static final Object MODE_KEY = "__mode";
@@ -86,6 +87,7 @@ public final class BaseLib implements JavaFunction {
 		names[RAWGET] = "rawget";
 		names[COLLECTGARBAGE] = "collectgarbage";
 		names[TABLECONCAT] = "tableconcat";
+		names[DEBUGSTACKTRACE] = "debugstacktrace";
 	}
 
 	private int index;
@@ -137,11 +139,31 @@ public final class BaseLib implements JavaFunction {
 		case RAWGET: return rawget(callFrame, nArguments);
 		case COLLECTGARBAGE: return collectgarbage(callFrame, nArguments);
 		case TABLECONCAT: return tableConcat(callFrame, nArguments);
+		case DEBUGSTACKTRACE: return debugstacktrace(callFrame, nArguments);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
 			return 0;
 		}
+	}
+
+	private int debugstacktrace(LuaCallFrame callFrame, int nArguments) {
+		Double levelDouble = (Double) getOptArg(callFrame, 1, BaseLib.TYPE_NUMBER);
+		int level = 0;
+		if (levelDouble != null) {
+			level = levelDouble.intValue();
+		}
+		Double countDouble = (Double) getOptArg(callFrame, 2, BaseLib.TYPE_NUMBER);
+		int count = Integer.MAX_VALUE;
+		if (countDouble != null) {
+			count = countDouble.intValue(); 
+		}
+		Double haltAtDouble = (Double) getOptArg(callFrame, 3, BaseLib.TYPE_NUMBER);
+		int haltAt = 0;
+		if (haltAtDouble != null) {
+			haltAt = haltAtDouble.intValue(); 
+		}
+		return callFrame.push(callFrame.thread.getCurrentStackTrace(level, count, haltAt));
 	}
 
 	private int rawget(LuaCallFrame callFrame, int nArguments) {
@@ -351,7 +373,7 @@ public final class BaseLib implements JavaFunction {
 			return "inf";
 		}
 		double n = num.doubleValue();
-		if (Math.floor(n) == n) {
+		if (Math.floor(n) == n && Math.abs(n) < 1e14) {
 			return String.valueOf(num.longValue());
 		}
 		return num.toString();

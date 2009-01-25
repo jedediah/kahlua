@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008 Kristofer Karlsson <kristofer.karlsson@gmail.com>
+Copyright (c) 2008-2009 Kristofer Karlsson <kristofer.karlsson@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -207,6 +207,23 @@ public class LuaThread {
 		return top;
 	}
 
+	public String getCurrentStackTrace(int level, int count, int haltAt) {
+		if (level < 0) {
+			level = 0;
+		}
+		if (count < 0) {
+			count = 0;
+		}
+		StringBuffer buffer = new StringBuffer();
+		for (int i = callFrameTop - 1 - level; i >= haltAt; i--) {
+			if (count-- <= 0) {
+				break;
+			}
+			buffer.append(getStackTrace(callFrameStack[i]));
+		}
+		return buffer.toString();
+	}
+	
 	public void cleanCallFrames(LuaCallFrame callerFrame) {
 		LuaCallFrame frame;
 		while ((frame = currentCallFrame()) != callerFrame) {
@@ -216,15 +233,20 @@ public class LuaThread {
 		}
 	}
 
-	void addStackTrace(LuaCallFrame frame) {
+	public void addStackTrace(LuaCallFrame frame) {
+		stackTrace += getStackTrace(frame); 
+	}
+
+	private String getStackTrace(LuaCallFrame frame) {
 		if (frame.closure != null) {
 			int[] lines = frame.closure.prototype.lines;
 			if (lines != null) {
-				frame.pc--;
-				if (frame.pc < lines.length) {
-					stackTrace += "at " + frame.closure.prototype + ":" + lines[frame.pc] + " (opcode: " + frame.pc + ")\n";
+				int pc = frame.pc - 1;
+				if (pc < lines.length) {
+					return "at " + frame.closure.prototype + ":" + lines[pc] + " (opcode: " + pc + ")\n";
 				}
 			}
 		}
+		return "";
 	}
 }

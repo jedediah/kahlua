@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2007-2008 Kristofer Karlsson <kristofer.karlsson@gmail.com>
+Copyright (c) 2007-2009 Kristofer Karlsson <kristofer.karlsson@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -630,7 +630,9 @@ public final class LuaState {
 					int returnBase2 = base + a;
 					
 					Object funObject = callFrame.get(a);
+					BaseLib.luaAssert(funObject != null, "Tried to call nil");
 					Object fun = prepareMetatableCall(funObject);
+					BaseLib.luaAssert(fun != null, "Object " + funObject + " did not have __call metatable set");
 					
 					// If it's a metatable __call, prepend the caller as the first argument 
 					if (fun != funObject) {
