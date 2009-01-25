@@ -114,7 +114,7 @@
 	</target>
 
 	<target name="compile-test-lua" depends="setup" description="Compile test lua files">
-		<apply executable="${luac.path}" dest="${test.lua.output.dir}" dir="${test.lua.input.dir}">
+		<apply executable="${luac.path}" dest="${test.lua.output.dir}" dir="${test.lua.input.dir}" failonerror="true">
 			<arg value="-o" />
 			<targetfile />
 			<srcfile />
