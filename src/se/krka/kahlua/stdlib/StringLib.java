@@ -330,7 +330,7 @@ public final class StringLib implements JavaFunction {
 						boolean isNaN = v.isInfinite() || v.isNaN();
 						
 						double vDouble = v.doubleValue();
-						if (vDouble < 0) {
+						if (MathLib.isNegative(vDouble)) {
 							if (!isNaN) {
 								result.append('-');
 							}
@@ -364,7 +364,7 @@ public final class StringLib implements JavaFunction {
 						Double v = getDoubleArg(callFrame, argc);
 						boolean isNaN = v.isInfinite() || v.isNaN();
 						double vDouble = v.doubleValue();
-						if (vDouble < 0) {
+						if (MathLib.isNegative(vDouble)) {
 							if (!isNaN) {
 								result.append('-');
 							}
@@ -623,7 +623,7 @@ public final class StringLib implements JavaFunction {
 					exponent++;
 				}
 			} else {
-				while (x < 1.0) {
+				while (x > 0 && x < 1.0) {
 					x *= 10.0;
 					exponent--;
 				}
