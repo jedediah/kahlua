@@ -196,11 +196,24 @@ function require(modname)
 	error("Module '" .. modname .. "' not found:\n" .. errormessage)
 end
 
+function package.seeall(module)
+	local mt = getmetatable(module) or {}
+	mt.__index = getfenv(0)
+	setmetatable(module, mt)
+end
+
+local function apply(obj, n, f, ...)
+	if n > 0 then
+		f(obj)
+		return apply(obj, n - 1, ...)
+	end	
+end
+
 function module(name, ...)
 	local env = getfenv(0)
 	local t = package.loaded[name] or env[name]
 	if not t then
-		t = setmetatable({}, {__index = env})
+		t = {}
 		package.loaded[name] = t
 	end
 	t._NAME = name
@@ -218,6 +231,7 @@ function module(name, ...)
 	else
 		env[name] = t
 	end
+	apply(t, select("#", ...), ...)
 	setfenv(2, t)
 end
 
