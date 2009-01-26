@@ -167,3 +167,57 @@ do
 	end
 end
 
+
+package = {}
+package.loaded = {}
+
+function require(modname)
+	local m = package.loaded[modname]
+	if m ~= nil then
+		return m
+	end
+	
+	local loaders = package.loaders
+	local errormessage = ""
+	for i = 1, #loaders do
+		local loader = loaders[i]
+		local loader2 = loader(modname)
+		if type(loader2) == "function" then
+			m = loader2(modname)
+			if m == nil then
+				m = true
+			end
+			package.loaded[modname] = m
+			return m
+		else
+			errormessage = errormessage .. loader2
+		end
+	end
+	error("Module '" .. modname .. "' not found:\n" .. errormessage)
+end
+
+function module(name, ...)
+	local env = getfenv(0)
+	local t = package.loaded[name] or env[name]
+	if not t then
+		t = setmetatable({}, {__index = env})
+		package.loaded[name] = t
+	end
+	t._NAME = name
+	t._M = t
+
+	local packagename, lastname = name:match("^(.*%.)([^.]*)$")
+	t._PACKAGE = packagename
+	if name:find(".", 1, true) then
+		local chain = env
+		for partial in name:gmatch("([^%.]*)%.") do
+			chain[partial] = chain[partial] or {}
+			chain = chain[partial]
+		end
+		chain[lastname] = t
+	else
+		env[name] = t
+	end
+	setfenv(2, t)
+end
+

@@ -205,13 +205,23 @@ public final class BaseLib implements JavaFunction {
 	private int setfenv(LuaCallFrame callFrame, int nArguments) {
         luaAssert(nArguments >= 2, "Not enough arguments");
 
-        Object o = callFrame.get(0);
-    	luaAssert(o instanceof LuaClosure, "expected a lua function");
-
         LuaTable newEnv = (LuaTable) callFrame.get(1);
         luaAssert(newEnv != null, "expected a table");
+        
+    	LuaClosure closure = null;
+        
+        Object o = callFrame.get(0);
+        if (o instanceof LuaClosure) {
+        	closure = (LuaClosure) o;
+        } else {
+        	o = rawTonumber(o);
+        	luaAssert(o != null, "expected a lua function or a number");
+        	int level = ((Double) o).intValue();
+        	luaAssert(level != 0, "setfenv not implemented for level == 0");
+        	closure = callFrame.thread.getParent(level).closure;
+        	luaAssert(closure != null, "No closure found at this level: " + level);
+        }
 
-    	LuaClosure closure = (LuaClosure) o;
     	closure.env = newEnv;
 
     	callFrame.setTop(1);
@@ -235,9 +245,7 @@ public final class BaseLib implements JavaFunction {
         	luaAssert(d != null, "Expected number");
         	int level = d.intValue();
         	luaAssert(level >= 0, "level must be non-negative");
-        	int callFrame2index = callFrame.thread.callFrameTop - level - 1;
-        	luaAssert(callFrame2index >= 0, "invalid level");
-        	LuaCallFrame callFrame2 = callFrame.thread.callFrameStack[callFrame2index];
+        	LuaCallFrame callFrame2 = callFrame.thread.getParent(level);
         	res = callFrame2.getEnvironment();
         }
         callFrame.push(res);

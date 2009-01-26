@@ -21,6 +21,8 @@ THE SOFTWARE.
 */
 package se.krka.kahlua.vm;
 
+import se.krka.kahlua.stdlib.BaseLib;
+
 import java.util.Vector;
 
 public class LuaThread {
@@ -207,6 +209,13 @@ public class LuaThread {
 		return top;
 	}
 
+	public LuaCallFrame getParent(int level) {
+		BaseLib.luaAssert(level >= 0, "Level must be non-negative");
+		int index = callFrameTop - level - 1;
+		BaseLib.luaAssert(index >= 0, "Level too high");
+		return callFrameStack[index];
+	}
+	
 	public String getCurrentStackTrace(int level, int count, int haltAt) {
 		if (level < 0) {
 			level = 0;
