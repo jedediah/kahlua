@@ -1,7 +1,9 @@
-t = {2, 4, 6, 8, 10}
-for i = 1, 5 do
-   assert(t[i] == i * 2, "t[" .. i .. "] = " .. t[i])
-end
+testCall(function()
+	t = {2, 4, 6, 8, 10}
+	for i = 1, 5 do
+	   assert(t[i] == i * 2, "t[" .. i .. "] = " .. t[i])
+	end
+end)
 
 t = {
 1,2,3,4,5,6,7,8,9,0,
@@ -35,11 +37,14 @@ t = {
 }
 
 
-for i = 1, #t do
-   assert(i == i, "wtf?")
+testCall(function()
+	for i = 1, #t do
+	   assert(i == i)
 
-   local c1 = t[i]
-   local c2 = i % 10
-   local b = c1 == c2
-   assert(b, "t[" .. i .. "] = " .. t[i])
-end
+	   local c1 = t[i]
+	   local c2 = i % 10
+	   local b = c1 == c2
+	   assert(b, "t[" .. i .. "] = " .. t[i])
+	end
+end)
+

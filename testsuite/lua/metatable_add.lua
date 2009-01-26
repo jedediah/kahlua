@@ -7,8 +7,8 @@ x.__add = function(a, b)
 
 end
 
-assert(x + x == 12)
-assert(5 + x == 11)
-assert(x + 5 == 11)
+testAssert(x + x == 12)
+testAssert(5 + x == 11)
+testAssert(x + 5 == 11)
 
 

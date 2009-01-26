@@ -11,16 +11,17 @@ function mt.__concat(a, b)
 end
 t1 = {"t1"}
 t2 = {"t2"}
-for k, v in pairs(t1) do
-assert(k == 1)
-assert(v == "t1")
-end
-
+testCall(function()
+	for k, v in pairs(t1) do
+		assert(k == 1)
+		assert(v == "t1")
+	end
+end)
 setmetatable(t1, mt)
 setmetatable(t2, mt)
 
 
-assert(tostring(t1) == "hi")
+testAssert(tostring(t1) == "hi")
 --[[
 assert(tostring("1.2") == "1.2")
 assert(tostring(1.2) == "1.2")

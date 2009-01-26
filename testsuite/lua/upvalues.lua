@@ -11,9 +11,9 @@ do
       end
    end
 
-   assert(f() == 1)   
+   testAssert(f() == 1)   
    g(10)
-   assert(f() == 10)
+   testAssert(f() == 10)
 end
 
 do
@@ -26,9 +26,9 @@ do
       s = x
    end
    
-   assert(f() == 1)   
+   testAssert(f() == 1)   
    g(10)
-   assert(f() == 10)
+   testAssert(f() == 10)
 end
 
 do
@@ -47,9 +47,10 @@ do
    end
 
    local v = f()()
-   assert(v == 1)
+   testAssert(v == 1)
    local g2 = g(10)
    g2()
    v = f()()
-   assert(v == 10)
+   testAssert(v == 10)
 end
+

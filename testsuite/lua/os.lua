@@ -2,6 +2,12 @@ local function assertEquals(a, b)
 	assert(a == b, "Expected " .. a .. " == " .. b)
 end
 
+function testAssertEquals(a, b)
+	testCall(function() assertEquals(a, b) end)
+end
+
+
+
 local tbl = "*t"
 local str = "%c"
 
@@ -14,45 +20,45 @@ local halloween = 1225440000  -- seconds since the epoch for halloween 2008, 8am
 
 do
 	local res = os.date(tbl, halloween)
-	assertEquals(res.year, 2008)
-	assertEquals(res.month, 10)
-	assertEquals(res.day, 31)
-	assertEquals(res.hour, 8)
-	assertEquals(res.min, 0)
-	assertEquals(res.sec, 0)
-	assertEquals(res.wday, 6)
-	assertEquals(res.yday, 304)
+	testAssertEquals(res.year, 2008)
+	testAssertEquals(res.month, 10)
+	testAssertEquals(res.day, 31)
+	testAssertEquals(res.hour, 8)
+	testAssertEquals(res.min, 0)
+	testAssertEquals(res.sec, 0)
+	testAssertEquals(res.wday, 6)
+	testAssertEquals(res.yday, 304)
 	
-	assertEquals(res.year, tonumber(os.date("%Y", halloween)))
-	assertEquals(res.month, tonumber(os.date("%m", halloween)))
-	assertEquals(res.day, tonumber(os.date("%d", halloween)))
-	assertEquals(res.yday, tonumber(os.date("%j", halloween)))
-	assertEquals(res.hour, tonumber(os.date("%H", halloween)))
-	assertEquals(res.min, tonumber(os.date("%M", halloween)))
-	assertEquals(res.sec, tonumber(os.date("%S", halloween)))
+	testAssertEquals(res.year, tonumber(os.date("%Y", halloween)))
+	testAssertEquals(res.month, tonumber(os.date("%m", halloween)))
+	testAssertEquals(res.day, tonumber(os.date("%d", halloween)))
+	testAssertEquals(res.yday, tonumber(os.date("%j", halloween)))
+	testAssertEquals(res.hour, tonumber(os.date("%H", halloween)))
+	testAssertEquals(res.min, tonumber(os.date("%M", halloween)))
+	testAssertEquals(res.sec, tonumber(os.date("%S", halloween)))
 end
 
-assert(os.difftime(os.time(christmas), os.time(newyearseve)) < 0,1)
-assert(os.difftime(os.time(newyearseve), os.time(christmas)) > 0,2)
-assertEquals(os.difftime(os.time(christmas), os.time(christmas)),0)
+testAssert(os.difftime(os.time(christmas), os.time(newyearseve)) < 0,1)
+testAssert(os.difftime(os.time(newyearseve), os.time(christmas)) > 0,2)
+testAssertEquals(os.difftime(os.time(christmas), os.time(christmas)),0)
 
-assertEquals(os.difftime(os.time(newyearseve), os.time(christmas)),6*24*60*60)
+testAssertEquals(os.difftime(os.time(newyearseve), os.time(christmas)),6*24*60*60)
 
 local nowtime = os.time()
 
-assertEquals(os.time(os.date(tbl, nowtime)),nowtime)
+testAssertEquals(os.time(os.date(tbl, nowtime)),nowtime)
 
 do
 	local res = os.date(tbl, os.time(oct25))
-	assertEquals(res.year, oct25.year)
-	assertEquals(res.month, oct25.month)
-	assertEquals(res.day, oct25.day)
-	assertEquals(res.hour, oct25.hour)
-	assertEquals(res.min, oct25.min)
-	assertEquals(res.sec, oct25.sec)
-	assertEquals(res.wday, oct25.wday)
-	assertEquals(res.yday, oct25.yday)
+	testAssertEquals(res.year, oct25.year)
+	testAssertEquals(res.month, oct25.month)
+	testAssertEquals(res.day, oct25.day)
+	testAssertEquals(res.hour, oct25.hour)
+	testAssertEquals(res.min, oct25.min)
+	testAssertEquals(res.sec, oct25.sec)
+	testAssertEquals(res.wday, oct25.wday)
+	testAssertEquals(res.yday, oct25.yday)
 end
 
 -- Locale dependant test, so comment it out
--- assertEquals(os.date(str,halloween), "Fri Oct 31 04:00:00 EDT 2008")
+-- testAssertEquals(os.date(str,halloween), "Fri Oct 31 04:00:00 EDT 2008")

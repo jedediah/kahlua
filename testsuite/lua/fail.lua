@@ -8,6 +8,7 @@ for i = 1, 10 do
 	end
 
 	local ok, msg = pcall(bar)
-	assert(not ok)
-	assert(msg == "test error")
+	testAssert(not ok)
+	testAssert(msg == "test error")
 end
+

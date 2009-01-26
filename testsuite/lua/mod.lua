@@ -1,10 +1,10 @@
 local two = 2
 local fivehalfs = 2.5
-assert(4 % two == 0)
-assert(3 % two == 1)
-assert(3 % fivehalfs == 0.5)
+testAssert(4 % two == 0)
+testAssert(3 % two == 1)
+testAssert(3 % fivehalfs == 0.5)
 
-do
+testCall(function()
    local c = 0
    for i = 1, 100 do
       c = c + 1
@@ -13,4 +13,4 @@ do
       end
       assert(i % 10 == c)
    end
-end
+end)

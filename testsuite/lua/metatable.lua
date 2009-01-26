@@ -25,16 +25,16 @@ b[1] = 9
 b[2] = 51
 
 local c = a + b
-assert(type(c) == "table")
-assert(c[1] == 24)
-assert(c[2] == 81)
-assert(c[3] == 20)
+testAssert(type(c) == "table")
+testAssert(c[1] == 24)
+testAssert(c[2] == 81)
+testAssert(c[3] == 20)
 
 local c = a - b
-assert(type(c) == "table")
-assert(c[1] == 6)
-assert(c[2] == -21)
-assert(c[3] == 20)
+testAssert(type(c) == "table")
+testAssert(c[1] == 6)
+testAssert(c[2] == -21)
+testAssert(c[3] == 20)
 
 function endswith(s1, s2)
 	return s1:sub(-#s2, -1) == s2
@@ -47,28 +47,28 @@ do
 
 	local t = setmetatable(meta, meta)
 	local ok, errmsg = pcall(function() return t.hello end)
-	assert(not ok, "expected recursive metatable error")
-	assert(endswith(errmsg, "loop in gettable"), "wrong error message: " .. errmsg)
+	testAssert(not ok, "expected recursive metatable error")
+	testAssert(endswith(errmsg, "loop in gettable"), "wrong error message: " .. errmsg)
 	
 	local ok, errmsg = pcall(function() t.hello = "world" end)
-	assert(not ok, "expected recursive metatable error")
-	assert(endswith(errmsg, "loop in settable"), "wrong error message: " .. errmsg)
+	testAssert(not ok, "expected recursive metatable error")
+	testAssert(endswith(errmsg, "loop in settable"), "wrong error message: " .. errmsg)
 end
 
 do
 	local t1, t2 = {}, {}
 	local ok, errmsg = pcall(function() return t1 + t2 end)
-	assert(not ok)
+	testAssert(not ok)
 	--assert(endswith(errmsg, "no meta function was found for __add"))
 	
 	local ok, errmsg = pcall(function() local x = (-t1) end)
-	assert(not ok)
+	testAssert(not ok)
 
 	local ok, errmsg = pcall(function() return t1 <= t2 end)
-	assert(not ok)
+	testAssert(not ok)
 	
 	local ok, errmsg = pcall(function() return t1 == t2 end)
-	assert(ok)
+	testAssert(ok)
 end
 
 
@@ -76,10 +76,10 @@ do
 	local meta = {__lt = function(a, b) return true end}
 	local t1 = setmetatable({}, meta)
 	local t2 = setmetatable({}, meta)
-	assert(t1 < t2)
-	assert(t2 < t1)
-	assert(not (t1 <= t2))
-	assert(not (t2 <= t1))
+	testAssert(t1 < t2)
+	testAssert(t2 < t1)
+	testAssert(not (t1 <= t2))
+	testAssert(not (t2 <= t1))
 end
 
 do
@@ -88,7 +88,7 @@ do
 	local t1 = setmetatable({}, meta1)
 	local t2 = setmetatable({}, meta2)
 	local ok, errmsg = pcall(function() assert(t1 < t2) end)
-	assert(not ok)
+	testAssert(not ok)
 end
 
 do
@@ -96,22 +96,22 @@ do
 	local t1 = setmetatable({12}, meta)
 	local t2
 	local ok, errmsg = pcall(function() t2 = -t1 end)
-	assert(ok)
-	assert(t2[1] == -12)
+	testAssert(ok)
+	testAssert(t2[1] == -12)
 end
 
 do
 	local meta = {__eq = function(a, b) return rawequal(a, b) end}
 	local t1 = setmetatable({}, meta)
 	local t2 = setmetatable({}, meta)
-	assert(t1 == t1)
-	assert(not (t1 == t2))
-	assert(not (t1 ~= t1))
-	assert(t1 ~= t2)
+	testAssert(t1 == t1)
+	testAssert(not (t1 == t2))
+	testAssert(not (t1 ~= t1))
+	testAssert(t1 ~= t2)
 end
 
 do
-	assert("a" ~= nil)
+	testAssert("a" ~= nil)
 end
 
 do
@@ -119,13 +119,13 @@ do
 	local meta2 = {__eq = function(a, b) return false end}
 	local t1 = setmetatable({}, meta1)
 	local t2 = nil
-	assert(t1 ~= t2)
-	assert(t2 ~= t1)
+	testAssert(t1 ~= t2)
+	testAssert(t2 ~= t1)
 	t2 = {}
-	assert(t1 ~= t2)
-	assert(t2 ~= t1)
+	testAssert(t1 ~= t2)
+	testAssert(t2 ~= t1)
 	t2 = setmetatable(t2, meta2)
-	assert(t1 ~= t2)
-	assert(t2 ~= t1)
+	testAssert(t1 ~= t2)
+	testAssert(t2 ~= t1)
 end
 

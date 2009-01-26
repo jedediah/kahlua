@@ -11,8 +11,10 @@ function mt.__index(t, k)
 end
 
 local t = setmetatable({}, mt)
-for key, value in pairs{1} do
-	assert(true)
-	assert(t.hello == "hellohello")
-end
+testCall(function()
+	for key, value in pairs{1} do
+		assert(true)
+		assert(t.hello == "hellohello")
+	end
+end)
 

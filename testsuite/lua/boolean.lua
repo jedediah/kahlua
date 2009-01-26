@@ -1,25 +1,25 @@
 local t = true
 local f = false
 
-assert(t == t)
-assert(f == f)
-assert(not not t == t)
-assert(not not f == f)
-assert(t ~= f)
+testAssert(t == t)
+testAssert(f == f)
+testAssert(not not t == t)
+testAssert(not not f == f)
+testAssert(t ~= f)
 
-assert(t and t)
-assert(not(t and f))
-assert(not(f and t))
+testAssert(t and t)
+testAssert(not(t and f))
+testAssert(not(f and t))
 
-assert(f or t)
-assert(t or f)
+testAssert(f or t)
+testAssert(t or f)
 
 local v0 = 1
 local v1 = 1
 local v2 = 2
 
-assert(v0 <= v1)
+testAssert(v0 <= v1)
 
-assert(v1 < v2)
-assert(v1 <= v2)
+testAssert(v1 < v2)
+testAssert(v1 <= v2)
 

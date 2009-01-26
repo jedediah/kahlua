@@ -33,27 +33,27 @@ end
 do return end
 --]]
 
-local i = 1
-for p in generator do
-	local correct = t[i]
-	i = i + 1
-	assert(p == correct, p .. " ~= " .. correct)
-	if p > 10 then
-		break
+testCall(function()
+	local i = 1
+	for p in generator do
+		local correct = t[i]
+		i = i + 1
+		assert(p == correct, p .. " ~= " .. correct)
+		if p > 10 then
+			break
+		end
 	end
-end
-
-for p in generator do
-	local correct = t[i]
-	i = i + 1
-	assert(p == correct, p .. " ~= " .. correct)
-	if p > 20 then
-		break
+	for p in generator do
+		local correct = t[i]
+		i = i + 1
+		assert(p == correct, p .. " ~= " .. correct)
+		if p > 20 then
+			break
+		end
 	end
-end
+end)
 
-do
-
+testCall(function()
 	local ok, err, stacktrace = pcall(function()
 		local f = coroutine.wrap(function(...)
 			assert(select("#", ...) == 3)
@@ -76,10 +76,9 @@ do
 	assert(err:sub(-4, -1) == "test")
 
 	assert(coroutine.status(coro) == "dead")
+end)
 
-end
-
-do
+testCall(function()
 	local coro = coroutine.create(function(a,b,c)
 		assert(a == 11)
 		assert(b == 22)
@@ -95,9 +94,9 @@ do
 	assert(z == 77)
 
 	assert(coroutine.status(coro) == "dead")
-end
+end)
 
-do
+testCall(function()
 	local coro = coroutine.create(function(a,b,c)
 		assert(a == 11)
 		assert(b == 22)
@@ -120,5 +119,5 @@ do
 	assert(z == 3)
 
 	assert(coroutine.status(coro) == "dead")
-end
+end)
 

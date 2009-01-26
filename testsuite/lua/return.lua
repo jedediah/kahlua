@@ -3,8 +3,8 @@ function foo()
 end
 
 local a,b,c,d = foo()
-assert(a == 1)
-assert(b == 2)
-assert(c == 3)
-assert(d == nil)
+testAssert(a == 1)
+testAssert(b == 2)
+testAssert(c == 3)
+testAssert(d == nil)
 

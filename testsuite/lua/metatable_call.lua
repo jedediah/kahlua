@@ -11,11 +11,14 @@ function mt.__call(caller, ...)
 	return 123
 end
 
-assert(t(1, 2, 3) == 123)
+testCall(function()
+	assert(t(1, 2, 3) == 123)
+end)
 
 function foo()
 	return t(1, 2, 3)
 end
 
-assert(foo() == 123)
-
+testCall(function()
+	assert(foo() == 123)
+end)

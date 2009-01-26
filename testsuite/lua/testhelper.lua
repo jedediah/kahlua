@@ -70,7 +70,7 @@ function testCall(name, f)
 end
 
 function testAssert(name, condition, errormessage)
-	if not name then
+	if type(name) ~= "string" then
 		condition, errormessage = name, condition
 	end
 	if not errormessage then

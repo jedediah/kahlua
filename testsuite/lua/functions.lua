@@ -3,18 +3,19 @@ function a(x,y,z)
 end
 
 local x,y,z = a(5,7,9)
-assert(x == 5)
-assert(y == 7)
-assert(z == 9)
+testAssert(x == 5)
+testAssert(y == 7)
+testAssert(z == 9)
 
 x, y = a(6,8,10)
-assert(x == 6)
-assert(y == 8)
-assert(z == 9)
+testAssert(x == 6)
+testAssert(y == 8)
+testAssert(z == 9)
 
 local z2 = 0
 x,y,z,z2 = a(10, 20, 30)
-assert(x == 10)
-assert(y == 20)
-assert(z == 30)
-assert(z2 == nil)
+testAssert(x == 10)
+testAssert(y == 20)
+testAssert(z == 30)
+testAssert(z2 == nil)
+

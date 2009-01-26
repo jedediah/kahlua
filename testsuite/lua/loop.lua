@@ -1,7 +1,10 @@
 local sum = 0
-for i = 1, 10 do
-assert(i > 0)
-   sum = sum + i
-end
+testCall(function()
+	for i = 1, 10 do
+		assert(i > 0)
+		sum = sum + i
+	end
+end)
 
-assert(sum == 55)
+testAssert(sum == 55)
+
