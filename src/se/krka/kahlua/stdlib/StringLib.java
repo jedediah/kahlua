@@ -79,7 +79,7 @@ public final class StringLib implements JavaFunction {
 
 	public static void register(LuaState state) {
 		LuaTable string = new LuaTable();
-		state.environment.rawset("string", string);
+		state.getEnvironment().rawset("string", string);
 		for (int i = 0; i < NUM_FUNCTIONS; i++) {
 			string.rawset(names[i], functions[i]);
 		}

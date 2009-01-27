@@ -101,7 +101,7 @@ public final class MathLib implements JavaFunction {
 	public static void register(LuaState state) {
 		initFunctions();
 		LuaTable math = new LuaTable();
-		state.environment.rawset("math", math);
+		state.getEnvironment().rawset("math", math);
 
 		math.rawset("pi", LuaState.toDouble(Math.PI));
 		math.rawset("huge", LuaState.toDouble(Double.POSITIVE_INFINITY));

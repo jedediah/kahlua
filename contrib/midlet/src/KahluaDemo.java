@@ -36,7 +36,7 @@ public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
 		StringLib.register(state);
 		CoroutineLib.register(state);
 		
-		state.environment.rawset("query", new JavaFunction() {
+		state.getEnvironment().rawset("query", new JavaFunction() {
 			public int call(LuaCallFrame callFrame, int nArguments) {
 				BaseLib.luaAssert(nArguments >= 3, "not enough args");
 				String[] options = new String[nArguments - 2];
@@ -73,7 +73,7 @@ public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
 	}
 	private void doRun() throws IOException {
 		InputStream resource = getClass().getResourceAsStream("/stdlib.lbc");
-		state.call(LuaPrototype.loadByteCode(resource, state.environment), null, null, null);
+		state.call(LuaPrototype.loadByteCode(resource, state.getEnvironment()), null, null, null);
 
 		while (true) {
 			String response = query("", "Please choose a game", options);
@@ -83,7 +83,7 @@ public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
 				// The system needs to decide which game to load.
 				resource = getClass().getResourceAsStream(response);
 				stringItem.setText("Loading bytecode...");
-				LuaClosure callback = LuaPrototype.loadByteCode(resource, state.environment);
+				LuaClosure callback = LuaPrototype.loadByteCode(resource, state.getEnvironment());
 				state.call(callback, null, null, null);
 			}
 		}

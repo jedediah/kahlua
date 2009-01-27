@@ -43,7 +43,7 @@ public class CoroutineLib implements JavaFunction {
 	private static final String[] names;
 	
 	// NOTE: LuaThread.class won't work in J2ME - so this is used as a workaround
-	private static final Class LUA_THREAD_CLASS = new LuaThread(null).getClass();
+	private static final Class LUA_THREAD_CLASS = new LuaThread(null, null).getClass();
 	
 	static {
 		names = new String[NUM_FUNCTIONS];
@@ -73,7 +73,7 @@ public class CoroutineLib implements JavaFunction {
 
 	public static void register(LuaState state) {
 		LuaTable coroutine = new LuaTable();
-		state.environment.rawset("coroutine", coroutine);
+		state.getEnvironment().rawset("coroutine", coroutine);
 		for (int i = 0; i < NUM_FUNCTIONS; i++) {
 			coroutine.rawset(names[i], functions[i]);
 		}
@@ -198,7 +198,7 @@ public class CoroutineLib implements JavaFunction {
 	private int create(LuaCallFrame callFrame, int nArguments) {
 		LuaClosure c = getFunction(callFrame, nArguments);
 
-		LuaThread newThread = new LuaThread(callFrame.thread.state);
+		LuaThread newThread = new LuaThread(callFrame.thread.state, callFrame.thread.environment);
 		newThread.pushNewCallFrame(c, 0, 0, -1, true, true);
 		callFrame.push(newThread);
 		return 1;

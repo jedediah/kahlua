@@ -68,7 +68,6 @@ public final class LuaState {
 	private static final int OP_CLOSURE = 36;
 	private static final int OP_VARARG = 37;
 
-	public LuaTable environment;
 	public LuaThread currentThread;
 
 	// Needed for Math lib - every state needs its own random
@@ -101,11 +100,11 @@ public final class LuaState {
 	}
 
 	public final void reset() {
-		environment = new LuaTable();
+		currentThread = new LuaThread(this, new LuaTable());
+
 		userdataMetatables = new LuaTable();
-		environment.rawset("_G", environment);
-		environment.rawset("_VERSION", "Lua 5.1 for CLDC 1.1");
-		currentThread = new LuaThread(this);
+		getEnvironment().rawset("_G", getEnvironment());
+		getEnvironment().rawset("_VERSION", "Lua 5.1 for CLDC 1.1");
 	}
 
 	/*
@@ -1208,6 +1207,10 @@ public final class LuaState {
 		return 4;
 	}
 
+	public LuaTable getEnvironment() {
+		return currentThread.environment;
+	}
+	
 	public static boolean luaEquals(Object a, Object b) {
 		if (a == null || b == null) {
 			return a == b;

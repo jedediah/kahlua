@@ -158,6 +158,6 @@ public class LuaCallFrame {
 		if (closure != null) {
 			return closure.env;
 		}
-		return thread.state.environment;
+		return thread.environment;
 	}
 }

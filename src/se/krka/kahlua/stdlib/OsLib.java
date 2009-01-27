@@ -55,7 +55,7 @@ public class OsLib implements JavaFunction {
 
 	public static void register(LuaState state) {
 		LuaTable os = new LuaTable();
-		state.environment.rawset("os", os);
+		state.getEnvironment().rawset("os", os);
 
 		for (int i = 0; i < NUM_FUNCS; i++) {
 			os.rawset(funcnames[i], funcs[i]);

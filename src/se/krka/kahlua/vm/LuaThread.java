@@ -26,6 +26,8 @@ import se.krka.kahlua.stdlib.BaseLib;
 import java.util.Vector;
 
 public class LuaThread {
+	public LuaTable environment;
+
 	public LuaThread parent;
 	
 	public String stackTrace = "";
@@ -48,8 +50,9 @@ public class LuaThread {
 
 	public int expectedResults;
 	
-	public LuaThread(LuaState state) {
+	public LuaThread(LuaState state, LuaTable environment) {
 		this.state = state;
+		this.environment = environment;
 	}
 
 	private void init() {
@@ -70,7 +73,6 @@ public class LuaThread {
 		callFrame.fromLua = fromLua;
 		callFrame.insideCoroutine = insideCoroutine;
 		callFrame.closure = closure;
-		
 		return callFrame;
 	}
 

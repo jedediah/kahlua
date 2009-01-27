@@ -58,7 +58,7 @@ public class Test {
 			throws IOException, FileNotFoundException {
 		excludedFiles.add(file);
 		File stdlib = file;
-		LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.environment);
+		LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.getEnvironment());
 		Object[] results = state.pcall(closure);
 		if (results[0] != Boolean.TRUE) {
 			System.out.println("Stdlib failed: " + results[1]);
@@ -74,11 +74,11 @@ public class Test {
 
 		LuaState state = getState(dir);
 		
-		Object runTest = state.environment.rawget("testCall");
+		Object runTest = state.getEnvironment().rawget("testCall");
 		BaseLib.luaAssert(runTest != null, "Could not find testCall");
-		Object generateReportClosure = state.environment.rawget("generatereport");
+		Object generateReportClosure = state.getEnvironment().rawget("generatereport");
 		BaseLib.luaAssert(generateReportClosure != null, "Could not find generatereport");
-		Object mergeTestsClosure = state.environment.rawget("mergetests");
+		Object mergeTestsClosure = state.getEnvironment().rawget("mergetests");
 		BaseLib.luaAssert(mergeTestsClosure != null, "Could not find mergetests");
 
 		File[] children = null;
@@ -104,7 +104,7 @@ public class Test {
 		for (int i = 0; i < children.length; i++) {
 			File child = children[i];
 			if (child != null && !excludedFiles.contains(child) && child.getName().endsWith(".lbc")) {
-				LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.environment);
+				LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(child), state.getEnvironment());
 				System.out.println("Running " + child + "...");
 				Object[] results = state.pcall(runTest, new Object[] {child.getName(), closure});
 				if (results[0] != Boolean.TRUE) {

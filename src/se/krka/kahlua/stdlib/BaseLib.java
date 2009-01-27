@@ -101,7 +101,7 @@ public final class BaseLib implements JavaFunction {
 		initFunctions();
 
 		for (int i = 0; i < NUM_FUNCTIONS; i++) {
-			state.environment.rawset(names[i], functions[i]);
+			state.getEnvironment().rawset(names[i], functions[i]);
 		}
 	}
 
@@ -217,7 +217,10 @@ public final class BaseLib implements JavaFunction {
         	o = rawTonumber(o);
         	luaAssert(o != null, "expected a lua function or a number");
         	int level = ((Double) o).intValue();
-        	luaAssert(level != 0, "setfenv not implemented for level == 0");
+        	if (level == 0) {
+        		callFrame.thread.environment = newEnv;
+        		return 0;
+        	}
         	closure = callFrame.thread.getParent(level).closure;
         	luaAssert(closure != null, "No closure found at this level: " + level);
         }
@@ -236,7 +239,7 @@ public final class BaseLib implements JavaFunction {
 
         Object res = null;
         if (o == null || o instanceof JavaFunction) {
-        	res = callFrame.thread.state.environment;
+        	res = callFrame.thread.environment;
         } else if (o instanceof LuaClosure) {
         	LuaClosure closure = (LuaClosure) o;
         	res = closure.env;
@@ -319,6 +322,11 @@ public final class BaseLib implements JavaFunction {
 
 	private int error(LuaCallFrame callFrame, int nArguments) {
 		if (nArguments >= 1) {
+			String stacktrace = (String) getOptArg(callFrame, 2, BaseLib.TYPE_STRING);
+			if (stacktrace == null) {
+				stacktrace = "";
+			}
+			callFrame.thread.stackTrace = stacktrace;
 			throw new LuaException(callFrame.get(0));
 		}
 		return 0;
@@ -330,7 +338,7 @@ public final class BaseLib implements JavaFunction {
 
 	private static int print(LuaCallFrame callFrame, int nArguments) {
 		LuaState state = callFrame.thread.state;
-		LuaTable env = state.environment;
+		LuaTable env = state.getEnvironment();
 		Object toStringFun = state.tableGet(env, "tostring");
 		StringBuffer sb = new StringBuffer();
 		for (int i = 0; i < nArguments; i++) {
