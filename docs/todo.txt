@@ -1,10 +1,7 @@
-* Write tests for setfenv and getfenv
-* Investigate whether environment should be in thread or state
 * Speed up the report building
 * Add testing for gsub - especially for invalid repl (i.e. bad usage of %)
 
-* Convert old tests to new system
-
+* Test coroutines further [implicit yields and such]
 * Implement require, module and loading of bytecode files
 * Try to get metalua to work with kahlua
 * Create a proper manual
