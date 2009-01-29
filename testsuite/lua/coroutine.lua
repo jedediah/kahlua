@@ -32,7 +32,20 @@ testCall("stacktrace should pass through coroutines [coroutine.wrap]", function(
 	assert(stacktrace:find("coroutine.lua:22", 1, 1), "expected to find coroutine.lua:22 in stacktrace: " .. stacktrace)
 	assert(stacktrace:find("coroutine.lua:24", 1, 1), "expected to find coroutine.lua:24 in stacktrace: " .. stacktrace)
 end)
-do return end
+
+testCall("implicit yield", function()
+	local coro = coroutine.create(function()
+		local function foo()
+		end
+		foo()
+		return 1, 2, 3
+	end)
+	local status, a, b, c = coroutine.resume(coro)
+	assert(status == true)
+	assert(a == 1)
+	assert(b == 2)
+	assert(c == 3)
+end)
 
 local sqrt = math.sqrt
 local function isprime(n)

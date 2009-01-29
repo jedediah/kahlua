@@ -41,7 +41,14 @@ public final class StringLib implements JavaFunction {
 
 	private static final int NUM_FUNCTIONS = 10;
 
-	private static final String SPECIALS = "^$*+?.([%-";
+	private static final boolean[] SPECIALS = new boolean[256];
+	static {
+		String s = "^$*+?.([%-";
+		for (int i = 0; i < s.length(); i++) {
+			SPECIALS[(int) s.charAt(i)] = true;
+		}
+	}
+	
 	private static final int LUA_MAXCAPTURES = 32;
 	private static final char L_ESC = '%';
 	private static final int CAP_UNFINISHED = ( -1 );
@@ -915,8 +922,9 @@ public final class StringLib implements JavaFunction {
 	}
 
 	private static boolean noSpecialChars(String pattern) {
-		for (int i = 0; i < SPECIALS.length(); i++) {
-			if (pattern.indexOf(SPECIALS.charAt(i)) > -1) {
+		for (int i = 0; i < pattern.length(); i++) {
+			char c = pattern.charAt(i);
+			if (c < 256 && SPECIALS[c]) {
 				return false;
 			}
 		}
@@ -1067,7 +1075,7 @@ public final class StringLib implements JavaFunction {
 		StringPointer p = pp.getClone();
 		switch ( p.postIncrString ( 1 ) ) {
 		case L_ESC: {
-			BaseLib.luaAssert(p.getChar () != '\0', "malformed pattern (ends with '%%')");
+			BaseLib.luaAssert(p.getChar () != '\0', "malformed pattern (ends with '%')");
 			p.postIncrString ( 1 );
 			return p;
 		}
@@ -1315,7 +1323,7 @@ public final class StringLib implements JavaFunction {
 		case 'z': res = (c == 0); break;
 		default: return (classIdentifier == c);
 		}
-		return Character.isLowerCase(classIdentifier) ? res : !res;
+		return Character.isLowerCase(classIdentifier) == res;
 	}
 
 	private static boolean isPunct(char c) {
