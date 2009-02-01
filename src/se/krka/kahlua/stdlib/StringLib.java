@@ -698,10 +698,11 @@ public final class StringLib implements JavaFunction {
 				dj = BaseLib.rawTonumber(callFrame.get(2));
 			}
 		}
-		double di2 = 1, dj2 = 1;
+		double di2 = 1;
 		if (di != null) {
 			di2 = LuaState.fromDouble(di);
 		}
+		double dj2 = di2;
 		if (dj != null) {
 			dj2 = LuaState.fromDouble(dj);
 		}
@@ -709,10 +710,22 @@ public final class StringLib implements JavaFunction {
 		int ii = (int) di2, ij = (int) dj2;
 
 		int len = s.length();
-		ii = Math.min(ii, len);
-		ij = Math.min(ij, len);
+		if (ii < 0) {
+			ii += len + 1;
+		}
+		if (ii <= 0) {
+			ii = 1;
+		}
+		if (ij < 0) {
+			ij += len + 1;
+		} else if (ij > len) {
+			ij = len;
+		}
 		int nReturns = 1 +ij - ii;
 
+		if (nReturns <= 0) {
+			return 0;
+		}
 		callFrame.setTop(nReturns);
 		int offset = ii - 1;
 		for (int i = 0; i < nReturns; i++) {

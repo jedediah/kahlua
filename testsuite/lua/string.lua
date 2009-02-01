@@ -76,6 +76,19 @@ do
 	testAssert(e == string.byte("o"))
 	testAssert(f == nil)
 	testAssert(g == nil)
+	
+	testAssert(string.byte("123", 1) == 49)
+	testAssert(string.byte("123", 2) == 50)
+	testAssert(string.byte("123", 3) == 51)
+	testAssert(string.byte("123", 4) == nil)
+
+	testAssert(string.byte("123", 0) == nil)
+	testAssert(string.byte("123", -1) == 51)
+	testAssert(string.byte("123", -2) == 50)
+	testAssert(string.byte("123", -3) == 49)
+	testAssert(string.byte("123", -4) == nil)
+	testAssert(select("#", string.byte("123", -4, 3)) == 3)
+	testAssert(select("#", string.byte("123", -2, 10)) == 2)	
 end
 
 do
