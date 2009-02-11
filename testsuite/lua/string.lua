@@ -2,8 +2,8 @@ function assertEqual(actual, expected, msg)
 	assert(expected == actual, msg or "expected " .. tostring(expected) .. ", actual " .. tostring(actual)) 
 end
 
-function testAssertEqual(a, b, msg)
-	testCall(function() assertEqual(a, b, msg) end)
+function testAssertEqual(a, b, msg, name)
+	testCall(name, function() assertEqual(a, b, msg) end)
 end
 
 
@@ -12,6 +12,9 @@ do
 	local s1, s2 = "hello", "world"
 	local s = s1 .. s2
 	testAssertEqual(s,"helloworld")
+	testAssertEqual(s:rep(1), "helloworld")
+	testAssertEqual(s:rep(5), "helloworldhelloworldhelloworldhelloworldhelloworld")
+	testAssertEqual(s:rep(0), "")
 end
 
 do
@@ -150,12 +153,15 @@ testAssertEqual(string.gsub("Hello world from Lua", "(%w+)%s*(%w+)", "%2 %1"),"w
 
 do
 	local function f(s) 
-		return s..s 
+		return s..s, 1, 2, 3 
 	end
 	testAssertEqual(string.gsub("$repeatme$", "%$(.-)%$", f),"repeatmerepeatme")
      
 	local t = {name="lua", version="5.1"}
 	testAssertEqual(string.gsub("$name-$version.tar.gz", "%$(%w+)", t),"lua-5.1.tar.gz")
+	
+	testAssertEqual(string.gsub("a", "a", "%%"), "%", nil, "gsub %%")
+	testAssertEqual(string.gsub("a", "a", "%"), "\0", nil, "gsub %")
 end
 
 

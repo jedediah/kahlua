@@ -16,7 +16,7 @@ local parent
 
 local function createTestcase(name)
 	if type(name) ~= "string" then
-		name = debugstacktrace(3, 1):match("([a-z0-9%.]+:[0-9]+)")
+		name = debugstacktrace(nil, 3, 1):match("([a-z0-9%.]+:[0-9]+)")
 	end
 	local testcase = {name = name, okcount = 0, failcount = 0}
 	return testcase
@@ -44,6 +44,7 @@ local function storeTestcase(testcase, status, errormessage, stacktrace)
 		parent.okcount = parent.okcount + testcase.okcount
 		parent.failcount = parent.failcount + testcase.failcount
 	end
+	assert(type(testcase) == "table")
 	return testcase
 end
 
@@ -60,12 +61,17 @@ function testCall(name, f)
 	parent = testcase
 
 	local status, errormessage, stacktrace = pcall(f)
-	
+	if status then
+		errormessage, stacktrace = nil, nil
+	end
 	parent = oldParent
 	
-	local stacktrace2 = debugstacktrace(3, nil, 1)
+	local stacktrace2 = debugstacktrace(nil, 3, nil, 1)
+	assert(stacktrace == nil or type(stacktrace) == "string", type(stacktrace))
+	assert(type(stacktrace2) == "string")
 	storeTestcase(testcase, status, errormessage, (stacktrace or "") .. stacktrace2)
 	
+	assert(type(testcase) == "table")
 	return testcase
 end
 
@@ -77,7 +83,7 @@ function testAssert(name, condition, errormessage)
 		errormessage = "Assertion failed"
 	end
 	local testcase = createTestcase(name)
-	storeTestcase(testcase, condition, errormessage, debugstacktrace(2, nil, 1))
+	storeTestcase(testcase, condition, errormessage, debugstacktrace(nil, 2, nil, 1))
 end
 
 local template, template_test
@@ -113,12 +119,12 @@ function generatereport(tests)
 		if test.fail then
 			local failcount = 0
 			local okcount = 0
-			for k, v in pairs(test.fail) do
+			for k, v in ipairs(test.fail) do
 				failcount = failcount + v.failcount
 				okcount = okcount + v.okcount
 			end
 			table.insert(faillistbuffer, getHeader('Failures', 'red', '', 'hide', okcount, failcount))
-			for k, v in pairs(test.fail) do
+			for k, v in ipairs(test.fail) do
 				table.insert(faillistbuffer, printTest(v))
 			end
 			table.insert(faillistbuffer, "</div></div></div>")
@@ -129,12 +135,12 @@ function generatereport(tests)
 		if test.ok then
 			local failcount = 0
 			local okcount = 0
-			for k, v in pairs(test.ok) do
+			for k, v in ipairs(test.ok) do
 				failcount = failcount + v.failcount
 				okcount = okcount + v.okcount
 			end
 			table.insert(oklistbuffer, getHeader('Successes', 'green', 'hidden', 'show', okcount, failcount))
-			for k, v in pairs(test.ok) do
+			for k, v in ipairs(test.ok) do
 				table.insert(oklistbuffer, printTest(v))
 			end
 			table.insert(oklistbuffer, "</div></div></div>")
@@ -175,7 +181,7 @@ template = [[
 		<style>
 			div.green {background-color: #ddffdd;}
 			div.red {background-color: #ffdddd;}
-			div.testcontainer {border: 1px black solid; padding: 5px; margin: 5px;}
+			div.testcontainer {border: 1px #777 solid; padding: 5px; margin: 5px;}
 			div.indent {margin-left: 10px;}
 			div.hidden {display: none;}
 			pre { margin: 0; padding: 0; }

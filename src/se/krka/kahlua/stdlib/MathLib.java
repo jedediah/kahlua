@@ -203,10 +203,10 @@ public final class MathLib implements JavaFunction {
 	}
 
 	/**
-	 * Rounds to keep _precision_ decimals.
-	 * @param x
-	 * @param precision
-	 * @return
+	 * Rounds to keep <em>precision</em> decimals. Rounds towards even numbers.
+	 * @param x the number to round
+	 * @param precision the precision to round to. A precision of 3 will for instance round 1.65432 to 1.654
+	 * @return the rounded number
 	 */
 	public static double roundToPrecision(double x, int precision) {
 		double roundingOffset = MathLib.ipow(10, precision);

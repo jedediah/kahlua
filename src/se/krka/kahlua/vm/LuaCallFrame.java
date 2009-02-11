@@ -117,7 +117,7 @@ public class LuaCallFrame {
 	public void init() {
 		pc = 0;
 		
-		if (closure != null) {
+		if (isLua()) {
 			if (closure.prototype.isVararg) {
 				localBase += nArguments;
 				
@@ -131,7 +131,7 @@ public class LuaCallFrame {
 	}
 
 	public void setPrototypeStacksize() {
-		if (closure != null) {
+		if (isLua()) {
 			setTop(closure.prototype.maxStacksize);
 		}
 	}
@@ -155,9 +155,18 @@ public class LuaCallFrame {
 	}
 	
 	public LuaTable getEnvironment() {
-		if (closure != null) {
+		if (isLua()) {
 			return closure.env;
 		}
 		return thread.environment;
 	}
+
+	public boolean isJava() {
+		return !isLua();
+	}
+	
+	public boolean isLua() {
+		return closure != null;
+	}
+	
 }

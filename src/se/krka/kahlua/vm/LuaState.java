@@ -21,11 +21,15 @@ THE SOFTWARE.
 */
 package se.krka.kahlua.vm;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.util.Random;
-
 import se.krka.kahlua.stdlib.BaseLib;
+import se.krka.kahlua.stdlib.CoroutineLib;
 import se.krka.kahlua.stdlib.MathLib;
+import se.krka.kahlua.stdlib.OsLib;
+import se.krka.kahlua.stdlib.StringLib;
 
 public final class LuaState {
 	private static final int FIELDS_PER_FLUSH = 50;
@@ -94,87 +98,54 @@ public final class LuaState {
 		meta_ops[OP_LT] = "__lt";
 		meta_ops[OP_LE] = "__le";
 	}
+	
 	public LuaState(PrintStream stream) {
 		out = stream;
 		reset();
 	}
 
+	public LuaState() {
+		this(System.out);
+	}
+	
+	// For debugging purposes only
+	/*
+	public static void main(String[] args) {
+		LuaState s = new LuaState();
+		try {
+			LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream("coroutine.lbc"), s.getEnvironment());
+			s.pcall(closure, null);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	*/
+	
 	public final void reset() {
 		currentThread = new LuaThread(this, new LuaTable());
 
 		userdataMetatables = new LuaTable();
 		getEnvironment().rawset("_G", getEnvironment());
 		getEnvironment().rawset("_VERSION", "Lua 5.1 for CLDC 1.1");
+		
+		BaseLib.register(this);
+		StringLib.register(this);
+		MathLib.register(this);
+		CoroutineLib.register(this);
+		OsLib.register(this);
+
+		LuaClosure closure = loadByteCodeFromResource("stdlib", getEnvironment());
+		call(closure, null, null, null);
 	}
-
-	/*
-	private static String pad(String s, int width) {
-		while (s.length() < width) s = " " + s;
-		return s;
-	}
-
-	public static void inspectThread(LuaThread t) {
-		System.out.println("call frames (" + t.callFrameTop + "):");
-		for (int i = 0; i < t.callFrameTop; i++) {
-			LuaCallFrame f = t.callFrameStack[i];
-			System.out.println(pad("" + i, 3) + ": " + (f.fromLua ? "from lua" : "from java") + ", " + (f.insideCoroutine ? "yieldable" : "-") + ", " + (f.closure != null ? "lua" : "java"));
-		}
-		System.out.println("------------");
-		if (t.callFrameTop == 0) {
-			return;
-		}
-		int stackIndex = 0;
-		LuaCallFrame callFrame = t.callFrameStack[stackIndex];
-		for (int i = 0; i < t.top; i++) {
-			if (stackIndex < t.callFrameTop - 1) {
-				LuaCallFrame nextCallFrame = t.callFrameStack[stackIndex + 1];
-				if (nextCallFrame.returnBase <= i) {
-					stackIndex++;
-					callFrame = nextCallFrame;
-				}
-			}
-
-			String info = "";
-			if (callFrame.returnBase == i) {
-				info = pad(""+stackIndex, 3) + " return base";
-			} else if (callFrame.localBase == i) {
-				info = pad(""+stackIndex, 3) + " local base";
-			}
-			Object obj = t.objectStack[i];
-			if (obj == null) {
-				obj = "null";
-			}
-			String output = pad(""+i, 3) + ": " + pad(obj.toString(), 50) + " - " + info;
-			System.out.println(output);
-		}
-		if (t.parent != null) {
-			System.out.println("Child of:");
-			inspectThread(t.parent);
-		}
-	}
-
-	public void inspectStack(LuaCallFrame callFrame) {
-		System.out.println("-- Current Stack --");
-		for (int i = 0; i < callFrame.getTop(); i++) {
-			Object o = callFrame.get(i);
-
-			System.out.println(i + ": " + BaseLib.type(o) + ": " + o);
-		}
-		System.out.println("-------------------");
-
-	}
-	*/
 
 	public int call(int nArguments) {
 		int top = currentThread.getTop();
 		int base = top - nArguments - 1;
 		Object o = currentThread.objectStack[base];
-
-		/*
-		if (!(o instanceof LuaClosure) && !(o instanceof JavaFunction)) {
-			o = prepareMetatableCall(base, o);
-		}
-		*/
 
 		if (o == null) {
 			throw new RuntimeException("tried to call nil");
@@ -475,7 +446,7 @@ public final class LuaState {
 							Object leftConcat = callFrame.get(last);
 
 							Object metafun = getBinMetaOp(leftConcat, res, "__concat");
-							BaseLib.luaAssert(metafun != null, "__concat not defined for operands");
+							BaseLib.luaAssert(metafun != null, "__concat not defined for operands: " + leftConcat + " and " + res);
 							res = call(metafun, leftConcat, res, null);
 							last--;
 						}
@@ -651,6 +622,12 @@ public final class LuaState {
 						callJava((JavaFunction) fun, base + a + 1, base + a, nArguments2);
 
 						callFrame = currentThread.currentCallFrame();
+						
+						// This means that we got back from a yield to a java function, such as pcall
+						if (callFrame.isJava()) {
+							return;
+						}
+						
 						closure = callFrame.closure;
 						prototype = closure.prototype;
 						opcodes = prototype.opcodes;
@@ -679,7 +656,9 @@ public final class LuaState {
 					callFrame.restoreTop = false;
 
 					Object funObject = callFrame.get(a);
+					BaseLib.luaAssert(funObject != null, "Tried to call nil");
 					Object fun = prepareMetatableCall(funObject);
+					BaseLib.luaAssert(fun != null, "Object " + funObject + " did not have __call metatable set");
 					
 					int localBase2 = returnBase + 1;
 					
@@ -697,28 +676,40 @@ public final class LuaState {
 						callFrame.nArguments = nArguments2;
 						callFrame.closure = (LuaClosure) fun;
 						callFrame.init();
-
-					} else if (fun instanceof JavaFunction) {
+					} else {
+						BaseLib.luaAssert(fun instanceof JavaFunction, "Tried to call a non-function: " + fun);
+						LuaThread oldThread = currentThread;
 						callJava((JavaFunction) fun, localBase2, returnBase, nArguments2);
 
-						currentThread.popCallFrame();
-						if (callFrame.fromLua) {
-							if (callFrame.restoreTop) {
-								callFrame.setTop(prototype.maxStacksize);
+						callFrame = currentThread.currentCallFrame();
+						oldThread.popCallFrame();
+						
+						if (oldThread != currentThread) {
+							if (oldThread.isDead()) {
+								
+								if (currentThread.parent == oldThread) {
+									currentThread.parent = oldThread.parent;
+									oldThread.parent = null;
+									
+									// This is an implicit yield, so push a TRUE to the parent
+									currentThread.parent.currentCallFrame().push(Boolean.TRUE); 
+								}
 							}
-
+							
 							callFrame = currentThread.currentCallFrame();
-
-							// FIXME: Handle implicit yield
-							if (callFrame == null) {
-								throw new RuntimeException("NYI: implicit yield");
+							if (callFrame.isJava()) {
+								return;
 							}
-
 						} else {
-							return;
+							if (!callFrame.fromLua) {
+								return;
+							}
+							callFrame = currentThread.currentCallFrame();
+							
+							if (callFrame.restoreTop) {
+								callFrame.setTop(callFrame.closure.prototype.maxStacksize);
+							}
 						}
-					} else {
-						throw new RuntimeException("Tried to call a non-function: " + fun);
 					}
 
 					closure = callFrame.closure;
@@ -741,28 +732,21 @@ public final class LuaState {
 					currentThread.stackCopy(callFrame.localBase + a, returnBase, b);
 					currentThread.setTop(returnBase + b);
 
-					currentThread.popCallFrame();
 					if (callFrame.fromLua) {
-						callFrame = currentThread.currentCallFrame();
-
-						// Handle implicit yield
-						if (callFrame == null) {
-							if (currentThread.parent == null) {
-								// should never happen
-								throw new RuntimeException("Internal lua state broken. This should NEVER happen.");
+						if (callFrame.insideCoroutine && currentThread.callFrameTop == 1) {
+							LuaThread thread = currentThread;
+							CoroutineLib.yieldHelper(callFrame, callFrame, b);
+							thread.popCallFrame();
+							
+							// If this thread is called from a java function, return immediately
+							callFrame = currentThread.currentCallFrame();
+							if (callFrame.isJava()) {
+								return;
 							}
-
-							LuaThread parent = currentThread.parent;
-							currentThread.parent = null;
-							callFrame = parent.currentCallFrame();
-
-							callFrame.push(Boolean.TRUE);
-							for (int i = 0; i < currentThread.top; i++) {
-								callFrame.push(currentThread.objectStack[i]);
-							}
-
-							currentThread = parent;
+						} else {
+							currentThread.popCallFrame();
 						}
+						callFrame = currentThread.currentCallFrame();
 
 						closure = callFrame.closure;
 						prototype = closure.prototype;
@@ -773,6 +757,7 @@ public final class LuaState {
 							callFrame.setTop(prototype.maxStacksize);
 						}
 					} else {
+						currentThread.popCallFrame();
 						return;
 					}
 					break;
@@ -895,7 +880,8 @@ public final class LuaState {
 				// Pop off all java frames first
 				while (true) {
 					callFrame = currentThread.currentCallFrame();
-					if (callFrame.closure != null) {
+
+					if (callFrame.isLua()) {
 						break;
 					}
 					currentThread.cleanCallFrames(callFrame);
@@ -1046,7 +1032,23 @@ public final class LuaState {
 	}
 
 	public final Object call(Object fun, Object arg1, Object arg2, Object arg3) {
-		return call(fun, new Object[] {arg1, arg2, arg3});
+		int oldTop = currentThread.getTop();
+		final int argslen = 3;
+		currentThread.setTop(oldTop + 1 + argslen);
+		currentThread.objectStack[oldTop] = fun;
+		
+		currentThread.objectStack[oldTop + 1] = arg1;
+		currentThread.objectStack[oldTop + 2] = arg2;
+		currentThread.objectStack[oldTop + 3] = arg3;
+
+		int nReturnValues = call(argslen);
+
+		Object ret = null;
+		if (nReturnValues >= 1) {
+			ret = currentThread.objectStack[oldTop];
+		}
+		currentThread.setTop(oldTop);
+		return ret;
 	}
 	
 	public final Object call(Object fun, Object[] args) {
@@ -1084,7 +1086,7 @@ public final class LuaState {
     			if (isTable) {
     				return null;
     			}
-    	   		throw new RuntimeException("attempted index of non-table");
+    	   		throw new RuntimeException("attempted index of non-table: " + curObj);
     		}
     		if (metaOp instanceof JavaFunction || metaOp instanceof LuaClosure) {
         		Object res = call(metaOp, table, key, null);
@@ -1172,18 +1174,19 @@ public final class LuaState {
 	}
 
 	public int pcall(int nArguments) {
-		LuaCallFrame currentCallFrame = currentThread.currentCallFrame();
-		currentThread.stackTrace = "";
-		int oldBase = currentThread.getTop() - nArguments - 1;
+		LuaThread thread = currentThread;
+		LuaCallFrame currentCallFrame = thread.currentCallFrame();
+		thread.stackTrace = "";
+		int oldBase = thread.getTop() - nArguments - 1;
 
 		Object errorMessage;
 		Throwable exception;
 		try {
 			int nValues = call(nArguments);
 			int newTop = oldBase + nValues + 1;
-			currentThread.setTop(newTop);
-			currentThread.stackCopy(oldBase, oldBase + 1, nValues);
-			currentThread.objectStack[oldBase] = Boolean.TRUE;
+			thread.setTop(newTop);
+			thread.stackCopy(oldBase, oldBase + 1, nValues);
+			thread.objectStack[oldBase] = Boolean.TRUE;
 
 			return 1 + nValues;
 		} catch (LuaException e) {
@@ -1193,16 +1196,16 @@ public final class LuaState {
 			exception = e;
 			errorMessage = e.getMessage();
 		}
-		currentThread.cleanCallFrames(currentCallFrame);
+		thread.cleanCallFrames(currentCallFrame);
 		if (errorMessage instanceof String) {
 			errorMessage = ((String) errorMessage);
 		}
-		currentThread.setTop(oldBase + 4);
-		currentThread.objectStack[oldBase] = Boolean.FALSE;
-		currentThread.objectStack[oldBase + 1] = errorMessage;
-		currentThread.objectStack[oldBase + 2] = currentThread.stackTrace;
-		currentThread.objectStack[oldBase + 3] = exception;
-		currentThread.stackTrace = "";
+		thread.setTop(oldBase + 4);
+		thread.objectStack[oldBase] = Boolean.FALSE;
+		thread.objectStack[oldBase + 1] = errorMessage;
+		thread.objectStack[oldBase + 2] = thread.stackTrace;
+		thread.objectStack[oldBase + 3] = exception;
+		thread.stackTrace = "";
 
 		return 4;
 	}
@@ -1243,4 +1246,17 @@ public final class LuaState {
 		return b ? Boolean.TRUE : Boolean.FALSE;
 	}
 
+	
+	public LuaClosure loadByteCodeFromResource(String name, LuaTable environment) {
+		InputStream stream = getClass().getResourceAsStream("/" + name + ".lbc");
+		if (stream == null) {
+			return null;
+		}
+		try {
+			return LuaPrototype.loadByteCode(stream, environment);
+		} catch (IOException e) {
+			throw new RuntimeException(e.getMessage());
+		}
+	}
+	
 }

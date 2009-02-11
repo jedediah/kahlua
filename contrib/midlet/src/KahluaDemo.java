@@ -23,7 +23,7 @@ import se.krka.kahlua.vm.LuaState;
 
 
 public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
-	private String[] options = {"/guess.lbc", "/primes.lbc", "/quizgame.lbc", "Quit"};
+	private String[] options = {"guess", "primes", "quizgame", "Quit"};
 	                        
 	private LuaState state;
 	private StringItem stringItem;
@@ -31,10 +31,6 @@ public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
 
 	public KahluaDemo() {
 		state = new LuaState(System.out);
-		BaseLib.register(state);
-		MathLib.register(state);
-		StringLib.register(state);
-		CoroutineLib.register(state);
 		
 		state.getEnvironment().rawset("query", new JavaFunction() {
 			public int call(LuaCallFrame callFrame, int nArguments) {
@@ -72,18 +68,14 @@ public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
 		}
 	}
 	private void doRun() throws IOException {
-		InputStream resource = getClass().getResourceAsStream("/stdlib.lbc");
-		state.call(LuaPrototype.loadByteCode(resource, state.getEnvironment()), null, null, null);
-
 		while (true) {
 			String response = query("", "Please choose a game", options);
 			if (response.equals("Quit")) {
 				return;
 			} else {
 				// The system needs to decide which game to load.
-				resource = getClass().getResourceAsStream(response);
 				stringItem.setText("Loading bytecode...");
-				LuaClosure callback = LuaPrototype.loadByteCode(resource, state.getEnvironment());
+				LuaClosure callback = BaseLib.loadByteCodeFromResource(response, state.getEnvironment());
 				state.call(callback, null, null, null);
 			}
 		}

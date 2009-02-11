@@ -25,11 +25,9 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashSet;
+
 import se.krka.kahlua.stdlib.BaseLib;
-import se.krka.kahlua.stdlib.CoroutineLib;
-import se.krka.kahlua.stdlib.MathLib;
 import se.krka.kahlua.stdlib.OsLib;
-import se.krka.kahlua.stdlib.StringLib;
 import se.krka.kahlua.test.UserdataArray;
 import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaPrototype;
@@ -41,31 +39,12 @@ public class Test {
 	private static LuaState getState(File dir) throws FileNotFoundException, IOException {
 
 		LuaState state = new LuaState(System.out);
-		
-		BaseLib.register(state);
-		MathLib.register(state);
-		StringLib.register(state);
 		UserdataArray.register(state);
-		CoroutineLib.register(state);
 		OsLib.register(state);
 
-		state = runLua(dir, state, new File(dir, "stdlib.lbc"));
-		state = runLua(dir, state, new File(dir, "testhelper.lbc"));
-		return state;
-	}
-
-	private static LuaState runLua(File dir, LuaState state, File file)
-			throws IOException, FileNotFoundException {
-		excludedFiles.add(file);
-		File stdlib = file;
-		LuaClosure closure = LuaPrototype.loadByteCode(new FileInputStream(stdlib), state.getEnvironment());
-		Object[] results = state.pcall(closure);
-		if (results[0] != Boolean.TRUE) {
-			System.out.println("Stdlib failed: " + results[1]);
-			((Throwable) (results[3])).printStackTrace();
-			System.out.println(results[2]);
-			state = null;
-		}
+		//state = runLua(dir, state, new File(dir, "stdlib.lbc"));
+		LuaClosure closure = state.loadByteCodeFromResource("testhelper", state.getEnvironment());
+		state.call(closure, null);
 		return state;
 	}
 	
@@ -108,23 +87,32 @@ public class Test {
 				System.out.println("Running " + child + "...");
 				Object[] results = state.pcall(runTest, new Object[] {child.getName(), closure});
 				if (results[0] != Boolean.TRUE) {
-					System.out.println("Crash at " + child + ": " +  results[1]);
-					((Throwable) (results[3])).printStackTrace();
+					Object errorMessage = results[1];
+					System.out.println("Crash at " + child + ": " +  errorMessage);
 					System.out.println(results[2]);
+					Throwable stacktrace = (Throwable) (results[3]);
+					if (stacktrace != null) {
+						stacktrace.printStackTrace();
+					}
 				} else {
+					BaseLib.luaAssert(results[1] instanceof LuaTable, "Did not get a table back from " + child + ", got a " + results[1] + " instead.");
 					testsuites.rawset(new Double(testsuites.len() + 1.0), results[1]);
 				}
 			}
 		}
 		Object[] results = state.pcall(mergeTestsClosure, new Object[] {"Kahlua", testsuites});
-		BaseLib.luaAssert(results[0] == Boolean.TRUE, "" + results[1]);
+		if (results[0] != Boolean.TRUE) {
+			BaseLib.luaAssert(false, "" + results[1] + ", " + results[2]);
+		}
 		Object testParent = results[1];
 		
 		System.out.println("Generating report...");
 		results = state.pcall(generateReportClosure, new Object[] {testParent});
 		if (results[0] == Boolean.TRUE) {
-			FileWriter writer = new FileWriter("testsuite/testreport.html");
-			writer.append((String) results[1]);
+			File f = new File("testreport.html");
+			System.out.println(f.getCanonicalPath());
+			FileWriter writer = new FileWriter(f);
+			writer.write((String) results[1]);
 			writer.close();
 			Long testsOk = new Long(((Double) results[2]).longValue());
 			Long testsFail = new Long(((Double) results[3]).longValue());

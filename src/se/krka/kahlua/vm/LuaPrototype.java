@@ -278,7 +278,10 @@ public final class LuaPrototype {
 	}
 
 	public static LuaClosure loadByteCode(InputStream in, LuaTable env) throws IOException {
-		return loadByteCode(new DataInputStream(in), env);
+		if (!(in instanceof DataInputStream)) {
+			in = new DataInputStream(in);
+		}
+		return loadByteCode((DataInputStream) in, env);
 	}
 
 

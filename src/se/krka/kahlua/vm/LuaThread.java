@@ -21,9 +21,8 @@ THE SOFTWARE.
 */
 package se.krka.kahlua.vm;
 
-import se.krka.kahlua.stdlib.BaseLib;
-
 import java.util.Vector;
+import se.krka.kahlua.stdlib.BaseLib;
 
 public class LuaThread {
 	public LuaTable environment;
@@ -77,7 +76,7 @@ public class LuaThread {
 	}
 
 	public void popCallFrame() {
-		if (callFrameTop == 0) {
+		if (isDead()) {
 			throw new RuntimeException("Stack underflow");			
 		}
 		setCallFrameStackTop(callFrameTop - 1);
@@ -196,15 +195,15 @@ public class LuaThread {
 	}
 
 	public LuaCallFrame currentCallFrame() {
-		if (callFrameTop > 0) {
-			LuaCallFrame callFrame = callFrameStack[callFrameTop - 1]; 
-			if (callFrame == null) {
-				callFrame = new LuaCallFrame(this);
-				callFrameStack[callFrameTop - 1] = callFrame;
-			}
-			return callFrame;
+		if (isDead()) {
+			return null;
 		}
-		return null;
+		LuaCallFrame callFrame = callFrameStack[callFrameTop - 1]; 
+		if (callFrame == null) {
+			callFrame = new LuaCallFrame(this);
+			callFrameStack[callFrameTop - 1] = callFrame;
+		}
+		return callFrame;
 	}
 
 	public int getTop() {
@@ -238,6 +237,9 @@ public class LuaThread {
 	public void cleanCallFrames(LuaCallFrame callerFrame) {
 		LuaCallFrame frame;
 		while ((frame = currentCallFrame()) != callerFrame) {
+			if (frame == null) {
+				break;
+			}
 			closeUpvalues(frame.returnBase);
 			addStackTrace(frame);				
 			popCallFrame();
@@ -249,15 +251,88 @@ public class LuaThread {
 	}
 
 	private String getStackTrace(LuaCallFrame frame) {
-		if (frame.closure != null) {
+		if (frame.isLua()) {
 			int[] lines = frame.closure.prototype.lines;
 			if (lines != null) {
 				int pc = frame.pc - 1;
-				if (pc < lines.length) {
+				if (pc >= 0 && pc < lines.length) {
 					return "at " + frame.closure.prototype + ":" + lines[pc] + " (opcode: " + pc + ")\n";
 				}
 			}
 		}
 		return "";
 	}
+
+	public boolean isDead() {
+		return callFrameTop == 0;
+	}
+
+	/*
+	private String indent(int level) {
+		String s = "";
+		for (int i = 0; i < level; i++) {
+			s = s + " ";
+		}
+		return s;
+	}
+	
+	public String getDebugInfo(int level) {
+		String s = "";
+		s = s + indent(level) + "Thread: " + this + "\n";
+		if (isDead()) {
+			s = s + indent(level) + "  dead" + "\n";
+		} else {
+			s = s + indent(level) + "Call frames:\n";
+			for (int i = 0; i < callFrameTop; i++) {
+				LuaCallFrame callFrame = callFrameStack[i];
+				String s2 = "java";
+				if (callFrame.isLua()) {
+					int pc = callFrame.pc - 1;
+					int[] lines = callFrame.closure.prototype.lines;
+					s2 = callFrame.closure.prototype.name + ":";
+					if (pc >= 0 && pc < lines.length) {
+						s2 = s2 + lines[pc];
+					} else {
+						s2 = s2 + lines[0] + " (not started)";
+					}
+				}
+				s = s + String.format("%s %4d: %s %s %s\n", indent(level), i, (callFrame.fromLua ? " [from lua]" : "[from java]"), (callFrame.insideCoroutine ? "[can yield]" : "         []"), s2);
+			}
+			s = s + indent(level) + "Stack:\n";
+			int stackIndex = 0;
+			LuaCallFrame callFrame = callFrameStack[stackIndex];
+			for (int i = 0; i < top; i++) {
+				if (stackIndex < callFrameTop - 1) {
+					LuaCallFrame nextCallFrame = callFrameStack[stackIndex + 1];
+					if (nextCallFrame.returnBase <= i) {
+						stackIndex++;
+						callFrame = nextCallFrame;
+					}
+				}
+
+				String info = "";
+				if (callFrame.returnBase == i) {
+					info = String.format("%3d %10s", stackIndex, "return base");
+				} else if (callFrame.localBase == i) {
+					info = String.format("%3d %10s", stackIndex, "local base");
+				}
+				Object obj = objectStack[i];
+				if (obj == null) {
+					obj = "null";
+				}
+				String objName = obj.toString();
+				if (objName.length() > 20) {
+					objName = objName.substring(objName.length() - 20);
+				}
+				s = s + String.format("%s %4d: %40s %s\n", indent(level), i, objName, info);
+			}
+		}
+		if (parent != null) {
+			s = s + indent(level) + "Child of:\n";
+			s = s + parent.getDebugInfo(level + 2);
+		}
+		return s;
+	}
+	*/
+	
 }

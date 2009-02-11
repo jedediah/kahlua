@@ -22,7 +22,6 @@ do
 	testAssert(t.a == nil)
 end
 
-
 do
 	local function foo(...)
 		return select("#", ...)

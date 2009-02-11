@@ -1,3 +1,4 @@
+--[[
 testCall(function()
 	local oldEnv = getfenv(1)
 	module("module1", package.seeall)
@@ -36,4 +37,4 @@ testCall(function()
 	assert(module2.a.b.c.d._M == module2.a.b.c.d)
 	assert(module2.a.b.c.d._PACKAGE == "module2.a.b.c.", module2.a.b.c.d._PACKAGE .. " = " .. "module2.a.b.c.")
 end)
-
+--]]

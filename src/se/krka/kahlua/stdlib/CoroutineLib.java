@@ -24,7 +24,6 @@ package se.krka.kahlua.stdlib;
 import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaClosure;
-import se.krka.kahlua.vm.LuaException;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
 import se.krka.kahlua.vm.LuaThread;
@@ -112,34 +111,36 @@ public class CoroutineLib implements JavaFunction {
 	private int status(LuaCallFrame callFrame, int nArguments) {
 		LuaThread t = getCoroutine(callFrame, nArguments);
 		
+		String status = getStatus(t, callFrame.thread);
+		callFrame.push(status);
+		return 1;
+	}
+
+	private String getStatus(LuaThread t, LuaThread caller) {
 		String status = null;
 		if (t.parent == null) {
-			if (t.callFrameTop > 0) {
-				status = "suspended";
-			} else {
+			if (t.isDead()) {
 				status = "dead";
+			} else {
+				status = "suspended";
 			}
 		} else {
-			if (callFrame.thread == t) {
+			if (caller == t) {
 				status = "running";
 			} else {
 				status = "normal";
 			}
 			
 		}
-		callFrame.push(status);
-		return 1;
+		return status;
 	}
 
 	private int resume(LuaCallFrame callFrame, int nArguments) {
 		LuaThread t = getCoroutine(callFrame, nArguments);
 		
-		if (t.parent != null) {
-			throw new LuaException("Can not resume a running thread");
-		}
-		if (t.callFrameTop == 0) {
-			throw new LuaException("Can not resume a dead thread");
-		}
+		String status = getStatus(t, callFrame.thread);
+		// equals on strings works because they are both constants
+		BaseLib.luaAssert(status == "suspended", "Can not resume thread that is in status: " + status);
 
 		LuaThread parent = callFrame.thread;
 		t.parent = parent;
@@ -167,19 +168,22 @@ public class CoroutineLib implements JavaFunction {
 		return 0;
 	}
 
-	public int yield(LuaCallFrame callFrame, int nArguments) {
+	public static int yield(LuaCallFrame callFrame, int nArguments) {
 		LuaThread t = callFrame.thread;
 		LuaThread parent = t.parent;
 
-		if (parent == null) {
-			throw new LuaException("Can not yield outside of a coroutine");
-		}
+		BaseLib.luaAssert(parent != null, "Can not yield outside of a coroutine");
 		
 		LuaCallFrame realCallFrame = t.callFrameStack[t.callFrameTop - 2];
-		if (!realCallFrame.insideCoroutine) {
-			throw new LuaException("Can not yield outside of a coroutine");
-		}
+		yieldHelper(realCallFrame, callFrame, nArguments);
+		return 0;
+	}
+	
+	public static void yieldHelper(LuaCallFrame callFrame, LuaCallFrame argsCallFrame, int nArguments) {
+		BaseLib.luaAssert(callFrame.insideCoroutine, "Can not yield outside of a coroutine");
 		
+		LuaThread t = callFrame.thread;
+		LuaThread parent = t.parent;
 		t.parent = null;
 
 		LuaCallFrame nextCallFrame = parent.currentCallFrame();
@@ -187,12 +191,10 @@ public class CoroutineLib implements JavaFunction {
 		// Copy arguments
 		nextCallFrame.push(Boolean.TRUE);
 		for (int i = 0; i < nArguments; i++) {
-			nextCallFrame.push(callFrame.get(i));
+			nextCallFrame.push(argsCallFrame.get(i));
 		}
 		
 		t.state.currentThread = parent;
-		
-		return 0;
 	}
 	
 	private int create(LuaCallFrame callFrame, int nArguments) {

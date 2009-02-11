@@ -58,7 +58,7 @@ public final class StringLib implements JavaFunction {
 	private static StringLib[] functions;  
 
 	// NOTE: String.class won't work in J2ME - so this is used as a workaround
-	private static final Class STRING_CLASS = "".getClass();
+	public static final Class STRING_CLASS = "".getClass();
 	
 	static {
 		names = new String[NUM_FUNCTIONS];

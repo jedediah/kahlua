@@ -1,12 +1,11 @@
 * Speed up the report building
-* Add testing for gsub - especially for invalid repl (i.e. bad usage of %)
 
-* Test coroutines further [implicit yields and such]
-* Implement require, module and loading of bytecode files
 * Try to get metalua to work with kahlua
 * Create a proper manual
 * Add array part of lua table
-* Implement a lua compiler
+* Implement a lua compiler - possibly from LuaJ
 
 * Major change: Implement metatables per object instead of per class for userdata.
+* Major change: Implement a LuaUserdata class, that contains environment, metatable
+and a reference to a real java object.
 

@@ -45,7 +45,7 @@
 			<arg line="-s" />
 			<arg line="-o" />
 			<arg line="${basedir}/build/classes/stdlib.lbc" />
-			<arg line="../../testsuite/lua/stdlib.lua" />
+			<arg line="${basedir}/../../resources/stdlib.lua" />
 		</exec>
 		<exec executable="${luac.path}">
 			<arg line="-s" />
@@ -85,7 +85,6 @@
 			<src path="${basedir}/src"/>
 			<src path="../../src"/>
 		</javac>
-		
 		<echo message="Jaring built release files"/>
 		<jar
 			basedir="${basedir}/build/classes"

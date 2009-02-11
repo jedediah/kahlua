@@ -54,7 +54,10 @@
 		<mkdir dir="${test.lua.output.dir}"/>
 	</target>
 
-	<target name="compile" depends="setup" description="Compiles Kahlua">
+	<target name="compile" depends="setup, compile-main-lua, compile-cldc, compile-j2se" description="Compiles Kahlua">
+	</target>
+	
+	<target name="compile-cldc" unless="j2se">
 		<javac
 			destdir="${classes.dir}"
 			debug="true"
@@ -69,6 +72,27 @@
 		</javac>
 	</target>
 
+	<target name="compile-j2se" if="j2se">
+		<javac
+			destdir="${classes.dir}"
+			debug="true"
+			classpathref="main.dependencies"
+		>
+			<src path="${src.dir}"/>
+		</javac>
+	</target>
+
+	<target name="compile-main-lua" depends="setup" description="Compile main lua files">
+		<apply executable="${luac.path}" dest="${classes.dir}" dir="${basedir}/resources" failonerror="true">
+			<arg value="-o" />
+			<targetfile />
+			<srcfile />
+			<fileset dir="${basedir}/resources" includes="*.lua" />
+			<mapper type="glob" from="*.lua" to="*.lbc"/>
+		</apply>
+	</target>
+
+
     <target name="package" depends="setup, compile" description="Package the final kahlua jar">
     	<jar jarfile="${build.dir}/kahlua.jar">
     		<fileset dir="${classes.dir}" />
@@ -79,21 +103,27 @@
 		<tstamp />
 		<zip zipfile="${build.dir}/kahlua-release-${DSTAMP}.zip">
 			<fileset dir="${basedir}">
-				<include name="contrib/annotation/src/**" />
-				<include name="contrib/annotation/test/**" />
-				<include name="contrib/annotation/build.xml" />
+				<include name="build.xml" />
+				
+				<include name="resources/**" />
+				<include name="lib/**" />
+				<include name="docs/**" />
+				<include name="src/**" />
+
+				<include name="testsuite/**" />
+				<exclude name="testsuite/bin/**" />
+				<exclude name="testsuite/coverage/**" />
+
+				<include name="contrib/annotation/**" />
+				<exclude name="contrib/annotation/bin/**" />
+
 				<include name="contrib/JavaLuac/include/**" />
 				<include name="contrib/JavaLuac/jni_src/**" />
 				<include name="contrib/JavaLuac/src/**" />
+				
 				<include name="contrib/midlet/resources/**" />
 				<include name="contrib/midlet/src/**" />
-				<include name="contrib/midlet/tools/**" />
 				<include name="contrib/midlet/build.xml" />
-				<include name="docs/**" />
-				<include name="src/**" />
-				<include name="testsuite/lua/**" />
-				<include name="testsuite/src/**" />
-				<include name="build.xml" />
 				
 				<exclude name="**/.svn/**" />
 			</fileset>
@@ -114,13 +144,14 @@
 	</target>
 
 	<target name="compile-test-lua" depends="setup" description="Compile test lua files">
-		<apply executable="${luac.path}" dest="${test.lua.output.dir}" dir="${test.lua.input.dir}" failonerror="true">
+		<apply executable="${luac.path}" dest="${test.lua.output.dir}" dir="${test.lua.input.dir}" failonerror="true" verbose="true">
 			<arg value="-o" />
 			<targetfile />
 			<srcfile />
 			<fileset dir="${test.lua.input.dir}" includes="*.lua" />
 			<mapper type="glob" from="*.lua" to="*.lbc"/>
 		</apply>
+		<move file="${test.lua.output.dir}/testhelper.lbc" todir="${test.classes.dir}" />
 	</target>
 
     <target name="test-depend" depends="setup, compile, compile-test, compile-test-lua">
@@ -143,6 +174,8 @@
 		<emmajava enabled="true" libclasspathref="emma.lib"
 			classname="Test"
 			classpathref="test.classpath"
+			sort="+class,+method,+name,+block"
+			metrics="method:100,block:90,line:80,class:100"
 		>
 			<arg value="${test.lua.output.dir}" />
 			<arg value="${test.file}" />
@@ -157,5 +190,12 @@
 		</emmajava>
 	</target>
 
+	<target name="javadoc" description="Generate javadoc">
+		<javadoc 
+				sourcepath="${src.dir}"
+				destdir="${build.dir}/javadoc"
+		/>
+	</target>
 </project>
+
 

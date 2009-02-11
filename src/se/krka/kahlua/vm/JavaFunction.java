@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2007-2008 Kristofer Karlsson <kristofer.karlsson@gmail.com>
+Copyright (c) 2007-2009 Kristofer Karlsson <kristofer.karlsson@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,18 +25,16 @@ package se.krka.kahlua.vm;
 
 public interface JavaFunction {
 	/**
-	 * General contract
-	 * 
-	 *  Input:
-	 *  callFrame = the frame that contains all the arguments, and where all the results should be put. 
-	 *  nArgs = number of function arguments
-	 *  callFrame.get(i) = an argument (0 <= i < nArgs) 
-	 *  
-	 *  Output:
+	 * General contract<br>
+	 * <br>
+	 *  Input:<br>
+	 *  callFrame = the frame that contains all the arguments, and where all the results should be put.<br> 
+	 *  nArgs = number of function arguments<br>
+	 *  callFrame.get(i) = an argument (0 <= i < nArgs)<br> 
 	 *  
 	 * @param callFrame - the current callframe for the function 
 	 * @param nArguments - number of function arguments 
-	 * @return N - number of return values. The N top objects on the stack is considered the return values 
+	 * @return N - number of return values. The N top objects on the stack are considered the return values 
 	 */
 	public abstract int call(LuaCallFrame callFrame, int nArguments);
 }

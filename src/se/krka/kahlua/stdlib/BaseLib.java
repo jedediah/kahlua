@@ -51,8 +51,9 @@ public final class BaseLib implements JavaFunction {
 	private static final int COLLECTGARBAGE = 16;
 	private static final int TABLECONCAT = 17;
 	private static final int DEBUGSTACKTRACE = 18;
+	private static final int BYTECODELOADER = 19;
 
-	private static final int NUM_FUNCTIONS = 19;
+	private static final int NUM_FUNCTIONS = 20;
 
 	private static final String[] names;
 	private static final Object MODE_KEY = "__mode";
@@ -88,6 +89,7 @@ public final class BaseLib implements JavaFunction {
 		names[COLLECTGARBAGE] = "collectgarbage";
 		names[TABLECONCAT] = "tableconcat";
 		names[DEBUGSTACKTRACE] = "debugstacktrace";
+		names[BYTECODELOADER] = "bytecodeloader";
 	}
 
 	private int index;
@@ -140,30 +142,35 @@ public final class BaseLib implements JavaFunction {
 		case COLLECTGARBAGE: return collectgarbage(callFrame, nArguments);
 		case TABLECONCAT: return tableConcat(callFrame, nArguments);
 		case DEBUGSTACKTRACE: return debugstacktrace(callFrame, nArguments);
+		case BYTECODELOADER: return bytecodeloader(callFrame, nArguments);
 		default:
 			// Should never happen
 			// throw new Error("Illegal function object");
 			return 0;
 		}
 	}
-
+	
 	private int debugstacktrace(LuaCallFrame callFrame, int nArguments) {
-		Double levelDouble = (Double) getOptArg(callFrame, 1, BaseLib.TYPE_NUMBER);
+		LuaThread thread = (LuaThread) getOptArg(callFrame, 1, BaseLib.TYPE_THREAD);
+		if (thread == null) {
+			thread = callFrame.thread;
+		}
+		Double levelDouble = (Double) getOptArg(callFrame, 2, BaseLib.TYPE_NUMBER);
 		int level = 0;
 		if (levelDouble != null) {
 			level = levelDouble.intValue();
 		}
-		Double countDouble = (Double) getOptArg(callFrame, 2, BaseLib.TYPE_NUMBER);
+		Double countDouble = (Double) getOptArg(callFrame, 3, BaseLib.TYPE_NUMBER);
 		int count = Integer.MAX_VALUE;
 		if (countDouble != null) {
 			count = countDouble.intValue(); 
 		}
-		Double haltAtDouble = (Double) getOptArg(callFrame, 3, BaseLib.TYPE_NUMBER);
+		Double haltAtDouble = (Double) getOptArg(callFrame, 4, BaseLib.TYPE_NUMBER);
 		int haltAt = 0;
 		if (haltAtDouble != null) {
 			haltAt = haltAtDouble.intValue(); 
 		}
-		return callFrame.push(callFrame.thread.getCurrentStackTrace(level, count, haltAt));
+		return callFrame.push(thread.getCurrentStackTrace(level, count, haltAt));
 	}
 
 	private int rawget(LuaCallFrame callFrame, int nArguments) {
@@ -221,8 +228,9 @@ public final class BaseLib implements JavaFunction {
         		callFrame.thread.environment = newEnv;
         		return 0;
         	}
-        	closure = callFrame.thread.getParent(level).closure;
-        	luaAssert(closure != null, "No closure found at this level: " + level);
+        	LuaCallFrame parentCallFrame = callFrame.thread.getParent(level);
+        	luaAssert(parentCallFrame.isLua(), "No closure found at this level: " + level);
+			closure = parentCallFrame.closure;
         }
 
     	closure.env = newEnv;
@@ -724,7 +732,18 @@ public final class BaseLib implements JavaFunction {
 			buffer.append(rawTostring(value));
 		}
 
-		callFrame.push(buffer.toString());
-		return 1;
+		return callFrame.push(buffer.toString());
 	}
+	
+	private static int bytecodeloader(LuaCallFrame callFrame, int nArguments) {
+		String modname = (String) getArg(callFrame, 1, "string", "loader");
+
+		LuaClosure closure = callFrame.thread.state.loadByteCodeFromResource(modname, callFrame.getEnvironment());
+		if (closure == null) {
+			return callFrame.push("Could not find the bytecode for '" + modname + "' in classpath");
+		}
+		return callFrame.push(closure);
+	}
+
+	
 }
