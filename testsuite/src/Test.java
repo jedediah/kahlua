@@ -109,7 +109,7 @@ public class Test {
 		System.out.println("Generating report...");
 		results = state.pcall(generateReportClosure, new Object[] {testParent});
 		if (results[0] == Boolean.TRUE) {
-			File f = new File("testreport.html");
+			File f = new File("testsuite/testreport.html");
 			System.out.println(f.getCanonicalPath());
 			FileWriter writer = new FileWriter(f);
 			writer.write((String) results[1]);
