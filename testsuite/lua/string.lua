@@ -135,6 +135,21 @@ testAssertEqual(s:match("Hello"),"Hello")
 testAssertEqual(s:match("H.l%D%w"),"Hello")
 
 testAssertEqual(s:match("H[e][lo][lo][lo]"),"Hello")
+
+do
+	testAssert(string.match("q", "^[%a_]$") == "q")
+	testAssert(string.match("_", "^[%a_]$") == "_")
+	testAssert(string.match("1", "^[%w]$") == "1")
+	testAssert(string.match("1", "^[%w]$") == "1")
+	testAssert(string.match("1", "^[%a_%w]$") == "1")
+	testAssert(string.match("1", "^[%a_%w]$") == "1")
+
+	local a, b = string.match("break", "^([%a_][%w_]*)()")
+	testAssert(a == "break", (a or "nil") .. (b or "nil"))
+	testAssert(b == 6, (a or "nil") .. (b or "nil"))
+end
+
+
 testAssertEqual(s:find("[Hello][Hello][Hello]"),1)
 testAssertEqual(s:find("[hello][hello][hello]"),2)
 

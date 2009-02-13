@@ -1178,7 +1178,7 @@ public final class StringLib implements JavaFunction {
 		while (p.preIncrStringI(1) < ec.getIndex()) {
 			if (p.getChar() == L_ESC) {
 				p.postIncrString(1);
-				if (matchClass(c, p.getChar())) {
+				if (matchClass(p.getChar(), c)) {
 					return sig;
 				}
 			} else if ((p.getChar(1) == '-') && (p.getIndex() + 2 < ec.getIndex())) {
@@ -1323,7 +1323,8 @@ public final class StringLib implements JavaFunction {
 
 	private static boolean matchClass(char classIdentifier, char c) {
 		boolean res;
-		switch (Character.toLowerCase(classIdentifier)) {
+		char lowerClassIdentifier = Character.toLowerCase(classIdentifier);
+		switch (lowerClassIdentifier) {
 		case 'a': res = Character.isLowerCase(c) || Character.isUpperCase(c); break;
 		case 'c': res = isControl(c); break;
 		case 'd': res = Character.isDigit(c); break;
@@ -1336,7 +1337,7 @@ public final class StringLib implements JavaFunction {
 		case 'z': res = (c == 0); break;
 		default: return (classIdentifier == c);
 		}
-		return Character.isLowerCase(classIdentifier) == res;
+		return (lowerClassIdentifier == classIdentifier) == res;
 	}
 
 	private static boolean isPunct(char c) {
