@@ -37,7 +37,7 @@
 	<taskdef resource="emma_ant.properties" classpathref="emma.lib" />
 
 	<!-- Main targets -->
-	<target name="all" depends="package, emma" />
+	<target name="all" depends="package, run-test" />
 	
 	<target name="clean" description="Removes old build files">
 		<delete dir="${build.dir}" failonerror="false"/>
