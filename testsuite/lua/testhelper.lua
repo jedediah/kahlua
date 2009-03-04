@@ -49,7 +49,7 @@ local function storeTestcase(testcase, status, errormessage, stacktrace)
 end
 
 
-function testCall(name, f)
+function testCall(name, f, ...)
 	if type(name) == "function" then
 		name, f = f, name
 	end
@@ -60,7 +60,7 @@ function testCall(name, f)
 	local oldParent = parent
 	parent = testcase
 
-	local status, errormessage, stacktrace = pcall(f)
+	local status, errormessage, stacktrace = pcall(f, ...)
 	if status then
 		errormessage, stacktrace = nil, nil
 	end

@@ -156,18 +156,22 @@ public final class MathLib implements JavaFunction {
 		default: return 0;
 		}
 	}
+	
+	private static double getDoubleArg(LuaCallFrame callFrame, int argc, String funcname) {
+		return ((Double)BaseLib.getArg(callFrame, argc, BaseLib.TYPE_NUMBER, funcname)).doubleValue();
+	}
 
 	// Generic math functions
 	private static int abs(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[ABS]);
 		callFrame.push(LuaState.toDouble(Math.abs(x)));
 		return 1;
 	}
 
 	private static int ceil(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x =getDoubleArg(callFrame,1,names[CEIL]);
 		callFrame.push(LuaState.toDouble(Math.ceil(x)));
 		return 1;
 	}
@@ -175,7 +179,7 @@ public final class MathLib implements JavaFunction {
 
 	private static int floor(LuaCallFrame callFrame, int nArguments)  {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[FLOOR]);
 		callFrame.push(LuaState.toDouble(Math.floor(x)));
 		return 1;
 	}
@@ -234,7 +238,7 @@ public final class MathLib implements JavaFunction {
 
 	private static int modf(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[MODF]);
 
 		boolean negate = false;
 		if (MathLib.isNegative(x)) {
@@ -258,8 +262,8 @@ public final class MathLib implements JavaFunction {
 
 	private static int fmod(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double v1 = LuaState.fromDouble(callFrame.get(0));
-		double v2 = LuaState.fromDouble(callFrame.get(1));
+		double v1 = getDoubleArg(callFrame,1,names[FMOD]);
+		double v2 = getDoubleArg(callFrame,2,names[FMOD]);
 
 		double res;
 		if (Double.isInfinite(v1) || Double.isNaN(v1)) {
@@ -292,14 +296,14 @@ public final class MathLib implements JavaFunction {
 			return 1;
 		}
 
-		double tmp = LuaState.fromDouble(callFrame.get(0));
+		double tmp = getDoubleArg(callFrame,1,names[RANDOM]);
 		int m = (int) tmp;
 		int n;
 		if (nArguments == 1) {
 			n = m;
 			m = 1;
 		} else {
-			tmp = LuaState.fromDouble(callFrame.get(1));
+			tmp = getDoubleArg(callFrame,2,names[RANDOM]);
 			n = (int) tmp;
 		}
 		callFrame.push(LuaState.toDouble(m + random.nextInt(n - m + 1)));
@@ -320,7 +324,7 @@ public final class MathLib implements JavaFunction {
 
 	private static int cosh(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[COSH]);
 
 		double exp_x = exp(x);
 		double res = (exp_x + 1 / exp_x) * 0.5;
@@ -331,7 +335,7 @@ public final class MathLib implements JavaFunction {
 
 	private static int sinh(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[SINH]);
 
 		double exp_x = exp(x);
 		double res = (exp_x - 1 / exp_x) * 0.5;
@@ -342,7 +346,7 @@ public final class MathLib implements JavaFunction {
 
 	private static int tanh(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[TANH]);
 
 		double exp_x = exp(2 * x);
 		double res = (exp_x - 1) / (exp_x + 1);
@@ -354,43 +358,43 @@ public final class MathLib implements JavaFunction {
 	// Trig functions
 	private static int deg(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[DEG]);
 		callFrame.push(LuaState.toDouble(Math.toDegrees(x)));
 		return 1;
 	}
 
 	private static int rad(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[RAD]);
 		callFrame.push(LuaState.toDouble(Math.toRadians(x)));
 		return 1;
 	}
 
 	private static int acos(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[ACOS]);
 		callFrame.push(LuaState.toDouble(acos(x)));
 		return 1;
 	}
 
 	private static int asin(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[ASIN]);
 		callFrame.push(LuaState.toDouble(asin(x)));
 		return 1;
 	}
 
 	private static int atan(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[ATAN]);
 		callFrame.push(LuaState.toDouble(atan(x)));
 		return 1;
 	}
 
 	private static int atan2(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double y = LuaState.fromDouble(callFrame.get(0));
-		double x = LuaState.fromDouble(callFrame.get(1));
+		double y = getDoubleArg(callFrame,1,names[ATAN2]);
+		double x = getDoubleArg(callFrame,2,names[ATAN2]);
 		callFrame.push(LuaState.toDouble(atan2(y, x)));
 		return 1;
 	}
@@ -398,21 +402,21 @@ public final class MathLib implements JavaFunction {
 
 	private static int cos(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[COS]);
 		callFrame.push(LuaState.toDouble(Math.cos(x)));
 		return 1;
 	}
 
 	private static int sin(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[SIN]);
 		callFrame.push(LuaState.toDouble(Math.sin(x)));
 		return 1;
 	}
 
 	private static int tan(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[TAN]);
 		callFrame.push(LuaState.toDouble(Math.tan(x)));
 		return 1;
 	}
@@ -420,29 +424,29 @@ public final class MathLib implements JavaFunction {
 	// Power functions
 	private static int sqrt(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[SQRT]);
 		callFrame.push(LuaState.toDouble(Math.sqrt(x)));
 		return 1;
 	}
 
 	private static int exp(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[EXP]);
 		callFrame.push(LuaState.toDouble(exp(x)));
 		return 1;
 	}
 
 	private static int pow(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
-		double y = LuaState.fromDouble(callFrame.get(1));
+		double x = getDoubleArg(callFrame,1,names[POW]);
+		double y = getDoubleArg(callFrame,2,names[POW]);
 		callFrame.push(LuaState.toDouble(pow(x, y)));
 		return 1;
 	}
 
 	private static int log(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[LOG]);
 		callFrame.push(LuaState.toDouble(ln(x)));
 		return 1;
 	}
@@ -451,7 +455,7 @@ public final class MathLib implements JavaFunction {
 
 	private static int log10(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[LOG10]);
 		callFrame.push(LuaState.toDouble(ln(x) * LN10_INV));
 		return 1;
 	}
@@ -461,7 +465,7 @@ public final class MathLib implements JavaFunction {
 
 	private static int frexp(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 1, "Not enough arguments");
-		double x = LuaState.fromDouble(callFrame.get(0));
+		double x = getDoubleArg(callFrame,1,names[FREXP]);
 
 		double e, m;
 		if (Double.isInfinite(x) || Double.isNaN(x)) {
@@ -478,8 +482,8 @@ public final class MathLib implements JavaFunction {
 
 	private static int ldexp(LuaCallFrame callFrame, int nArguments) {
 		BaseLib.luaAssert(nArguments >= 2, "Not enough arguments");
-		double m = LuaState.fromDouble(callFrame.get(0));
-		double dE = LuaState.fromDouble(callFrame.get(1));
+		double m = getDoubleArg(callFrame,1,names[LDEXP]);
+		double dE = getDoubleArg(callFrame,2,names[LDEXP]);
 
 		double ret;
 		double tmp = m + dE;
