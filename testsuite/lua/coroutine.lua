@@ -403,3 +403,18 @@ testCall(function()
 	assert(tostring(getfenv(0)) == "original")
 end)
 
+
+testCall(function()
+
+    local f = function()
+        return 1, 2
+    end
+
+    local co = coroutine.create(function() return f() end)
+    local status, a, b = coroutine.resume(co)
+    print(status, a, b)
+    assert(status)
+    assert(a == 1)
+    assert(b == 2)
+end)
+
