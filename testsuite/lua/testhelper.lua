@@ -70,7 +70,7 @@ function testCall(name, f, ...)
 	assert(stacktrace == nil or type(stacktrace) == "string", type(stacktrace))
 	assert(type(stacktrace2) == "string")
 	storeTestcase(testcase, status, errormessage, (stacktrace or "") .. stacktrace2)
-	
+
 	assert(type(testcase) == "table")
 	return testcase
 end

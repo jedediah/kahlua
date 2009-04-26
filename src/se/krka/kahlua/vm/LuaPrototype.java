@@ -22,12 +22,15 @@ THE SOFTWARE.
 package se.krka.kahlua.vm;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 public final class LuaPrototype {
-	public int[] opcodes;
+	public int[] code;
 
 	// Constants
 	public Object[] constants;
@@ -44,6 +47,9 @@ public final class LuaPrototype {
 	public int numUpvalues;
 
 	public int maxStacksize;
+	
+	public LuaPrototype() {
+	}
 
 	public LuaPrototype(DataInputStream in, boolean littleEndian, String parentName, int size_t) throws IOException {
 		int tmp;
@@ -65,10 +71,10 @@ public final class LuaPrototype {
 		maxStacksize = in.read();
 
 		int codeLen = toInt(in.readInt(), littleEndian);
-		opcodes = new int[codeLen];
+		code = new int[codeLen];
 		for (int i = 0; i < codeLen; i++) {
 			int op = toInt(in.readInt(), littleEndian);
-			opcodes[i] = op;
+			code[i] = op;
 		}
 
 		int constantsLen = toInt(in.readInt(), littleEndian);
@@ -142,11 +148,12 @@ public final class LuaPrototype {
 		long len = 0;
 
 		if (size_t == 4) {
-			len = toInt(in.readInt(), littleEndian);
+			int i = in.readInt();
+			len = toInt(i, littleEndian);
 		} else if (size_t == 8) {
 			len = toLong(in.readLong(), littleEndian);
 		} else {
-			loadAssert(false);
+			loadAssert(false, "Bad string size");
 		}
 
 		if (len == 0) {
@@ -157,7 +164,7 @@ public final class LuaPrototype {
 
 		// Change this to a proper string loader if you need longer strings.
 		// The extra code needed seems unnecessary for the common use cases.
-		loadAssert(len < 0x10000);
+		loadAssert(len < 0x10000, "Too long string:" + len);
 
 		int iLen = (int) len;
 		byte[] stringData = new byte[2 + 1 + iLen];
@@ -167,8 +174,8 @@ public final class LuaPrototype {
 
 		// Remember to read the trailing 0 too
 		int bytesRead = in.read(stringData, 2, iLen + 1);
-		loadAssert(bytesRead == iLen + 1);
-		loadAssert(stringData[2 + iLen] == 0);
+		loadAssert(bytesRead == iLen + 1, "String loading 1");
+		loadAssert(stringData[2 + iLen] == 0, "String loading 2");
 
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(stringData));
 		String s = dis.readUTF();
@@ -223,47 +230,47 @@ public final class LuaPrototype {
 
 //		Read lua header
 		tmp = in.read();
-		loadAssert(tmp == 27);
+		loadAssert(tmp == 27, "Signature 1");
 
 		tmp = in.read();
-		loadAssert(tmp == 'L');
+		loadAssert(tmp == 'L', "Signature 2");
 
 		tmp = in.read();
-		loadAssert(tmp == 'u');
+		loadAssert(tmp == 'u', "Signature 3");
 
 		tmp = in.read();
-		loadAssert(tmp == 'a');
+		loadAssert(tmp == 'a', "Signature 4");
 
 //		Version = 5.1
 		tmp = in.read();
-		loadAssert(tmp == 0x51);
+		loadAssert(tmp == 0x51, "Version");
 
 //		Format
 		tmp = in.read();
-		loadAssert(tmp == 0);
+		loadAssert(tmp == 0, "Format");
 
 //		Little Endian!
 		boolean littleEndian = in.read() == 1;
 
 //		Size of int
 		tmp = in.read();
-		loadAssert(tmp == 4);
+		loadAssert(tmp == 4, "Size int");
 
 //		Size of size_t
 		int size_t = in.read();
-		loadAssert(size_t == 4 || size_t == 8);
+		loadAssert(size_t == 4 || size_t == 8, "Size t");
 
 //		Size of instruction
 		tmp = in.read();
-		loadAssert(tmp == 4);
+		loadAssert(tmp == 4, "Size instr");
 
 //		Size of number
 		tmp = in.read();
-		loadAssert(tmp == 8);
+		loadAssert(tmp == 8, "Size number");
 
 //		Integral
 		tmp = in.read();
-		loadAssert(tmp == 0);
+		loadAssert(tmp == 0, "Integral");
 
 //		Done with header, start reading functions
 		LuaPrototype mainPrototype = new LuaPrototype(in, littleEndian, null, size_t);
@@ -271,9 +278,9 @@ public final class LuaPrototype {
 		return closure;
 	}
 
-	private static void loadAssert(boolean c) throws IOException {
+	private static void loadAssert(boolean c, String message) throws IOException {
 	    if (!c) {
-			throw new IOException("could not load bytecode");
+			throw new IOException("Could not load bytecode:" + message);
 		}
 	}
 
@@ -283,6 +290,114 @@ public final class LuaPrototype {
 		}
 		return loadByteCode((DataInputStream) in, env);
 	}
+	
+	/*
+	 * Dump functions to stream
+	 */
 
+	public void dump(OutputStream os) throws IOException {
+		DataOutputStream dos;
+		if (os instanceof DataOutputStream) {
+			dos = (DataOutputStream) os;
+		} else {
+			dos = new DataOutputStream(os);
+		}
+		
+		// signature
+		dos.write(27);		
+		dos.write('L');
+		dos.write('u');
+		dos.write('a');
+		
+		dos.write(0x51); // version
+		dos.write(0); // format
+		dos.write(0); // 0 = big endian, 1 = little endian
+		
+		dos.write(4); // size of int
+		dos.write(4); // size t
+		dos.write(4); // size of instruction
+		dos.write(8); // size of number
+		dos.write(0); // integral
+		
+		// Start dumping prototypes
+		dumpPrototype(dos);
+	}
+	
+	private void dumpPrototype(DataOutputStream dos) throws IOException {
+		dumpString(name, dos);
+
+		// Commented out since they are not used
+		// read line defined and last line defined
+		dos.writeInt(0);
+		dos.writeInt(0);
+
+		dos.write(numUpvalues);
+		dos.write(numParams);
+		dos.write(isVararg ? 2 : 0);
+		dos.write(maxStacksize);
+		
+		int codeLen = code.length;
+		dos.writeInt(codeLen);
+		for (int i = 0; i < codeLen; i++) {
+			dos.writeInt(code[i]);
+		}
+
+		int constantsLen = constants.length;
+		dos.writeInt(constantsLen);
+		for (int i = 0; i < constantsLen; i++) {
+			Object o = constants[i];
+			if (o == null) {
+				dos.write(0);
+			} else if (o instanceof Boolean) {
+				dos.write(1);
+				dos.write(((Boolean) o).booleanValue() ? 1 : 0);				
+			} else if (o instanceof Double) {
+				dos.write(3);
+				Double d = (Double) o;
+				dos.writeLong(Double.doubleToLongBits(d.doubleValue()));
+			} else if (o instanceof String) {
+				dos.write(4);
+				dumpString((String) o, dos);
+			} else {
+				throw new RuntimeException("Bad type in constant pool");
+			}
+		}
+
+		int prototypesLen = prototypes.length;
+		dos.writeInt(prototypesLen);
+		for (int i = 0; i < prototypesLen; i++) {
+			prototypes[i].dumpPrototype(dos);
+		}
+
+		// DEBUGGING INFORMATION
+
+		// read lines
+		int linesLen = lines.length;
+		dos.writeInt(linesLen);
+		for (int i = 0; i < linesLen; i++) {
+			dos.writeInt(lines[i]);
+		}
+
+		// skip locals
+		dos.writeInt(0);
+
+		// read upvalues
+		dos.writeInt(0);		
+	}
+
+	private static void dumpString(String name, DataOutputStream dos) throws IOException {
+		if (name == null) {
+			dos.writeShort(0);
+			return;
+		}
+		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		new DataOutputStream(baos).writeUTF(name);
+		byte[] bytes = baos.toByteArray();
+		int numBytes = bytes.length - 2;
+		dos.writeInt(numBytes + 1); // 1 extra for lua string storage spec
+		dos.write(bytes, 2, numBytes);
+		dos.write(0);
+	}
 
 }

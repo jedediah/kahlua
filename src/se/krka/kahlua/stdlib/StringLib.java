@@ -25,6 +25,7 @@ import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaTableImpl;
 
 public final class StringLib implements JavaFunction {
 
@@ -85,7 +86,7 @@ public final class StringLib implements JavaFunction {
 	}
 
 	public static void register(LuaState state) {
-		LuaTable string = new LuaTable();
+		LuaTable string = new LuaTableImpl();
 		state.getEnvironment().rawset("string", string);
 		for (int i = 0; i < NUM_FUNCTIONS; i++) {
 			string.rawset(names[i], functions[i]);

@@ -14,7 +14,7 @@ run in most Java environments.
 
 Kahlua can easily be integrated with a J2ME project - 
 see the example midlet in the distribution.
-The Java source code just one class file and about 130 lines
+The Java source code is just one class file and about 130 lines
 of easy to read Java.
 
 Kahlua may also be used for J2SE- or J2EE projects, but you would need to
@@ -95,8 +95,8 @@ Strings in Kahlua are represented in UTF-16, just like Java strings
 The following functions are not implemented in Kahlua:
   * io.`*`
   * debug.`*`
-  * string.dump
-  * loadstring, loadfile, load, dofile
+  * string.dump (but you can dump a closure into an InputStream from Java)
+  * loadstring, loadfile, load, dofile (but loadstring is available if you link with LuaJ)
   * gcinfo
   * xpcall
   * os.execute, os.exit, os.setlocale, os.getenv, os.remove, os.clock, os.tmpname, os.rename
@@ -163,15 +163,20 @@ called `debug.traceback ([thread,] [message] [, level])`.
 ==Compat options==
 Kahlua implements no compat-options, i.e. no support for `arg` as in Lua 5.0
 
-==Lack of a compiler==
-Kahlua currently does not have a compiler,
-and can only load precompiled Lua bytecode.
-This is something that may be added in the future.
+==Compiler==
+Kahlua currently does not have its own compiler,
+but it has support for using [http://sourceforge.net/projects/luaj/ LuaJ]s
+compiler. This is very easy to do, just add LuaJ to the classpath, and run
+{{{
+LuaCompiler.register(state)
+}}}
+You will then get access to loadstring inside Lua.
+Also take a look at the source code inside testsuite/src for examples on how to
+use it.
 
-Instead Kahlua can load precompiled lua 5.1b bytecode.
+Kahlua can also natively load precompiled Lua 5.1b bytecode.
 Use luac -o output.lbc input.lua to compile a lua source file to bytecode.
 You can then use `LuaPrototype.loadBytecode` to get a lua closure.
-See se.krka.kahlua.test.Test to see examples of usage.
 
 ==Thread safety==
 Kahlua is not thread safe in any way.
@@ -184,6 +189,9 @@ another is reading (or writing), since the data structure is not thread safe.
 However, you can create as many `LuaState`s as you want to run in different
 threads if they do not communicate directly. All `LuaState`s are completely
 independent of one another and do not share any writeable static fields.
+
+=Major changes since Kahlua release 2009-02-11=
+  * Added support for using the LuaJ compiler.
 
 =Major changes since Kahlua release 2008-10-11=
   * Strings used to be interned everywhere, but this has been changed for three reasons:

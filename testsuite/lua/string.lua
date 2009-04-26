@@ -1,10 +1,24 @@
+local function tobytes(s)
+	local t = {string.byte(s)}
+	return table.concat(t, ",")
+end
+
 function assertEqual(actual, expected, msg)
-	assert(expected == actual, msg or "expected " .. tostring(expected) .. ", actual " .. tostring(actual)) 
+	if expected == actual then
+		return
+	end
+	error(msg or string.format("expected: %s (%s), actual: %s (%s)",
+			tostring(expected), tobytes(tostring(expected)),
+			tostring(actual), tobytes(tostring(actual))))
 end
 
 function testAssertEqual(a, b, msg, name)
 	testCall(name, function() assertEqual(a, b, msg) end)
 end
+
+testAssertEqual("\0", string.char(0))
+testAssertEqual(#("\0"), 1)
+testAssertEqual(#("\0\0"), 2)
 
 
 -- test concatenation

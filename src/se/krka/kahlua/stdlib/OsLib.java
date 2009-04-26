@@ -30,6 +30,7 @@ import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaTableImpl;
 
 public class OsLib implements JavaFunction {
 	private static final int DATE = 0;
@@ -54,7 +55,7 @@ public class OsLib implements JavaFunction {
 	}
 
 	public static void register(LuaState state) {
-		LuaTable os = new LuaTable();
+		LuaTable os = new LuaTableImpl();
 		state.getEnvironment().rawset("os", os);
 
 		for (int i = 0; i < NUM_FUNCS; i++) {
@@ -223,7 +224,7 @@ public class OsLib implements JavaFunction {
 	}
 
 	public static LuaTable getTableFromDate(Calendar c) {
-		LuaTable time = new LuaTable();
+		LuaTable time = new LuaTableImpl();
 		time.rawset(YEAR, LuaState.toDouble(c.get(Calendar.YEAR)));
 		time.rawset(MONTH, LuaState.toDouble(c.get(Calendar.MONTH)+1));
 		time.rawset(DAY, LuaState.toDouble(c.get(Calendar.DAY_OF_MONTH)));

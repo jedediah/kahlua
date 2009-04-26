@@ -31,6 +31,9 @@
 			<include name="cldcapi11.jar"/>
 			<include name="midpapi20.jar"/>
 		</fileset>
+		<fileset dir="${basedir}/../../lib">
+			<include name="luaj*.jar"/>
+		</fileset>
 	</path>	
 		
 	<target name="clean" description="Removes old build files">
@@ -83,7 +86,7 @@
 			verbose="false"
 			bootclasspathref="build.buildclasspath">
 			<src path="${basedir}/src"/>
-			<src path="../../src"/>
+			<src path="${basedir}/../../src"/>
 		</javac>
 		<echo message="Jaring built release files"/>
 		<jar
@@ -115,7 +118,7 @@
 
 		<exec executable="${wtk.home}/bin/preverify">
 			<arg line="-classpath" />
-			<arg line="${wtk.home}/lib/cldcapi11.jar:${wtk.home}/lib/midpapi20.jar" />
+			<arg line="${wtk.home}/lib/cldcapi11.jar:${wtk.home}/lib/midpapi20.jar:${basedir}/../../lib/luaj-j2me-0.95.jar" />
 			<arg line="-target" />
 			<arg line="CLDC1.1" />
 			<arg line="${basedir}/build/kahluademo.jar" />

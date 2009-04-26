@@ -26,6 +26,7 @@ import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaTableImpl;
 import se.krka.kahlua.vm.LuaThread;
 
 public class CoroutineLib implements JavaFunction {
@@ -71,7 +72,7 @@ public class CoroutineLib implements JavaFunction {
 	}
 
 	public static void register(LuaState state) {
-		LuaTable coroutine = new LuaTable();
+		LuaTable coroutine = new LuaTableImpl();
 		state.getEnvironment().rawset("coroutine", coroutine);
 		for (int i = 0; i < NUM_FUNCTIONS; i++) {
 			coroutine.rawset(names[i], functions[i]);
@@ -191,7 +192,8 @@ public class CoroutineLib implements JavaFunction {
 		// Copy arguments
 		nextCallFrame.push(Boolean.TRUE);
 		for (int i = 0; i < nArguments; i++) {
-			nextCallFrame.push(argsCallFrame.get(i));
+			Object value = argsCallFrame.get(i);
+			nextCallFrame.push(value);
 		}
 		
 		t.state.currentThread = parent;

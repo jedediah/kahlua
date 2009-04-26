@@ -167,9 +167,10 @@ do
 	testAssert(t[3] == 1)
 	testAssert(t[4] == nil)
 
-	table.remove(t, 1)
-	testAssert(t[1] == 3)
-	testAssert(t[2] == 1)
-	testAssert(t[3] == nil)
+	local v = table.remove(t, 1)
+	testAssert(t[1] == 3, "t[1] is "..tostring(t[1])..", expected is 3")
+	testAssert(t[2] == 1, "t[2] is "..tostring(t[2])..", expected is 1")
+	testAssert(t[3] == nil, "t[3] is "..tostring(t[3])..", expected is nil")
+	testAssert(v == 2, "returned value is "..tostring(v)..", expected is 2")
 end
 

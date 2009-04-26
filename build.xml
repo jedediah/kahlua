@@ -2,7 +2,6 @@
 <project name="Kahlua" basedir="." default="all">
 	<property file="local.properties" />
 
-	<property name="luac.path" value="luac" />
 	<property name="emma.dir" value="/usr/share/java" />
 
 	<property name="src.dir"       value="${basedir}/src"/>
@@ -19,6 +18,9 @@
 
 	<path id="main.dependencies">
 		<pathelement location="${basedir}/lib/cldcapi11.jar" />
+		<fileset dir="lib">
+			<include name="luaj*.jar" />
+		</fileset>
 	</path>
 
 	<path id="main.classpath">
@@ -28,6 +30,9 @@
 	<path id="test.classpath">
 		<path refid="main.classpath" />
 		<pathelement path="${test.classes.dir}"/>
+		<fileset dir="lib">
+			<include name="luaj*.jar" />
+		</fileset>
 	</path>
 
 	<path id="emma.lib" >
@@ -54,7 +59,14 @@
 		<mkdir dir="${test.lua.output.dir}"/>
 	</target>
 
-	<target name="compile" depends="setup, compile-main-lua, compile-cldc, compile-j2se" description="Compiles Kahlua">
+	<target name="j2se" description="Build with j2se-settings">
+		<property name="j2se" value="true" />
+	</target>
+
+	<target name="compile" depends="setup, compile-cldc, compile-j2se" description="Compiles Kahlua">
+	</target>
+	
+	<target name="build" depends="compile, build-stdlib" description="Compiles Kahlua">
 	</target>
 	
 	<target name="compile-cldc" unless="j2se">
@@ -82,18 +94,7 @@
 		</javac>
 	</target>
 
-	<target name="compile-main-lua" depends="setup" description="Compile main lua files">
-		<apply executable="${luac.path}" dest="${classes.dir}" dir="${basedir}/resources" failonerror="true">
-			<arg value="-o" />
-			<targetfile />
-			<srcfile />
-			<fileset dir="${basedir}/resources" includes="*.lua" />
-			<mapper type="glob" from="*.lua" to="*.lbc"/>
-		</apply>
-	</target>
-
-
-    <target name="package" depends="setup, compile" description="Package the final kahlua jar">
+    <target name="package" depends="setup, build" description="Package the final kahlua jar">
     	<jar jarfile="${build.dir}/kahlua.jar">
     		<fileset dir="${classes.dir}" />
     	</jar>
@@ -130,6 +131,16 @@
 		</zip>
 	</target>
 
+	<target name="build-stdlib" depends="compile-test">
+		<java classname="LuaC" fork="true" dir="${basedir}">
+			<classpath location="${instrumented.dir}" />
+			<classpath refid="test.classpath" />
+			
+			<arg value="${basedir}/resources/stdlib.lua" />
+			<arg value="${classes.dir}/stdlib.lbc" />
+		</java>
+	</target>
+	
 	<!-- Test stuff -->
 	<target name="compile-test" depends="setup, compile" description="Compile test classes">
 		<javac
@@ -143,24 +154,16 @@
 		</javac>
 	</target>
 
-	<target name="compile-test-lua" depends="setup" description="Compile test lua files">
-		<apply executable="${luac.path}" dest="${test.lua.output.dir}" dir="${test.lua.input.dir}" failonerror="true" verbose="true">
-			<arg value="-o" />
-			<targetfile />
-			<srcfile />
-			<fileset dir="${test.lua.input.dir}" includes="*.lua" />
-			<mapper type="glob" from="*.lua" to="*.lbc"/>
-		</apply>
-		<move file="${test.lua.output.dir}/testhelper.lbc" todir="${test.classes.dir}" />
-	</target>
-
-    <target name="test-depend" depends="setup, compile, compile-test, compile-test-lua">
+    <target name="test-depend" depends="setup, build, compile-test">
     </target>
 
     <target name="run-test" depends="test-depend" description="Run the test-suite">
 		<property name="test.file" value="" />
-		<java classname="Test" classpathref="test.classpath" fork="true" dir="${basedir}">
-			<arg value="${test.lua.output.dir}" />
+		<java classname="Test" fork="true" dir="${basedir}">
+			<classpath location="${instrumented.dir}" />
+			<classpath refid="test.classpath" />
+			
+			<arg value="${test.lua.input.dir}" />
 			<arg value="${test.file}" />
 		</java>
     </target>

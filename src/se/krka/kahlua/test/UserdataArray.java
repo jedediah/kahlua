@@ -28,6 +28,7 @@ import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaTableImpl;
 
 public class UserdataArray implements JavaFunction {
 
@@ -44,7 +45,7 @@ public class UserdataArray implements JavaFunction {
 
 	public static synchronized void register(LuaState state) {
 		if (metatable == null) {
-			metatable = new LuaTable();
+			metatable = new LuaTableImpl();
 			metatable.rawset("__metatable", "restricted");
 			metatable.rawset("__len", new UserdataArray(LENGTH));
 			metatable.rawset("__index", new UserdataArray(INDEX));

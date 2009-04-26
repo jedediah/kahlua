@@ -21,49 +21,6 @@ function pairs(t)
 	return next, t, nil
 end
 
-table = {}
-function table.insert(t, a, b)
-	local tlen = #t
-	local pos, value
-	if b then
-		pos, value = a, b
-	else
-		pos, value = tlen + 1, a
-	end
-	for i = tlen, pos, -1 do
-		t[i + 1] = t[i]
-	end
-	t[pos] = value
-end
-
-function table.remove(t, pos)
-	local tlen = #t
-	for i = pos, tlen - 1 do
-		t[i] = t[i + 1]
-	end
-	local v = t[tlen]
-	t[tlen] = nil
-	return v
-end
-
-function table.setn()
-	error("setn is obsolete")
-end
-
-function table.getn(t)
-	return #t
-end
-
-function table.maxn(t)
-	local maxIndex = 0
-	for k, v in next, t do
-		if maxIndex < k then
-			maxIndex = k
-		end
-	end
-	return maxIndex
-end
-
 do
 	local function partition(tbl, left, right, pivot, comp)
 		local pval = tbl[pivot]
@@ -96,12 +53,11 @@ do
 	end
 end
 
-local tableconcat = tableconcat
-table.concat = tableconcat
-
 function string.len(s)
 	return #s
 end
+
+local tableconcat = table.concat
 
 function string.rep(s, n)
 	local t = {}
@@ -171,8 +127,17 @@ end
 
 
 package = {}
-package.loaded = {}
+package.loaded = {
+	string = string,
+	table = table,
+	math = math,
+	package = package,
+	os = os,
+	math = math,
+	coroutine = coroutine
+}
 package.loaders = {}
+package.path = "/"
 table.insert(package.loaders, bytecodeloader)
 bytecodeloader = nil
 

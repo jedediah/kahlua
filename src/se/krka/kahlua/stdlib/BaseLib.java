@@ -27,6 +27,7 @@ import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaException;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaTableImpl;
 import se.krka.kahlua.vm.LuaThread;
 
 public final class BaseLib implements JavaFunction {
@@ -49,11 +50,10 @@ public final class BaseLib implements JavaFunction {
 	private static final int RAWSET = 14;
 	private static final int RAWGET = 15;
 	private static final int COLLECTGARBAGE = 16;
-	private static final int TABLECONCAT = 17;
-	private static final int DEBUGSTACKTRACE = 18;
-	private static final int BYTECODELOADER = 19;
+	private static final int DEBUGSTACKTRACE = 17;
+	private static final int BYTECODELOADER = 18;
 
-	private static final int NUM_FUNCTIONS = 20;
+	private static final int NUM_FUNCTIONS = 19;
 
 	private static final String[] names;
 	private static final Object MODE_KEY = "__mode";
@@ -87,7 +87,6 @@ public final class BaseLib implements JavaFunction {
 		names[RAWSET] = "rawset";
 		names[RAWGET] = "rawget";
 		names[COLLECTGARBAGE] = "collectgarbage";
-		names[TABLECONCAT] = "tableconcat";
 		names[DEBUGSTACKTRACE] = "debugstacktrace";
 		names[BYTECODELOADER] = "bytecodeloader";
 	}
@@ -140,7 +139,6 @@ public final class BaseLib implements JavaFunction {
 		case RAWSET: return rawset(callFrame, nArguments);
 		case RAWGET: return rawget(callFrame, nArguments);
 		case COLLECTGARBAGE: return collectgarbage(callFrame, nArguments);
-		case TABLECONCAT: return tableConcat(callFrame, nArguments);
 		case DEBUGSTACKTRACE: return debugstacktrace(callFrame, nArguments);
 		case BYTECODELOADER: return bytecodeloader(callFrame, nArguments);
 		default:
@@ -496,7 +494,7 @@ public final class BaseLib implements JavaFunction {
 
 		if (o instanceof LuaTable) {
 			to = (LuaTable) o;
-			oldMeta = to.metatable;
+			oldMeta = to.getMetatable();
 		} else {
 			co = o.getClass();
 			oldMeta = (LuaTable) state.userdataMetatables.rawget(co);
@@ -507,7 +505,7 @@ public final class BaseLib implements JavaFunction {
 		}
 
 		if (to != null) {
-			to.metatable = newMeta;
+			to.setMetatable(newMeta);
 			boolean weakKeys = false, weakValues = false;
 			if (newMeta != null) {
 				Object modeObj = newMeta.rawget(MODE_KEY);
@@ -698,51 +696,33 @@ public final class BaseLib implements JavaFunction {
 		return null;
 	}
 
-	private static int tableConcat(LuaCallFrame callFrame, int nArguments) {
-		luaAssert(nArguments >= 1, "expected table, got no arguments");
-		LuaTable table = (LuaTable) callFrame.get(0);
-
-		String separator = "";
-		if (nArguments >= 2) {
-			separator = rawTostring(callFrame.get(1));
-		}
-
-		int first = 1;
-		if (nArguments >= 3) {
-			Double firstDouble = rawTonumber(callFrame.get(2));
-			first = firstDouble.intValue();
-		}
-
-		int last;
-		if (nArguments >= 4) {
-			Double lastDouble = rawTonumber(callFrame.get(3));
-			last = lastDouble.intValue();
-		} else {
-			last = table.len();
-		}
-
-		StringBuffer buffer = new StringBuffer();
-		for (int i = first; i <= last; i++) {
-			if (i > first) {
-				buffer.append(separator);
-			}
-
-			Double key = LuaState.toDouble(i);
-			Object value = table.rawget(key);
-			buffer.append(rawTostring(value));
-		}
-
-		return callFrame.push(buffer.toString());
-	}
-	
 	private static int bytecodeloader(LuaCallFrame callFrame, int nArguments) {
 		String modname = (String) getArg(callFrame, 1, "string", "loader");
 
-		LuaClosure closure = callFrame.thread.state.loadByteCodeFromResource(modname, callFrame.getEnvironment());
-		if (closure == null) {
-			return callFrame.push("Could not find the bytecode for '" + modname + "' in classpath");
+		LuaTable packageTable = (LuaTable) callFrame.getEnvironment().rawget("package");
+		String classpath = (String) packageTable.rawget("classpath");
+		
+		int index = 0;
+		while (index < classpath.length()) {
+			int nextIndex = classpath.indexOf(";", index);
+
+			if (nextIndex == -1) {
+				nextIndex = classpath.length();
+			}
+			
+			String path = classpath.substring(index, nextIndex);
+			if (path.length() > 0) {
+				if (!path.endsWith("/")) {
+					path = path + "/";
+				}
+				LuaClosure closure = callFrame.thread.state.loadByteCodeFromResource(path + modname, callFrame.getEnvironment());
+				if (closure != null) {
+					return callFrame.push(closure);
+				}
+			}
+			index = nextIndex;
 		}
-		return callFrame.push(closure);
+		return callFrame.push("Could not find the bytecode for '" + modname + "' in classpath");
 	}
 
 	

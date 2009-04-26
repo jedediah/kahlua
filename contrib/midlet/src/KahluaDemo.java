@@ -23,7 +23,7 @@ import se.krka.kahlua.vm.LuaState;
 
 
 public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
-	private String[] options = {"guess", "primes", "quizgame", "Quit"};
+	private String[] options = {"/guess", "/primes", "/quizgame", "Quit"};
 	                        
 	private LuaState state;
 	private StringItem stringItem;
@@ -75,7 +75,7 @@ public class KahluaDemo extends MIDlet implements Runnable, ItemStateListener {
 			} else {
 				// The system needs to decide which game to load.
 				stringItem.setText("Loading bytecode...");
-				LuaClosure callback = BaseLib.loadByteCodeFromResource(response, state.getEnvironment());
+				LuaClosure callback = state.loadByteCodeFromResource(response, state.getEnvironment());
 				state.call(callback, null, null, null);
 			}
 		}

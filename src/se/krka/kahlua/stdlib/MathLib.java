@@ -27,6 +27,7 @@ import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaTableImpl;
 
 public final class MathLib implements JavaFunction {
 
@@ -100,7 +101,7 @@ public final class MathLib implements JavaFunction {
 
 	public static void register(LuaState state) {
 		initFunctions();
-		LuaTable math = new LuaTable();
+		LuaTable math = new LuaTableImpl();
 		state.getEnvironment().rawset("math", math);
 
 		math.rawset("pi", LuaState.toDouble(Math.PI));
