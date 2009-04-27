@@ -9,6 +9,7 @@ import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
+import se.krka.kahlua.vm.LuaTableImpl;
 
 /**
  * A tool to automatically expose java classes and
@@ -31,13 +32,13 @@ public class LuaJavaClassFactory {
 			Class superClazz = getSuperClass(clazz);
 			exposeClass(superClazz);
 			
-			LuaTable metatable = new LuaTable();
-			LuaTable indextable = new LuaTable();
+			LuaTable metatable = new LuaTableImpl();
+			LuaTable indextable = new LuaTableImpl();
 			metatable.rawset("__index", indextable);
 			state.setUserdataMetatable(clazz, metatable);
 
 			LuaTable superMetatable = (LuaTable) state.userdataMetatables.rawget(superClazz);
-			indextable.metatable = superMetatable;
+			indextable.setMetatable(superMetatable);
 			populateMethods(clazz, indextable);
 		}
 	}
@@ -153,7 +154,7 @@ public class LuaJavaClassFactory {
 					luaCallFrame.push(((String) returnObject).intern());
 				} else if (returnObject instanceof List) {
 					List l = (List) returnObject;
-					LuaTable t = new LuaTable();
+					LuaTable t = new LuaTableImpl();
 					for (int index = 0; index < l.size(); index++) {
 						t.rawset((double) index + 1, l.get(index));
 					}

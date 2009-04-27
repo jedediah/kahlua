@@ -29,7 +29,7 @@ public class AnnotationTest extends TestCase {
 		JavaFunction func = (JavaFunction) indexTable.rawget("inheritedMethodWithArgs");
 		assertNotNull(func);
 
-		LuaTable inheritedMeta = indexTable.metatable;
+		LuaTable inheritedMeta = indexTable.getMetatable();
 		LuaTable inheritedIndexTable = (LuaTable) inheritedMeta.rawget("__index");
 		func = (JavaFunction) inheritedIndexTable.rawget("baseMethodWithArgs");
 		assertNotNull(func);
