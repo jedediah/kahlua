@@ -125,7 +125,10 @@
 				<include name="contrib/midlet/resources/**" />
 				<include name="contrib/midlet/src/**" />
 				<include name="contrib/midlet/build.xml" />
-				
+
+				<include name="contrib/midlet-interpreter/src/**" />
+				<include name="contrib/midlet-interpreter/build.xml" />
+
 				<exclude name="**/.svn/**" />
 			</fileset>
 		</zip>
