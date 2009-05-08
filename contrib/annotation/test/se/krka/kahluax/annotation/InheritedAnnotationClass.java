@@ -18,6 +18,18 @@ public class InheritedAnnotationClass extends BaseAnnotationClass {
 		this.imba = imba;
 	}
 	
+	@LuaMethod
+	public void inheritedMethodWithMultipleReturns(ReturnValues r) {
+		r.push("Hello");
+		r.push("World");
+	}
+	
+	@LuaMethod
+	public void inheritedMethodWithMultipleReturns2(ReturnValues r, String a) {
+		r.push(a + "Hello");
+		r.push(a + "World");
+	}
+	
 	@LuaMethod(global = true)
 	public void myGlobalFunction(String s, double d, boolean b, int i) {
 		this.s = s;

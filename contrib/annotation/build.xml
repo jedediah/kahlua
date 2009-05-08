@@ -3,6 +3,7 @@
 	<property file="local.properties" />
 
 	<property name="kahlua.classes.dir"       value="${basedir}/../../bin/classes"/>
+	<property name="luaj.jar" value="${basedir}/../../lib/luaj-j2me-0.96.jar" />	
 
 	<property name="src.dir"       value="${basedir}/src"/>
 	<property name="test.src.dir"       value="${basedir}/test"/>
@@ -16,11 +17,13 @@
 	</path>
 
 	<path id="test.build.classpath">
+		<fileset file="${luaj.jar}" />
 		<path refid="kahlua.classpath"/>
 		<pathelement path="${classes.dir}"/>
 	</path>
 
 	<path id="test.run.classpath">
+		<fileset file="${luaj.jar}" />
 		<path refid="test.build.classpath"/>
 		<pathelement path="${classes.dir}"/>
 	</path>

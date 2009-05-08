@@ -141,5 +141,24 @@ public class AnnotationTest extends TestCase {
 		assertEquals(testObject.y, 7);
 	}
 	
+	public void testMethodWithMultipleReturnValues() throws IOException {
+		LuaState state = new LuaState(System.out);
+		LuaJavaClassExposer factory = new LuaJavaClassExposer(state);
+
+		InheritedAnnotationClass testObject = new InheritedAnnotationClass();
+		factory.exposeClass(InheritedAnnotationClass.class);
+		state.getEnvironment().rawset("testObject", testObject);
+
+		String testString = "local a, b = testObject:inheritedMethodWithMultipleReturns(); assert(a == 'Hello', '1st'); assert(b == 'World', '2nd');";
+		LuaClosure closure = LuaCompiler.loadstring(testString, "src", state.getEnvironment());
+		state.call(closure, null);
+		
+		testString = "local a, b = testObject:inheritedMethodWithMultipleReturns2('prefix'); assert(a == 'prefixHello', '1st'); assert(b == 'prefixWorld', '2nd');";
+		closure = LuaCompiler.loadstring(testString, "src", state.getEnvironment());
+		state.call(closure, null);
+		
+	}
+	
+	
 	
 }
