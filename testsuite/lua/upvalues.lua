@@ -1,3 +1,18 @@
+testCall(function()
+	local myfunction
+	local f = function()
+		local upvalue = 123
+		myfunction = function()
+			assert(upvalue == 123)
+			return upvalue
+		end
+		error"an error"
+	end
+	local status, errmsg = pcall(f)
+	assert(status == false)
+	assert(errmsg:find("an error"))
+	assert(myfunction() == 123)
+end)
 
 do
    do

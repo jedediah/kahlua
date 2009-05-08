@@ -97,14 +97,16 @@ public class Test {
 						stacktrace.printStackTrace();
 					}
 				} else {
-					BaseLib.luaAssert(results[1] instanceof LuaTable, "Did not get a table back from " + child + ", got a " + results[1] + " instead.");
+					if (!(results[1] instanceof LuaTable)) {
+						BaseLib.fail(("Did not get a table back from " + child + ", got a " + results[1] + " instead."));
+					}
 					testsuites.rawset(new Double(testsuites.len() + 1.0), results[1]);
 				}
 			}
 		}
 		Object[] results = state.pcall(mergeTestsClosure, new Object[] {"Kahlua", testsuites});
 		if (results[0] != Boolean.TRUE) {
-			BaseLib.luaAssert(false, "" + results[1] + ", " + results[2]);
+			BaseLib.fail("" + results[1] + ", " + results[2]);
 		}
 		Object testParent = results[1];
 		

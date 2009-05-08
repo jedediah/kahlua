@@ -52,17 +52,13 @@ public class LuaThread {
 	public LuaThread(LuaState state, LuaTable environment) {
 		this.state = state;
 		this.environment = environment;
-	}
-
-	private void init() {
-		if (objectStack == null) {
-			objectStack = new Object[INITIAL_STACK_SIZE];
-			callFrameStack = new LuaCallFrame[INITIAL_CALL_FRAME_STACK_SIZE];
-			liveUpvalues = new Vector();
-		}
+		
+		objectStack = new Object[INITIAL_STACK_SIZE];
+		callFrameStack = new LuaCallFrame[INITIAL_CALL_FRAME_STACK_SIZE];
+		liveUpvalues = new Vector();		
 	}
 	
-	public LuaCallFrame pushNewCallFrame(LuaClosure closure, int localBase, int returnBase, int nArguments, boolean fromLua, boolean insideCoroutine) {
+	public final LuaCallFrame pushNewCallFrame(LuaClosure closure, int localBase, int returnBase, int nArguments, boolean fromLua, boolean insideCoroutine) {
 		setCallFrameStackTop(callFrameTop + 1);
 		LuaCallFrame callFrame = currentCallFrame();
 		
@@ -83,7 +79,6 @@ public class LuaThread {
 	}
 	
 	private final void ensureCallFrameStackSize(int index) {
-		init();
 		if (index > MAX_CALL_FRAME_STACK_SIZE) {
 			throw new RuntimeException("Stack overflow");			
 		}
@@ -118,7 +113,6 @@ public class LuaThread {
 	}
 
 	private final void ensureStacksize(int index) {
-		init();
 		if (index > MAX_STACK_SIZE) {
 			throw new RuntimeException("Stack overflow");			
 		}
@@ -194,7 +188,7 @@ public class LuaThread {
 		return uv;				
 	}
 
-	public LuaCallFrame currentCallFrame() {
+	public final LuaCallFrame currentCallFrame() {
 		if (isDead()) {
 			return null;
 		}
@@ -236,11 +230,11 @@ public class LuaThread {
 	
 	public void cleanCallFrames(LuaCallFrame callerFrame) {
 		LuaCallFrame frame;
-		while ((frame = currentCallFrame()) != callerFrame) {
-			if (frame == null) {
+		while (true) {
+			frame = currentCallFrame();
+			if (frame == null || frame == callerFrame) {
 				break;
 			}
-			closeUpvalues(frame.returnBase);
 			addStackTrace(frame);				
 			popCallFrame();
 		}
@@ -256,7 +250,7 @@ public class LuaThread {
 			if (lines != null) {
 				int pc = frame.pc - 1;
 				if (pc >= 0 && pc < lines.length) {
-					return "at " + frame.closure.prototype + ":" + lines[pc] + " (opcode: " + pc + ")\n";
+					return "at " + frame.closure.prototype + ":" + lines[pc] + "\n";
 				}
 			}
 		}

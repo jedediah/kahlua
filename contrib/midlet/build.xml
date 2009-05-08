@@ -4,6 +4,8 @@
 	<property file="local.properties" />
 	
 	<!-- Default properties - please change this to what you want to use, or predefine them in a file called local.properties -->
+
+	<property name="luaj.jar" value="${basedir}/../../lib/luaj-j2me-0.96.jar" />	
 	
 	<property name="wtk.home" value="${basedir}/WTK" />
 	<property name="antenna.jar" value="${basedir}/tools/antenna-bin-0.9.13.jar" />
@@ -21,7 +23,17 @@
 	<fail unless="required.cldc" message="You must place cldcapi11.jar in ${wtk.home}/lib" />	
 	<fail unless="required.midp" message="You must place midpapi20.jar in ${wtk.home}/lib" />	
 
+	<property name="kahlua.jar" value="${basedir}/../../bin/kahlua.jar" />
+	<available property="required.kahlua" file="${kahlua.jar}" />
+	<fail unless="required.kahlua" message="You must package kahlua first" />	
+
+
 	<property name="midlet.mainclass" value="KahluaDemo" />
+	<property name="midlet.jar.name" value="kahluademo" />
+	<property name="midlet.jar.name.jar" value="${basedir}/build/${midlet.jar.name}.jar" />
+	<property name="midlet.jar.name.jad" value="${basedir}/build/${midlet.jar.name}.jad" />
+
+
 
 	<!-- Task definitions -->
 	<taskdef resource="antenna.properties" classpath="${antenna.jar}"/>
@@ -31,11 +43,18 @@
 			<include name="cldcapi11.jar"/>
 			<include name="midpapi20.jar"/>
 		</fileset>
-		<fileset dir="${basedir}/../../lib">
-			<include name="luaj*.jar"/>
-		</fileset>
 	</path>	
 		
+	<path id="include.classpath">
+		<fileset file="${luaj.jar}" />
+		<fileset file="${kahlua.jar}" />
+	</path>	
+
+	<path id="compile.classpath">
+		<path refid="build.buildclasspath" />
+		<path refid="include.classpath" />
+	</path>
+
 	<target name="clean" description="Removes old build files">
 		<delete dir="${basedir}/build/" failonerror="false"/>
 		<mkdir dir="${basedir}/build"/>
@@ -75,8 +94,7 @@
 	*** BUILD ***
 	*************
 	-->
-	<target name="build" depends="clean, compile-lua" description="Compiles a version of the game" >
-		<echo message="Compiling preprocessed release files"/>
+	<target name="compile">
 		<javac
 			destdir="${basedir}/build/classes"
 			source="1.4"
@@ -86,12 +104,14 @@
 			verbose="false"
 			bootclasspathref="build.buildclasspath">
 			<src path="${basedir}/src"/>
-			<src path="${basedir}/../../src"/>
+			<classpath refid="compile.classpath" />
 		</javac>
-		<echo message="Jaring built release files"/>
+	</target>
+
+	<target name="package" depends="compile">
 		<jar
 			basedir="${basedir}/build/classes"
-			jarfile="${basedir}/build/kahluademo.jar"
+			jarfile="${midlet.jar.name.jar}"
 			compress="true"
 			>
 
@@ -111,14 +131,18 @@
 					<attribute name="Implementation-Revision" value="1.0"/>
 				</section>
 			</manifest>
+			
+			<zipfileset src="${kahlua.jar}" excludes="META-INF/*" />
 		</jar>
-        
+	</target>
+
+	<target name="build" depends="clean, compile, compile-lua, package, perform-obfuscation" description="Compiles a version of the game" >
         <property name="wtk.cldc.version" value="1.1" />
         <property name="wtk.midp.version" value="2.0" />
 
 		<exec executable="${wtk.home}/bin/preverify">
 			<arg line="-classpath" />
-			<arg line="${wtk.home}/lib/cldcapi11.jar:${wtk.home}/lib/midpapi20.jar:${basedir}/../../lib/luaj-j2me-0.95.jar" />
+			<arg line="${wtk.home}/lib/cldcapi11.jar:${wtk.home}/lib/midpapi20.jar:${luaj.jar}" />
 			<arg line="-target" />
 			<arg line="CLDC1.1" />
 			<arg line="${basedir}/build/kahluademo.jar" />
@@ -137,7 +161,41 @@
 		</wtkjad>
 	</target>
 
-	<target name="run" description="Run in emulator" depends="build">
+	<target name="with-obfuscation">
+		<property name="do.obfuscate" value="true" />
+	</target>
+
+	<target name="obfuscate" depends="with-obfuscation, build" description="Obfuscates the jar for optimal size">
+	</target>
+
+	<target name="perform-obfuscation" if="do.obfuscate">
+		<available property="required.proguard" file="${proguard.jar}" />
+		<fail unless="required.proguard" message="You must set up proguard.jar to point to the proguard jar" />	
+		<taskdef resource="proguard/ant/task.properties" classpath="${proguard.jar}" />
+		
+		<proguard>
+		  -libraryjars ${wtk.home}/lib/midpapi20.jar
+		  -libraryjars ${wtk.home}/lib/cldcapi11.jar
+		  -libraryjars ${luaj.jar}
+		  -injars      ${midlet.jar.name.jar}
+		  -outjars     ${midlet.jar.name.jar}.obfuscated.jar
+
+			-overloadaggressively
+			-repackageclasses ''
+			-allowaccessmodification
+			-dontusemixedcaseclassnames            
+			-printmapping obfuscation-map.txt
+			-keep public class * extends javax.microedition.midlet.MIDlet
+			-dontoptimize
+	  
+		</proguard>
+
+		<mkdir dir="${basedir}/build/unobfuscated/" />
+		<move toFile="${basedir}/build/unobfuscated/${midlet.jar.name}.jar" file="${midlet.jar.name.jar}" />
+		<move toFile="${midlet.jar.name.jar}" file="${midlet.jar.name.jar}.obfuscated.jar" />
+	</target>
+
+	<target name="run" description="Run in emulator">
         <wtkrun jadfile="${basedir}/build/kahluademo.jad" 
         	heapsize="10000000"
         />

@@ -141,7 +141,9 @@ public class CoroutineLib implements JavaFunction {
 		
 		String status = getStatus(t, callFrame.thread);
 		// equals on strings works because they are both constants
-		BaseLib.luaAssert(status == "suspended", "Can not resume thread that is in status: " + status);
+		if (!(status == "suspended")) {
+			BaseLib.fail(("Can not resume thread that is in status: " + status));
+		}
 
 		LuaThread parent = callFrame.thread;
 		t.parent = parent;

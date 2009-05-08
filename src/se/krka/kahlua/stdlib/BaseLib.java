@@ -27,7 +27,6 @@ import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaException;
 import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
-import se.krka.kahlua.vm.LuaTableImpl;
 import se.krka.kahlua.vm.LuaThread;
 
 public final class BaseLib implements JavaFunction {
@@ -227,7 +226,9 @@ public final class BaseLib implements JavaFunction {
         		return 0;
         	}
         	LuaCallFrame parentCallFrame = callFrame.thread.getParent(level);
-        	luaAssert(parentCallFrame.isLua(), "No closure found at this level: " + level);
+        	if (!parentCallFrame.isLua()) {
+        		fail("No closure found at this level: " + level);
+        	}
 			closure = parentCallFrame.closure;
         }
 
@@ -380,8 +381,12 @@ public final class BaseLib implements JavaFunction {
 
 	public static void luaAssert(boolean b, String msg) {
 		if (!b) {
-			throw new RuntimeException(msg);
+			fail(msg);
 		}
+	}
+
+	public static void fail(String msg) {
+		throw new RuntimeException(msg);
 	}
 
 	public static String numberToString(Double num) {
@@ -435,9 +440,10 @@ public final class BaseLib implements JavaFunction {
 		if (type != null) {
 			// type checking
 			String isType = type(o);
-			luaAssert(type == isType,
-					"bad argument #" + n + " to '" + function +"' (" + type +
+			if (type != isType) {
+				fail("bad argument #" + n + " to '" + function +"' (" + type +
 					" expected, got " + isType + ")");
+			}
 		}
 		return o;
 

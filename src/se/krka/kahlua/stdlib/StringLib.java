@@ -1391,10 +1391,11 @@ public final class StringLib implements JavaFunction {
 		}
 
 		String replType = BaseLib.type(repl);
-		BaseLib.luaAssert(replType == BaseLib.TYPE_FUNCTION ||
-				replType == BaseLib.TYPE_STRING || 
-				replType == BaseLib.TYPE_TABLE, 
-				"string/function/table expected, got "+replType);
+		if (!(replType == BaseLib.TYPE_FUNCTION ||
+						replType == BaseLib.TYPE_STRING || 
+						replType == BaseLib.TYPE_TABLE)) {
+			BaseLib.fail(("string/function/table expected, got "+replType));
+		}
 
 		MatchState ms = new MatchState ();
 		ms.callFrame = cf;

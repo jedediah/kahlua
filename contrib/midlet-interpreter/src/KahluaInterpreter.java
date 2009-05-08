@@ -1,5 +1,3 @@
-import javax.microedition.lcdui.Item;
-
 import java.io.IOException;
 import java.io.PrintStream;
 import javax.microedition.lcdui.Command;
@@ -15,20 +13,23 @@ import se.krka.kahlua.vm.LuaClosure;
 import se.krka.kahlua.vm.LuaState;
 
 
-public class KahluaInterpreter extends MIDlet implements CommandListener {
+public class KahluaInterpreter extends MIDlet implements CommandListener, Runnable {
 	private TextField input;
 	private Command run;
 	private Command exit;
 	private Form form;
 	private LuaState state;
 	private Command clear;
-	private LuaRunner runner;
+	private boolean alive = true;
+
+	private Object notifyObject = new Object();
+	private String source;
 
 	public KahluaInterpreter() {
 		run = new Command("Run", Command.OK, 1);
 		clear = new Command("Clear", Command.OK, 90);
 		exit = new Command("Exit", Command.EXIT, 100);
-		
+
 		form = new Form("Kahlua Interpreter");
 		input = new TextField("Input", "", 200, TextField.ANY);
 
@@ -39,19 +40,26 @@ public class KahluaInterpreter extends MIDlet implements CommandListener {
 		};
 		state = new LuaState(printStream);
 		LuaCompiler.register(state);
-		
+
 		form.setCommandListener(this);
 		form.addCommand(exit);
 		form.addCommand(run);
 		form.addCommand(clear);
-		
+
 		form.append(input);
-		
+
+		new Thread(this).start();
+
 		Display.getDisplay(this).setCurrent(form);
 	}
-	
+
 	protected void destroyApp(boolean arg0) throws MIDletStateChangeException {
+		alive = false;
+		synchronized (notifyObject) {
+			notifyObject.notifyAll();
+		}
 	}
+
 	protected void pauseApp() {
 	}
 	protected void startApp() throws MIDletStateChangeException {
@@ -65,15 +73,16 @@ public class KahluaInterpreter extends MIDlet implements CommandListener {
 		if (command == run) {
 			form.removeCommand(run);
 			clearOutput();
-			String source = input.getString();
+			source = input.getString();
 			if (source.startsWith("=")) {
 				source = "return " + source.substring(1);
 			}
-			runner = new LuaRunner(source);
-			new Thread(runner).start();
+			synchronized (notifyObject) {
+				notifyObject.notifyAll();
+			}
 			return;
 		}
-		
+
 		if (command == clear) {
 			input.setString("");
 			return;
@@ -85,50 +94,53 @@ public class KahluaInterpreter extends MIDlet implements CommandListener {
 			form.delete(i);
 		}
 	}
-	
-	private class LuaRunner implements Runnable {
 
-		private final String source;
+	public void run() {
+		while (alive) {
+			synchronized (notifyObject) {
+				try {
+					notifyObject.wait();
+				} catch (InterruptedException e) {
+					
+				}
+			}
+			if (source != null) {
+				try {
+					state.out.println("Compiling...");
+					LuaClosure closure = LuaCompiler.loadstring(source, "stdin", state.getEnvironment());
+					source = null;
+					clearOutput();
+					state.out.println("Running...");
+					Object[] result = state.pcall(closure);
 
-		public LuaRunner(String source) {
-			this.source = source;
-		}
-
-		public void run() {
-			try {
-				state.out.println("Compiling...");
-				LuaClosure closure = LuaCompiler.loadstring(source, "stdin", state.getEnvironment());
-				clearOutput();
-				state.out.println("Running...");
-				Object[] result = state.pcall(closure);
-				
-				if (result != null) {
-					if (result[0] == Boolean.TRUE) {
-						StringBuffer line = new StringBuffer();
-						for (int i = 1; i < result.length; i++) {
-							if (i > 1) {
-								line.append(", ");
+					if (result != null) {
+						if (result[0] == Boolean.TRUE) {
+							StringBuffer line = new StringBuffer();
+							for (int i = 1; i < result.length; i++) {
+								if (i > 1) {
+									line.append(", ");
+								}
+								line.append(result[i].toString());
 							}
-							line.append(result[i].toString());
-						}
-						state.out.println(line.toString());
-					} else {
-						if (result[1] instanceof String) {
-							state.out.println((String) result[1]);
-						}
-						if (result[2] instanceof String) {
-							state.out.println((String) result[2]);
+							state.out.println(line.toString());
+						} else {
+							if (result[1] instanceof String) {
+								state.out.println((String) result[1]);
+							}
+							if (result[2] instanceof String) {
+								state.out.println((String) result[2]);
+							}
 						}
 					}
+				} catch (RuntimeException e) {
+					state.out.println(e.getMessage());
+				} catch (IOException e) {
+					state.out.println(e.getMessage());
 				}
-			} catch (RuntimeException e) {
-				state.out.println(e.getMessage());
-			} catch (IOException e) {
-				state.out.println(e.getMessage());
+				// delete the "running..." text
+				form.delete(1);
+				form.addCommand(run);
 			}
-			// delete the "running..." text
-			form.delete(1);
-			form.addCommand(run);
-		}		
+		}
 	}
 }

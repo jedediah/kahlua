@@ -11,5 +11,5 @@ public @interface LuaMethod {
 	String UNASSIGNED = "[unassigned]";
 
 	public String alias() default UNASSIGNED;
-
+	public boolean global() default false;
 }
