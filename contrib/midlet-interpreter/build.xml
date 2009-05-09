@@ -5,8 +5,6 @@
 	
 	<!-- Default properties - please change this to what you want to use, or predefine them in a file called local.properties -->
 
-	<property name="luaj.jar" value="${basedir}/../../lib/luaj-j2me-0.96.jar" />	
-
 	<property name="wtk.home" value="${basedir}/WTK" />
 	<property name="antenna.jar" value="${basedir}/tools/antenna-bin-0.9.13.jar" />
 	
@@ -42,7 +40,6 @@
 	</path>	
 		
 	<path id="include.classpath">
-		<fileset file="${luaj.jar}" />
 		<fileset file="${kahlua.jar}" />
 	</path>	
 
@@ -102,7 +99,6 @@
 			</manifest>
 			
 			
-			<zipfileset src="${luaj.jar}" excludes="META-INF/*" />
 			<zipfileset src="${kahlua.jar}" excludes="META-INF/*" />
 		</jar>
 	</target>

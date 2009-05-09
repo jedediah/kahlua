@@ -5,8 +5,6 @@
 	
 	<!-- Default properties - please change this to what you want to use, or predefine them in a file called local.properties -->
 
-	<property name="luaj.jar" value="${basedir}/../../lib/luaj-j2me-0.96.jar" />	
-	
 	<property name="wtk.home" value="${basedir}/WTK" />
 	<property name="antenna.jar" value="${basedir}/tools/antenna-bin-0.9.13.jar" />
 	<property name="luac.path" value="luac" />
@@ -46,7 +44,6 @@
 	</path>	
 		
 	<path id="include.classpath">
-		<fileset file="${luaj.jar}" />
 		<fileset file="${kahlua.jar}" />
 	</path>	
 
@@ -142,7 +139,7 @@
 
 		<exec executable="${wtk.home}/bin/preverify">
 			<arg line="-classpath" />
-			<arg line="${wtk.home}/lib/cldcapi11.jar:${wtk.home}/lib/midpapi20.jar:${luaj.jar}" />
+			<arg line="${wtk.home}/lib/cldcapi11.jar:${wtk.home}/lib/midpapi20.jar" />
 			<arg line="-target" />
 			<arg line="CLDC1.1" />
 			<arg line="${basedir}/build/kahluademo.jar" />
@@ -176,7 +173,6 @@
 		<proguard>
 		  -libraryjars ${wtk.home}/lib/midpapi20.jar
 		  -libraryjars ${wtk.home}/lib/cldcapi11.jar
-		  -libraryjars ${luaj.jar}
 		  -injars      ${midlet.jar.name.jar}
 		  -outjars     ${midlet.jar.name.jar}.obfuscated.jar
 
