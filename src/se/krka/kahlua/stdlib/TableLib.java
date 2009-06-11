@@ -129,15 +129,40 @@ public final class TableLib implements JavaFunction {
 	}
 	
 	public static void insert (LuaState state, LuaTable table, Object element) {
-		insert(state, table, table.len() + 1, element);
+		append(state, table, element);
 	}
 
-	public static void insert (LuaState state, LuaTable table, int position, Object element) {
+	public static void append(LuaState state, LuaTable table, Object element) {
+		int position = 1 + table.len();
+		state.tableSet(table, LuaState.toDouble(position), element);
+	}
+
+	public static void rawappend(LuaTable table, Object element) {
+		int position = 1 + table.len();
+		table.rawset(LuaState.toDouble(position), element);
+	}
+
+	public static void insert(LuaState state, LuaTable table, int position, Object element) {
 		int len = table.len();
 		for (int i = len; i >= position; i--) {
 			state.tableSet(table, LuaState.toDouble(i+1), state.tableGet(table, LuaState.toDouble(i)));
 		}
 		state.tableSet(table, LuaState.toDouble(position), element);
+	}
+
+	public static void rawinsert(LuaTable table, int position, Object element) {
+		int len = table.len();
+		if (position <= len) {
+			Double dest = LuaState.toDouble(len + 1);
+			for (int i = len; i >= position; i--) {
+				Double src = LuaState.toDouble(i);
+				table.rawset(dest, table.rawget(src));
+				dest = src;
+			}
+			table.rawset(dest, element);
+		} else {
+			table.rawset(LuaState.toDouble(position), element);
+		}
 	}
 
 	private static int insert (LuaCallFrame callFrame, int nArguments) {

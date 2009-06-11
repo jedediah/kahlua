@@ -20,33 +20,16 @@
  THE SOFTWARE.
  */
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+package se.krka.kahlua.integration.annotations;
 
-import se.krka.kahlua.luaj.compiler.LuaCompiler;
-import se.krka.kahlua.vm.LuaClosure;
-import se.krka.kahlua.vm.LuaTable;
-import se.krka.kahlua.vm.LuaTableImpl;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class LuaC {
-	
-	public static void main(String[] args) throws FileNotFoundException, IOException {
-		if (args.length < 2) {
-			System.err.println("Not enough arguments");
-			System.err.println("Syntax: java LuaC <input.lua> <output.lbc>");
-			System.exit(1);
-		}
-		
-		File input = new File(args[0]);
-		System.out.println("Input: " + input.getCanonicalPath());
-		File output = new File(args[1]);
-		System.out.println("Output: " + output.getCanonicalPath());
-		
-		LuaTable table = new LuaTableImpl();
-		LuaClosure closure = LuaCompiler.loadis(new FileInputStream(input), input.getName(), table);
-		closure.prototype.dump(new FileOutputStream(output));
-	}
+@Retention(RetentionPolicy.SOURCE)
+@Target({ElementType.PARAMETER, ElementType.METHOD, ElementType.TYPE, ElementType.CONSTRUCTOR})
+
+public @interface Desc {
+	public String value();
 }

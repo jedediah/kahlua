@@ -1,3 +1,5 @@
+testAssert = testAssert or assert
+
 local function count(t)
 	local n = 0
 	for k in next, t do
@@ -64,5 +66,16 @@ do
 		collectgarbage()
 		testAssert(count(t) == 0)
 	end
+end
+
+
+do
+	local t = setmetatable({}, {__mode = "kv"})
+	local key = {}
+	t[key] = key
+	assert(next(t) == key)
+	key = nil
+	collectgarbage()
+	assert(next(t) == nil)
 end
 

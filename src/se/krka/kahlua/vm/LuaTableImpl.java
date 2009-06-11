@@ -409,4 +409,12 @@ public final class LuaTableImpl implements LuaTable {
 	public void setMetatable(LuaTable metatable) {
 		this.metatable = metatable;
 	}
+
+	public Object rawget(int key) {
+		return rawget(LuaState.toDouble(key));
+	}
+
+	public void rawset(int key, Object value) {
+		rawset(LuaState.toDouble(key), value);
+	}
 }

@@ -20,33 +20,39 @@
  THE SOFTWARE.
  */
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+package se.krka.kahlua.integration.expose.caller;
 
-import se.krka.kahlua.luaj.compiler.LuaCompiler;
-import se.krka.kahlua.vm.LuaClosure;
-import se.krka.kahlua.vm.LuaTable;
-import se.krka.kahlua.vm.LuaTableImpl;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import se.krka.kahlua.integration.expose.ReturnValues;
 
-public class LuaC {
+public class ConstructorCaller implements Caller {
+
+	private final Constructor<?> constructor;
+	private final Class<?>[] parameterTypes;
+
+	public ConstructorCaller(Constructor<?> constructor) {
+		this.constructor = constructor;
+		parameterTypes = constructor.getParameterTypes();
+	}
 	
-	public static void main(String[] args) throws FileNotFoundException, IOException {
-		if (args.length < 2) {
-			System.err.println("Not enough arguments");
-			System.err.println("Syntax: java LuaC <input.lua> <output.lbc>");
-			System.exit(1);
-		}
-		
-		File input = new File(args[0]);
-		System.out.println("Input: " + input.getCanonicalPath());
-		File output = new File(args[1]);
-		System.out.println("Output: " + output.getCanonicalPath());
-		
-		LuaTable table = new LuaTableImpl();
-		LuaClosure closure = LuaCompiler.loadis(new FileInputStream(input), input.getName(), table);
-		closure.prototype.dump(new FileOutputStream(output));
+	@Override
+	public void call(Object self, ReturnValues rv, Object[] params) throws IllegalArgumentException, InstantiationException, IllegalAccessException, InvocationTargetException {
+		rv.push(constructor.newInstance(params));
+	}
+
+	@Override
+	public Class<?>[] getParameterTypes() {
+		return parameterTypes;
+	}
+
+	@Override
+	public boolean needsMultipleReturnValues() {
+		return false;
+	}
+
+	@Override
+	public boolean hasSelf() {
+		return false;
 	}
 }

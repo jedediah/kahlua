@@ -183,7 +183,7 @@
 			sort="+class,+method,+name,+block"
 			metrics="method:100,block:90,line:80,class:100"
 		>
-			<arg value="${test.lua.output.dir}" />
+			<arg value="${test.lua.input.dir}" />
 			<arg value="${test.file}" />
 
 			<filter includes="se.krka.kahlua.*" />

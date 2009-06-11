@@ -22,34 +22,59 @@ function pairs(t)
 end
 
 do
-	local function partition(tbl, left, right, pivot, comp)
+	local function partition_nocomp(tbl, left, right, pivot)
 		local pval = tbl[pivot]
-		tbl[pivot], tbl[right] = tbl[right], tbl[pivot]
+		tbl[pivot], tbl[right] = tbl[right], pval
 		local store = left
 		for v = left, right - 1, 1 do
-			if comp(tbl[v], pval) then
-				tbl[v], tbl[store] = tbl[store], tbl[v]
+			local vval = tbl[v]
+			if vval < pval then
+				tbl[v], tbl[store] = tbl[store], vval
 				store = store + 1
 			end
 		end
 		tbl[store], tbl[right] = tbl[right], tbl[store]
 		return store
 	end
-	local function quicksort(tbl, left, right, comp)
+	local function quicksort_nocomp(tbl, left, right)
 		if right > left then
 			local pivot = left
-			local newpivot = partition(tbl,left,right,pivot, comp)
-			quicksort(tbl,left,newpivot-1, comp)
-			return quicksort(tbl,newpivot+1,right, comp)
+			local newpivot = partition_nocomp(tbl,left,right,pivot)
+			quicksort_nocomp(tbl,left,newpivot-1)
+			return quicksort_nocomp(tbl,newpivot+1,right)
+		end
+		return tbl
+	end
+
+	local function partition_comp(tbl, left, right, pivot, comp)
+		local pval = tbl[pivot]
+		tbl[pivot], tbl[right] = tbl[right], pval
+		local store = left
+		for v = left, right - 1, 1 do
+			local vval = tbl[v]
+			if comp(vval, pval) then
+				tbl[v], tbl[store] = tbl[store], vval
+				store = store + 1
+			end
+		end
+		tbl[store], tbl[right] = tbl[right], tbl[store]
+		return store
+	end
+	local function quicksort_comp(tbl, left, right, comp)
+		if right > left then
+			local pivot = left
+			local newpivot = partition_comp(tbl,left,right,pivot, comp)
+			quicksort_comp(tbl,left,newpivot-1, comp)
+			return quicksort_comp(tbl,newpivot+1,right, comp)
 		end
 		return tbl
 	end
 
 	function table.sort(tbl, comp) -- quicksort
-	    if not comp then
-		comp = function(one,two) return one < two end
+	    if comp then
+		    return quicksort_comp(tbl,1, #tbl, comp)
 	    end
-	    return quicksort(tbl,1, #tbl, comp)
+    	return quicksort_nocomp(tbl, 1, #tbl)
 	end
 end
 

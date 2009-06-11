@@ -74,11 +74,13 @@ public class OsLib implements JavaFunction {
 	private static final String SEC = "sec";
 	private static final String WDAY = "wday";
 	private static final String YDAY = "yday";
+	private static final Object MILLISECOND = "milli";
 	//private static final String ISDST = "isdst";
 
 	private static TimeZone tzone = TimeZone.getTimeZone("UTC");
 	
 	public static final int TIME_DIVIDEND = 1000; // number to divide by for converting from milliseconds.
+	public static final double TIME_DIVIDEND_INVERTED = 1.0 / TIME_DIVIDEND; // number to divide by for converting from milliseconds.
 	private static final int MILLIS_PER_DAY = TIME_DIVIDEND * 60 * 60 * 24;
 	private static final int MILLIS_PER_WEEK = MILLIS_PER_DAY * 7;
 	
@@ -99,17 +101,19 @@ public class OsLib implements JavaFunction {
 
 	private int time(LuaCallFrame cf, int nargs) {
 		if (nargs == 0) {
-			cf.push(LuaState.toDouble(((System.currentTimeMillis() / TIME_DIVIDEND))));
+			double t = (double) System.currentTimeMillis() * TIME_DIVIDEND_INVERTED;
+			cf.push(LuaState.toDouble(t));
 		} else {
-			LuaTable t = (LuaTable)BaseLib.getArg(cf, 1, BaseLib.TYPE_TABLE, "time");
-			cf.push(LuaState.toDouble(getDateFromTable(t).getTime() / TIME_DIVIDEND));
+			LuaTable table = (LuaTable) BaseLib.getArg(cf, 1, BaseLib.TYPE_TABLE, "time");
+			double t = (double) getDateFromTable(table).getTime() * TIME_DIVIDEND_INVERTED;
+			cf.push(LuaState.toDouble(t));
 		}
 		return 1;
 	}
 
 	private int difftime(LuaCallFrame cf, int nargs) {
-		long t2 = BaseLib.rawTonumber(cf.get(0)).longValue();
-		long t1 = BaseLib.rawTonumber(cf.get(1)).longValue();
+		double t2 = BaseLib.rawTonumber(cf.get(0)).doubleValue();
+		double t1 = BaseLib.rawTonumber(cf.get(1)).doubleValue();
 		cf.push(LuaState.toDouble(t2-t1));
 		return 1;
 	}
@@ -117,11 +121,15 @@ public class OsLib implements JavaFunction {
 	private int date(LuaCallFrame cf, int nargs) {
 		if (nargs == 0) {
 			return cf.push(getdate(DEFAULT_FORMAT));
-		} else if (nargs == 1) {
-			return cf.push(getdate(BaseLib.rawTostring(cf.get(0))));
 		} else {
-			return cf.push(getdate(BaseLib.rawTostring(cf.get(0)), 
-					               BaseLib.rawTonumber(cf.get(1)).longValue() * TIME_DIVIDEND));
+			String format = BaseLib.rawTostring(cf.get(0));
+			if (nargs == 1) {
+				return cf.push(getdate(format));
+			} else {
+				Double rawTonumber = BaseLib.rawTonumber(cf.get(1));
+				long time = (long) (rawTonumber.doubleValue() * TIME_DIVIDEND);
+				return cf.push(getdate(format, time));
+			}
 		}
 	}
 
@@ -233,6 +241,7 @@ public class OsLib implements JavaFunction {
 		time.rawset(SEC, LuaState.toDouble(c.get(Calendar.SECOND)));
 		time.rawset(WDAY, LuaState.toDouble(c.get(Calendar.DAY_OF_WEEK)));
 		time.rawset(YDAY, LuaState.toDouble(getDayOfYear(c)));
+		time.rawset(MILLISECOND, LuaState.toDouble(c.get(Calendar.MILLISECOND)));
 		//time.rawset(ISDST, null);
 		return time;
 	}
@@ -250,6 +259,7 @@ public class OsLib implements JavaFunction {
 		Object hour = time.rawget(HOUR);
 		Object minute = time.rawget(MIN);
 		Object seconds = time.rawget(SEC);
+		Object milliseconds = time.rawget(MILLISECOND);
 		//Object isDst = time.rawget(ISDST);
 		if (hour != null) {
 			c.set(Calendar.HOUR_OF_DAY,(int)LuaState.fromDouble(hour));
@@ -265,6 +275,11 @@ public class OsLib implements JavaFunction {
 			c.set(Calendar.SECOND,(int)LuaState.fromDouble(seconds));
 		} else {
 			c.set(Calendar.SECOND, 0);
+		}
+		if (milliseconds != null) {
+			c.set(Calendar.MILLISECOND, (int)LuaState.fromDouble(milliseconds));
+		} else {
+			c.set(Calendar.MILLISECOND, 0);
 		}
 		// TODO: daylight savings support(is it possible?)
 		return c.getTime();

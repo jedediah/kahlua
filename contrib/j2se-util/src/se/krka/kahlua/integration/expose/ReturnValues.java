@@ -20,33 +20,44 @@
  THE SOFTWARE.
  */
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+package se.krka.kahlua.integration.expose;
 
-import se.krka.kahlua.luaj.compiler.LuaCompiler;
-import se.krka.kahlua.vm.LuaClosure;
-import se.krka.kahlua.vm.LuaTable;
-import se.krka.kahlua.vm.LuaTableImpl;
+import se.krka.kahlua.converter.LuaConversionError;
+import se.krka.kahlua.converter.LuaConverterManager;
+import se.krka.kahlua.vm.LuaCallFrame;
 
-public class LuaC {
+public class ReturnValues {
+	private final LuaConverterManager manager;
 	
-	public static void main(String[] args) throws FileNotFoundException, IOException {
-		if (args.length < 2) {
-			System.err.println("Not enough arguments");
-			System.err.println("Syntax: java LuaC <input.lua> <output.lbc>");
-			System.exit(1);
+	private LuaCallFrame callFrame;
+	private int args;
+	
+	ReturnValues(LuaConverterManager manager) {
+		this.manager = manager;		
+	}
+	
+	void reset(LuaCallFrame callFrame) {
+		this.callFrame = callFrame;
+		args = 0;
+	}
+	
+	public ReturnValues push(Object o) {
+		try {
+			args += callFrame.push(manager.fromJavaToLua(o));
+			return this;
+		} catch (LuaConversionError e) {
+			throw new RuntimeException(e);
 		}
-		
-		File input = new File(args[0]);
-		System.out.println("Input: " + input.getCanonicalPath());
-		File output = new File(args[1]);
-		System.out.println("Output: " + output.getCanonicalPath());
-		
-		LuaTable table = new LuaTableImpl();
-		LuaClosure closure = LuaCompiler.loadis(new FileInputStream(input), input.getName(), table);
-		closure.prototype.dump(new FileOutputStream(output));
+	}
+	
+	public ReturnValues push(Object... params) {
+		for (Object o: params) {
+			push(o);
+		}
+		return this;
+	}
+	
+	int getNArguments() {
+		return args;
 	}
 }
