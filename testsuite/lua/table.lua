@@ -8,10 +8,12 @@ testAssert(next(t), "next must not be nil")
 
 do
    local c = 0
-   for k in pairs(t) do
+   local s = ""
+   for k, v in pairs(t) do
+   	s = s .. ", " .. k .. "=" .. v
       c = c + 1
    end
-   testAssert(c == 100, "wrong number of elements in table")
+   testAssert(c == 100, "wrong number of elements in table: was " .. c .. s)
 end
 
 testCall(function()
@@ -57,11 +59,11 @@ end
 
 
 local status, errmsg = pcall(function() local t = {} t[0/0] = 1 end)
-testAssert(not status)
+testAssert(status == false)
 testAssert(endswith(errmsg, "table index is NaN"))
 
 local status, errmsg = pcall(function() local t = {} t[nil] = 1 end)
-testAssert(not status)
+testAssert(status == false, "status was " .. tostring(status))
 testAssert(endswith(errmsg, "table index is nil"))
 
 local status, errmsg = pcall(function() local t = {} next(t, "bad key") end)

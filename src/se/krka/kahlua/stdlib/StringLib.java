@@ -809,6 +809,9 @@ public final class StringLib implements JavaFunction {
 		}
 
 		public Object[] getCaptures() {
+			if (level <= 0) {
+				return null;
+			}
 			Object[] caps = new String[level];
 			for (int i = 0; i < level; i++) {
 				if (capture[i].len == CAP_POSITION) {
@@ -1432,12 +1435,22 @@ public final class StringLib implements JavaFunction {
 		String type = BaseLib.type(repl);
 		if (type == BaseLib.TYPE_NUMBER || type == BaseLib.TYPE_STRING) {
 			b.append(addString (ms, repl, src, e));
-		} else if (type == BaseLib.TYPE_FUNCTION) {
-			Object res = ms.callFrame.thread.state.call(repl,ms.getCaptures());
-			b.append(res);
-		} else if (type == BaseLib.TYPE_TABLE) {
-			Object cap = ms.getCaptures()[0];
-			b.append(((LuaTable)repl).rawget(cap));
+		} else {
+			String match = src.getString().substring(0, e.getIndex() - src.getIndex());
+			Object[] captures = ms.getCaptures();
+			if (captures != null) {
+				match = BaseLib.rawTostring(captures[0]);
+			}
+			Object res = null;
+			if (type == BaseLib.TYPE_FUNCTION) {
+				res = ms.callFrame.thread.state.call(repl, match, null, null);
+			} else if (type == BaseLib.TYPE_TABLE) {
+				res = ((LuaTable)repl).rawget(match);
+			}
+			if (res == null) {
+				res = match;
+			}
+			b.append(BaseLib.rawTostring(res));
 		}
 	}
 

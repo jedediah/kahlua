@@ -22,6 +22,10 @@
 
 package se.krka.kahlua.luaj.compiler;
 
+import java.io.InputStreamReader;
+
+import java.io.Reader;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -110,8 +114,12 @@ public class LuaCompiler implements JavaFunction {
 	}
 
 	public static LuaClosure loadis(InputStream inputStream, String name, LuaTable environment) throws IOException {
+		return loadis(new InputStreamReader(inputStream), name, environment);
+	}
+	
+	public static LuaClosure loadis(Reader reader, String name, LuaTable environment) throws IOException {
 		BaseLib.luaAssert(name != null, "no name given the compilation unit");
-		return new LuaClosure(LexState.compile(inputStream.read(), inputStream, name), environment);		
+		return new LuaClosure(LexState.compile(reader.read(), reader, name), environment);		
 	}
 	
 	public static LuaClosure loadstring(String source, String name, LuaTable environment) throws IOException {

@@ -22,6 +22,8 @@
 
 package se.krka.kahlua.integration.processor;
 
+import se.krka.kahlua.vm.LuaException;
+
 import se.krka.kahlua.integration.expose.ReturnValues;
 
 import se.krka.kahlua.integration.annotations.LuaConstructor;

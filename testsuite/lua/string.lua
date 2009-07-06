@@ -193,6 +193,24 @@ do
 	testAssertEqual(string.gsub("a", "a", "%"), "\0", nil, "gsub %")
 end
 
+do
+	-- "when no captures are present, pass the whole match"
+	-- if the function/table returns something other than string, no replacement is performed
+	local function f(s)
+		if (s == "a") then
+			return "A"
+		elseif (s == "b") then
+			return 6
+		end
+	end
+	testAssertEqual(string.gsub("ahoj babi", ".", f), "Ahoj 6A6i")
+
+	local tbl = { a='A', b=6 }
+	testAssertEqual(string.gsub("ahoj babi", ".", tbl), "Ahoj 6A6i")
+	
+	testAssertEqual(string.gsub("ahoj babi", "[ab]", 1), "1hoj 111i")
+	testAssertEqual(string.gsub("ahoj babi", "[ab]", "XY"), "XYhoj XYXYXYi")
+end
 
 do
 	local s2 = "abcdabcd"

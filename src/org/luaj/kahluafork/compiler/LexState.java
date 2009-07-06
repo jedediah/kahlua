@@ -22,12 +22,10 @@
 package org.luaj.kahluafork.compiler;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.util.Hashtable;
-
 import org.luaj.kahluafork.compiler.FuncState.BlockCnt;
-
 import se.krka.kahlua.vm.LuaException;
 import se.krka.kahlua.vm.LuaPrototype;
 
@@ -131,7 +129,7 @@ public class LexState {
 	final Token t = new Token();  /* current token */
 	final Token lookahead = new Token();  /* look ahead token */
 	FuncState fs;  /* `FuncState' is private to the parser */
-	InputStream z;  /* input stream */
+	Reader z;  /* input stream */
 	byte[] buff;  /* buffer for tokens */
 	int nbuff; /* length of buffer */
 	String source;  /* current source name */
@@ -189,7 +187,7 @@ public class LexState {
 		return (c <= ' ');
 	}
 	
-	public static LuaPrototype compile(int firstByte, InputStream z, String name) {
+	public static LuaPrototype compile(int firstByte, Reader z, String name) {
 		LexState lexstate = new LexState(z);
 		FuncState funcstate = new FuncState();
 		// lexstate.buff = buff;
@@ -208,7 +206,7 @@ public class LexState {
 		return funcstate.f;
 	}
 	
-	public LexState(InputStream stream) {
+	public LexState(Reader stream) {
 		this.z = stream;
 		this.buff = new byte[32];
 	}
@@ -327,7 +325,7 @@ public class LexState {
 			syntaxerror("chunk has too many lines");
 	}
 
-	void setinput(int firstByte, InputStream z, String source ) {
+	void setinput(int firstByte, Reader z, String source ) {
 		this.decpoint = '.';
 		this.lookahead.token = TK_EOS; /* no look-ahead token */
 		this.z = z;
