@@ -106,11 +106,11 @@ public final class TableLib implements JavaFunction {
 		if (param instanceof LuaTable && arguments == 1) {
 			LuaTable t = (LuaTable) param;
 			int n = t.len();
-			for (int i = 1; i <= n; i++) {
+			for (int i = n; i >= 1; i--) {
 				ret.rawset(i, t.rawget(i));
 			}
 		} else {
-            for (int i = 1; i <= arguments; i++) {
+            for (int i = arguments; i >= 1; i--) {
                 ret.rawset(i, callFrame.get(i - 1));
             }
         }

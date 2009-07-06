@@ -43,12 +43,15 @@ public class LuaArray implements LuaTable {
         if (index <= 0) {
             BaseLib.fail("Index out of range: " + index);
         }
-        if (index > len) {
+        if (index >= len) {
 	        if (value == null) {
+	        	if (index == len) {
+	                data[index - 1] = value;
+	                recalculateLen = true;
+	        	}
 	        	return;
 	        }
-            int maxLen = 1 + data.length;
-            if (maxLen < index) {
+            if (data.length < index) {
                 int newMaxLen = 2 * index;
                 int newCap = newMaxLen - 1;
                 Object[] newData = new Object[newCap];
@@ -56,10 +59,6 @@ public class LuaArray implements LuaTable {
                 data = newData;
             }
             len = index;
-        } else if (index == len) {
-            if (value == null) {
-                recalculateLen = true;
-            }
         }
         data[(index - 1)] = value;
     }
