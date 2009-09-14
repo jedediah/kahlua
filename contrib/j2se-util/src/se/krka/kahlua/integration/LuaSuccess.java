@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2009 Per Malmén <per.malmen@gmail.com>
+ Copyright (c) 2009 Per MalmÃ©n <per.malmen@gmail.com>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -55,22 +55,26 @@ public class LuaSuccess extends LuaReturn {
 
 	@Override
 	Object getFirst() {
-		return returnValues[1];
+		return getReturnValue(0);
 	}
 
 	@Override
 	Object getSecond() {
-		return returnValues[2];
+		return getReturnValue(1);
 	}
 
 	@Override
 	Object getThird() {
-		return returnValues[3];
+		return getReturnValue(2);
 	}
 
 	@Override
 	Object getReturnValue(int index) {
-		return returnValues[index + 1];
+		int realIndex = index + 1;
+		if (realIndex >= returnValues.length || realIndex < 1) {
+			return null;
+		}
+		return returnValues[realIndex];
 	}
 
 	@Override
