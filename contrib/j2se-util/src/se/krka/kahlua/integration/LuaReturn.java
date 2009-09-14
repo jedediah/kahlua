@@ -32,17 +32,17 @@ public abstract class LuaReturn {
 	public abstract boolean isSuccess();
 
 	// valid when success == false, otherwise throws some exception
-	abstract Object getErrorObject();
-	abstract String getErrorString();
-	abstract String getLuaStackTrace();
-	abstract Exception getJavaException();
+	public abstract Object getErrorObject();
+	public abstract String getErrorString();
+	public abstract String getLuaStackTrace();
+	public abstract Exception getJavaException();
 
 	// valid when success == true, otherwise throws some exception
-	abstract Object getFirst();
-	abstract Object getSecond();
-	abstract Object getThird();
-	abstract Object getReturnValue(int index); // starts at 0
-	abstract Object getNumReturnValues();  
+	public abstract Object getFirst();
+	public abstract Object getSecond();
+	public abstract Object getThird();
+	public abstract Object getReturnValue(int index); // starts at 0
+	public abstract Object getNumReturnValues();
 
 	public static LuaReturn createReturn(Object[] returnValues) {
 		Boolean success = (Boolean) returnValues[0];

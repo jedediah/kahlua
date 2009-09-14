@@ -36,7 +36,7 @@ public class LuaFail extends LuaReturn {
 	}
 
 	@Override
-	Object getErrorObject() {
+	public Object getErrorObject() {
 		if (returnValues.length >= 2) {
 			return returnValues[1];
 		}
@@ -44,7 +44,7 @@ public class LuaFail extends LuaReturn {
 	}
 
 	@Override
-	String getErrorString() {
+	public String getErrorString() {
 		if (returnValues.length >= 2 && returnValues[1] != null) {
 			return BaseLib.rawTostring(returnValues[1]);
 		}
@@ -52,7 +52,7 @@ public class LuaFail extends LuaReturn {
 	}
 
 	@Override
-	String getLuaStackTrace() {
+	public String getLuaStackTrace() {
 		if (returnValues.length >= 3 && returnValues[2] instanceof String) {
 			return (String) returnValues[2];
 		}
@@ -60,7 +60,7 @@ public class LuaFail extends LuaReturn {
 	}
 
 	@Override
-	Exception getJavaException() {
+	public Exception getJavaException() {
 		if (returnValues.length >= 4 && returnValues[3] instanceof Exception) {
 			return (Exception) returnValues[3];
 		}
@@ -68,27 +68,27 @@ public class LuaFail extends LuaReturn {
 	}
 
 	@Override
-	Object getFirst() {
+	public Object getFirst() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is false");
 	}
 
 	@Override
-	Object getSecond() {
+	public Object getSecond() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is false");
 	}
 
 	@Override
-	Object getThird() {
+	public Object getThird() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is false");
 	}
 
 	@Override
-	Object getReturnValue(int index) {
+	public Object getReturnValue(int index) {
 		throw new UnsupportedOperationException("Not valid when isSuccess is false");
 	}
 
 	@Override
-	Object getNumReturnValues() {
+	public Object getNumReturnValues() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is false");
 	}
 }

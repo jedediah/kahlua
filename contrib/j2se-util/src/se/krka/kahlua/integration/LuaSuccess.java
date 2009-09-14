@@ -34,42 +34,42 @@ public class LuaSuccess extends LuaReturn {
 	}
 
 	@Override
-	Object getErrorObject() {
+	public Object getErrorObject() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is true");
 	}
 
 	@Override
-	String getErrorString() {
+	public String getErrorString() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is true");
 	}
 
 	@Override
-	String getLuaStackTrace() {
+	public String getLuaStackTrace() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is true");
 	}
 
 	@Override
-	Exception getJavaException() {
+	public Exception getJavaException() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is true");
 	}
 
 	@Override
-	Object getFirst() {
+	public Object getFirst() {
 		return getReturnValue(0);
 	}
 
 	@Override
-	Object getSecond() {
+	public Object getSecond() {
 		return getReturnValue(1);
 	}
 
 	@Override
-	Object getThird() {
+	public Object getThird() {
 		return getReturnValue(2);
 	}
 
 	@Override
-	Object getReturnValue(int index) {
+	public Object getReturnValue(int index) {
 		int realIndex = index + 1;
 		if (realIndex >= returnValues.length || realIndex < 1) {
 			return null;
@@ -78,7 +78,7 @@ public class LuaSuccess extends LuaReturn {
 	}
 
 	@Override
-	Object getNumReturnValues() {
+	public Object getNumReturnValues() {
 		return returnValues.length - 1;
 	}
 }
