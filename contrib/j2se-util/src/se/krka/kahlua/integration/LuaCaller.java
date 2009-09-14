@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2009 Kristofer Karlsson <kristofer.karlsson@gmail.com>
+ Copyright (c) 2009 Kristofer Karlsson <kristofer.karlsson@gmail.com>, Per Malmén <per.malmen@gmail.com>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,6 @@ package se.krka.kahlua.integration;
 
 import se.krka.kahlua.converter.LuaConversionError;
 import se.krka.kahlua.converter.LuaConverterManager;
-
 import se.krka.kahlua.vm.LuaState;
 
 public class LuaCaller {
@@ -47,5 +46,9 @@ public class LuaCaller {
 		}
 		Object[] results = state.pcall(functionObject, args);
 		return results;
-	}	
+	}
+
+	public LuaReturn protectedCall(LuaState state, Object functionObject, Object... args) {
+		return LuaReturn.createReturn(pcall(state, functionObject, args));
+	}
 }
