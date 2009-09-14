@@ -18,6 +18,9 @@ public class ScriptEngineTest {
 	public void testScriptEngine() throws ScriptException {
 		ScriptEngineManager scriptEngineManager = new ScriptEngineManager();
 		
+		// TODO: figure out the real way to register an engine, so only a jar needs to be supplied.
+		scriptEngineManager.registerEngineName("kahlua", new KahluaEngineFactory());
+		
 		ScriptEngine engine = scriptEngineManager.getEngineByName("kahlua");
 		assertNotNull("Kahlua engine is not installed", engine);
 		Object eval = engine.eval("return 1*2*3*4*5*6");

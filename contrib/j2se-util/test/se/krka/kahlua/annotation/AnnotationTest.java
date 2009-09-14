@@ -17,6 +17,7 @@ import se.krka.kahlua.integration.expose.LuaJavaClassExposer;
 import se.krka.kahlua.converter.LuaConverterManager;
 import se.krka.kahlua.converter.LuaNumberConverter;
 import se.krka.kahlua.converter.LuaTableConverter;
+import se.krka.kahlua.converter.LuaConversionError;
 
 import se.krka.kahlua.integration.processor.LuaClassDebugInformation;
 import se.krka.kahlua.integration.processor.LuaMethodDebugInformation;
@@ -27,6 +28,7 @@ import se.krka.kahlua.integration.processor.LuaMethodDebugInformation;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Map;
 import org.junit.Before;
 import se.krka.kahlua.luaj.compiler.LuaCompiler;
 import se.krka.kahlua.vm.LuaClosure;
@@ -272,25 +274,17 @@ public class AnnotationTest {
 	}
 	
 	@Test
-	public void testGetExposedClasses() {
+	public void testGetExposedClasses() throws LuaConversionError {
 
 		factory.exposeClass(InheritedAnnotationClass.class);
 		LuaTable exposedClasses = factory.getExposedClasses();
 		assertNotNull(exposedClasses);
 		
-		Object key = null;
-		LuaTable value;
 		
-		key = exposedClasses.next(key);
-		assertEquals(key, InheritedAnnotationClass.class.getName());
-		value = (LuaTable) exposedClasses.rawget(key);
-		assertNotNull(value);
-		
-		key = exposedClasses.next(key);
-		assertEquals(key, BaseAnnotationClass.class.getName());
-		value = (LuaTable) exposedClasses.rawget(key);
-		assertNotNull(value);
-		
+		Map exposed = manager.fromLuaToJava(exposedClasses, Map.class);
+		assertEquals(exposed.size(), 2);
+		assertNotNull(exposed.get(InheritedAnnotationClass.class.getName()));
+		assertNotNull(exposed.get(BaseAnnotationClass.class.getName()));
 	}
 	
 	@Test
