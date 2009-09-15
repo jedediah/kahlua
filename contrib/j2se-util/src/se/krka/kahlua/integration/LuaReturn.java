@@ -22,10 +22,10 @@
 
 package se.krka.kahlua.integration;
 
-public abstract class LuaReturn {
-	protected Object[] returnValues;
+public abstract class LuaReturn implements Iterable<Object> {
+	protected final Object[] returnValues;
 
-	public LuaReturn(Object[] returnValues) {
+	protected LuaReturn(Object[] returnValues) {
 		this.returnValues = returnValues; 
 	}
 
@@ -35,14 +35,20 @@ public abstract class LuaReturn {
 	public abstract Object getErrorObject();
 	public abstract String getErrorString();
 	public abstract String getLuaStackTrace();
-	public abstract Exception getJavaException();
+	public abstract RuntimeException getJavaException();
 
 	// valid when success == true, otherwise throws some exception
 	public abstract Object getFirst();
 	public abstract Object getSecond();
 	public abstract Object getThird();
 	public abstract Object getReturnValue(int index); // starts at 0
-	public abstract Object getNumReturnValues();
+	
+	/**
+	 * returns all the input return values except the boolean flag at position 0. 
+	 */
+	public abstract Object[] getReturnValues();
+	
+	public abstract int getNumReturnValues();  
 
 	public static LuaReturn createReturn(Object[] returnValues) {
 		Boolean success = (Boolean) returnValues[0];

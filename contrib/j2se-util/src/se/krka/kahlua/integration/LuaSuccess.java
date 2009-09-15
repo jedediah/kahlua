@@ -20,11 +20,13 @@
  THE SOFTWARE.
  */
 
-
 package se.krka.kahlua.integration;
 
+import java.util.Arrays;
+import java.util.Iterator;
+
 public class LuaSuccess extends LuaReturn {
-	public LuaSuccess(Object[] returnValues) {
+	LuaSuccess(Object[] returnValues) {
 		super(returnValues);
 	}
 
@@ -49,7 +51,7 @@ public class LuaSuccess extends LuaReturn {
 	}
 
 	@Override
-	public Exception getJavaException() {
+	public RuntimeException getJavaException() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is true");
 	}
 
@@ -78,7 +80,38 @@ public class LuaSuccess extends LuaReturn {
 	}
 
 	@Override
-	public Object getNumReturnValues() {
+	public int getNumReturnValues() {
 		return returnValues.length - 1;
+	}
+	
+	@Override
+	public Object[] getReturnValues() {
+		return Arrays.copyOfRange(returnValues, 1, returnValues.length);
+	}
+	
+	@Override
+	public Iterator<Object> iterator() {
+		return new Iter();
+	}
+	
+	private class Iter implements Iterator<Object> {
+		private int pos = 1;
+		
+		@Override
+		public boolean hasNext() {
+			return pos < returnValues.length;
+		}
+		
+		@Override
+		public Object next() {
+			Object obj = returnValues[pos];
+			pos++;
+			return obj;
+		}
+		
+		@Override
+		public void remove() {
+			throw new UnsupportedOperationException("Not valid for immutable list");
+		}
 	}
 }
