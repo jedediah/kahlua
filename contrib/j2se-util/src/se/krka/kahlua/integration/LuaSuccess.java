@@ -22,9 +22,6 @@
 
 package se.krka.kahlua.integration;
 
-import java.util.Arrays;
-import java.util.Iterator;
-
 public class LuaSuccess extends LuaReturn {
 	LuaSuccess(Object[] returnValues) {
 		super(returnValues);
@@ -53,65 +50,5 @@ public class LuaSuccess extends LuaReturn {
 	@Override
 	public RuntimeException getJavaException() {
 		throw new UnsupportedOperationException("Not valid when isSuccess is true");
-	}
-
-	@Override
-	public Object getFirst() {
-		return getReturnValue(0);
-	}
-
-	@Override
-	public Object getSecond() {
-		return getReturnValue(1);
-	}
-
-	@Override
-	public Object getThird() {
-		return getReturnValue(2);
-	}
-
-	@Override
-	public Object getReturnValue(int index) {
-		int realIndex = index + 1;
-		if (realIndex >= returnValues.length || realIndex < 1) {
-			return null;
-		}
-		return returnValues[realIndex];
-	}
-
-	@Override
-	public int getNumReturnValues() {
-		return returnValues.length - 1;
-	}
-	
-	@Override
-	public Object[] getReturnValues() {
-		return Arrays.copyOfRange(returnValues, 1, returnValues.length);
-	}
-	
-	@Override
-	public Iterator<Object> iterator() {
-		return new Iter();
-	}
-	
-	private class Iter implements Iterator<Object> {
-		private int pos = 1;
-		
-		@Override
-		public boolean hasNext() {
-			return pos < returnValues.length;
-		}
-		
-		@Override
-		public Object next() {
-			Object obj = returnValues[pos];
-			pos++;
-			return obj;
-		}
-		
-		@Override
-		public void remove() {
-			throw new UnsupportedOperationException("Not valid for immutable list");
-		}
 	}
 }

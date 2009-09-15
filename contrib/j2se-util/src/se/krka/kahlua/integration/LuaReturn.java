@@ -22,7 +22,9 @@
 
 package se.krka.kahlua.integration;
 
-public abstract class LuaReturn implements Iterable<Object> {
+import java.util.AbstractList;
+
+public abstract class LuaReturn extends AbstractList<Object> {
 	protected final Object[] returnValues;
 
 	protected LuaReturn(Object[] returnValues) {
@@ -37,18 +39,34 @@ public abstract class LuaReturn implements Iterable<Object> {
 	public abstract String getLuaStackTrace();
 	public abstract RuntimeException getJavaException();
 
+
 	// valid when success == true, otherwise throws some exception
-	public abstract Object getFirst();
-	public abstract Object getSecond();
-	public abstract Object getThird();
-	public abstract Object getReturnValue(int index); // starts at 0
+	public Object getFirst() {
+		return get(0);
+	}
+
+	public Object getSecond() {
+		return get(1);
+	}
+
+	public Object getThird() {
+		return get(2);
+	}
 	
-	/**
-	 * returns all the input return values except the boolean flag at position 0. 
-	 */
-	public abstract Object[] getReturnValues();
-	
-	public abstract int getNumReturnValues();  
+	@Override
+	public Object get(int index) {
+		int realIndex = index + 1;
+		if (realIndex >= returnValues.length || realIndex < 1) {
+			throw new IndexOutOfBoundsException("The index " + (index - 1) + " is outside the bounds [" + 0 
+					+ ", " + (returnValues.length  - 1) + ")");
+		}
+		return returnValues[realIndex];
+	}
+
+	@Override
+	public int size() {
+		return returnValues.length - 1;
+	}
 
 	public static LuaReturn createReturn(Object[] returnValues) {
 		Boolean success = (Boolean) returnValues[0];

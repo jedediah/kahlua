@@ -23,7 +23,6 @@
 
 package se.krka.kahlua.integration;
 
-import java.util.Iterator;
 import se.krka.kahlua.stdlib.BaseLib;
 
 public class LuaFail extends LuaReturn {
@@ -69,38 +68,12 @@ public class LuaFail extends LuaReturn {
 	}
 
 	@Override
-	public Object getFirst() {
+	public Object get(int index) {
 		throw new UnsupportedOperationException("Not valid when isSuccess is false");
 	}
 
 	@Override
-	public Object getSecond() {
-		throw new UnsupportedOperationException("Not valid when isSuccess is false");
+	public int size() {
+		return 0;
 	}
-
-	@Override
-	public Object getThird() {
-		throw new UnsupportedOperationException("Not valid when isSuccess is false");
-	}
-
-	@Override
-	public Object getReturnValue(int index) {
-		throw new UnsupportedOperationException("Not valid when isSuccess is false");
-	}
-
-	@Override
-	public int getNumReturnValues() {
-		throw new UnsupportedOperationException("Not valid when isSuccess is false");
-	}
-	
-	@Override
-	public Object[] getReturnValues() {
-		throw new UnsupportedOperationException("Not valid when isSuccess is false");
-	}
-	
-	@Override
-	public Iterator<Object> iterator() {
-		throw new UnsupportedOperationException("Not valid when isSuccess is false");
-	}
-	
 }
