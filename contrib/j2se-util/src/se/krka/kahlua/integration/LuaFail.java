@@ -25,8 +25,6 @@ package se.krka.kahlua.integration;
 
 import se.krka.kahlua.stdlib.BaseLib;
 
-import java.util.List;
-
 public class LuaFail extends LuaReturn {
 	LuaFail(Object[] returnValues) {
 		super(returnValues);
@@ -70,7 +68,7 @@ public class LuaFail extends LuaReturn {
 	}
 
 	@Override
-	public List<Object> asList() {
-		throw new UnsupportedOperationException("Not valid when isSuccess is false");
+	public int size() {
+		return 0;
 	}
 }
