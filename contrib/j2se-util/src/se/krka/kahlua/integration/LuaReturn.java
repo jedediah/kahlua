@@ -23,8 +23,9 @@
 package se.krka.kahlua.integration;
 
 import java.util.AbstractList;
+import java.util.List;
 
-public abstract class LuaReturn extends AbstractList<Object> {
+public abstract class LuaReturn {
 	protected final Object[] returnValues;
 
 	protected LuaReturn(Object[] returnValues) {
@@ -42,30 +43,44 @@ public abstract class LuaReturn extends AbstractList<Object> {
 
 	// valid when success == true, otherwise throws some exception
 	public Object getFirst() {
-		return get(0);
+		return getReturnValue(0);
 	}
 
 	public Object getSecond() {
-		return get(1);
+		return getReturnValue(1);
 	}
 
 	public Object getThird() {
-		return get(2);
+		return getReturnValue(2);
 	}
-	
-	@Override
-	public Object get(int index) {
+
+
+	public Object getReturnValue(int index) {
 		int realIndex = index + 1;
 		if (realIndex >= returnValues.length || realIndex < 1) {
-			throw new IndexOutOfBoundsException("The index " + (index - 1) + " is outside the bounds [" + 0 
+			throw new IndexOutOfBoundsException("The index " + (index - 1) + " is outside the bounds [" + 0
 					+ ", " + (returnValues.length  - 1) + ")");
 		}
 		return returnValues[realIndex];
 	}
 
-	@Override
-	public int size() {
-		return returnValues.length - 1;
+	/**
+	 * Returns a view of this LuaReturn as a list
+	 * This method is only valid when isSuccess returns true
+	 * @return a list view of this object
+	 */
+	public List<Object> asList() {
+		return new AbstractList<Object>() {
+			@Override
+				public Object get(int index) {
+					return getReturnValue(index);
+				}
+
+				@Override
+				public int size() {
+					return returnValues.length - 1;
+				}
+		};
 	}
 
 	public static LuaReturn createReturn(Object[] returnValues) {
