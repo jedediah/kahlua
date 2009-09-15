@@ -58,7 +58,7 @@ public abstract class LuaReturn extends AbstractList<Object> {
 		int n = size();
 		if (index < 0 || index >= n) {
 			throw new IndexOutOfBoundsException("The index " + index + " is outside the bounds [" + 0 
-					+ ", " + size + ")");
+					+ ", " + n + ")");
 		}
 		return returnValues[index + 1];
 	}
