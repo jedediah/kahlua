@@ -204,7 +204,11 @@ public class LuaDebugDataProcessor implements Processor, ElementVisitor<Void, Lu
 
 	private String findSimpleClassName(Element arg0) {
 		if (arg0.getKind() == ElementKind.CLASS) {
-			return arg0.getSimpleName().toString();
+			String simpleName = arg0.getSimpleName().toString();
+			if (arg0.getEnclosingElement().getKind() == ElementKind.CLASS) {
+				return findSimpleClassName(arg0.getEnclosingElement()) + "_" + simpleName;  
+			}
+			return simpleName;
 		}
 		return findSimpleClassName(arg0.getEnclosingElement());
 	}

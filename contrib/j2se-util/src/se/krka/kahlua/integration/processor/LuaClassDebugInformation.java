@@ -69,8 +69,7 @@ public class LuaClassDebugInformation implements Serializable {
 	
 	
 	public static LuaClassDebugInformation getFromStream(Class<?> clazz) throws IOException, ClassNotFoundException {
-		String className = clazz.getName();
-		String fileName = getFileName(className);
+		String fileName = getFileName(clazz);
 		InputStream stream = clazz.getResourceAsStream(fileName);
 		if (stream == null) {
 			return null;
@@ -78,18 +77,25 @@ public class LuaClassDebugInformation implements Serializable {
 		ObjectInputStream objectStream = new ObjectInputStream(stream);
 		return (LuaClassDebugInformation) objectStream.readObject();
 	}
-	
+
+	private static String getFileName(Class<?> clazz) {
+		return "/" + clazz.getPackage().getName().replace('.', '/') + "/" + getSimpleName(clazz) + ".luadebugdata";
+	}
+
+	private static String getSimpleName(Class<?> clazz) {
+		if (clazz.getEnclosingClass() != null) {
+			return getSimpleName(clazz.getEnclosingClass()) + "_" + clazz.getSimpleName();
+		}
+		return clazz.getSimpleName();
+	}
+
 	public void saveToStream(OutputStream stream) throws IOException {
 		ObjectOutputStream outputStream = new ObjectOutputStream(stream);
 		outputStream.writeObject(this);
 	}
 
-	public static String getFileName(String className) {
-		return "/" + className.replace('.', '/') + ".luadebugdata";
-	}
-	
 	public String getFileName() {
-		return getFileName(getFullClassName());
+		return getFileName(getClass());
 	}
 	
 	
