@@ -178,9 +178,19 @@
     <target name="test-depend" depends="setup, build, compile-test">
     </target>
 
-    <target name="run-test" depends="test-depend" description="Run the test-suite">
+	<target name="debug-listen">
+		<property name="debugargs" value="-Xdebug -Xrunjdwp:transport=dt_socket,server=n,address=5005,suspend=y" />
+	</target>
+	
+	<target name="default-debugargs">
+		<property name="debugargs" value="" />
+	</target>
+	
+	
+    <target name="run-test" depends="test-depend, default-debugargs" description="Run the test-suite">
 		<property name="test.file" value="" />
 		<java classname="Test" fork="true" dir="${basedir}">
+			<jvmarg line="${debugargs}" />
 			<classpath location="${instrumented.dir}" />
 			<classpath refid="test.classpath" />
 			

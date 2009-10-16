@@ -125,6 +125,7 @@ public class LuaCallFrame {
 				stackCopy(-nArguments, 0, toCopy);
 			} else {
 				setTop(closure.prototype.maxStacksize);
+				stackClear(closure.prototype.numParams, nArguments);
 			}
 		}
 	}
@@ -167,5 +168,11 @@ public class LuaCallFrame {
 	public boolean isLua() {
 		return closure != null;
 	}
-	
+
+	public String toString() {
+		if (closure == null) {
+			return super.toString();
+		}
+		return "Callframe at: " + closure.toString();
+	}
 }
