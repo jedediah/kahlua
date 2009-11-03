@@ -37,35 +37,30 @@ import se.krka.kahlua.vm.LuaState;
 import se.krka.kahlua.vm.LuaTable;
 
 /**
- * 
- * A decorator for a LuaState, which makes it easier to use the same LuaState in multiple
- * threads.
- * Note that this does not mean that the you can run several functions concurrently in the LuaState,
- * it will in fact just ensure that they do NOT run at the same time, in order to avoid a broken
- * Lua state.
  *
- * You MUST lock the state before doing any operation on it, and unlock it when you're done.
- * Calling pcall will grab the lock implicitly.
- */
-public class ThreadSafeLuaState extends LuaState {
+ * A specialized LuaState that verifies that a LuaState is not used by multiple threads.
+  */
+public class VerifiedSingleThreadLuaState extends LuaState {
 	private final Lock lock = new ReentrantLock();
-	
-	
-	public ThreadSafeLuaState(PrintStream stream) {
+
+
+	public VerifiedSingleThreadLuaState(PrintStream stream) {
 		super(stream, false);
 		reset();
 	}
 
-	public ThreadSafeLuaState() {
+	public VerifiedSingleThreadLuaState() {
 		this(System.out);
-	}	
-		
-	
+	}
+
+
 	@Override
 	public void lock() {
-		lock.lock();
+		if (!lock.tryLock()) {
+			throw new IllegalStateException("Multiple threads may not access the same lua state");
+		}
 	}
-	
+
 	@Override
 	public void unlock() {
 		lock.unlock();
@@ -108,9 +103,9 @@ public class ThreadSafeLuaState extends LuaState {
 			return super.pcall(fun, args);
 		} finally {
 			unlock();
-		}		
+		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void setUserdataMetatable(Class type, LuaTable metatable) {
@@ -121,7 +116,7 @@ public class ThreadSafeLuaState extends LuaState {
 			unlock();
 		}
 	}
-	
+
 	@Override
 	public Object call(Object fun, Object arg1, Object arg2, Object arg3) {
 		lock();
@@ -200,35 +195,5 @@ public class ThreadSafeLuaState extends LuaState {
 		} finally {
 			unlock();
 		}
-	}
-
-	public static void main(String[] args) throws IOException, InterruptedException {
-		final ThreadSafeLuaState state = new ThreadSafeLuaState();
-		//final LuaState state = new LuaState();
-		
-		final LuaClosure c = LuaCompiler.loadstring("x = (x or 0) + 1", "", state.getEnvironment());
-		final AtomicInteger counter = new AtomicInteger(0);
-		for(int i = 0; i < 100; i++) {
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					for (int i = 0; i < 100; i++) {
-						try {
-							Thread.sleep((long) (Math.random() * 10));
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-						state.pcall(c);
-					}
-					counter.incrementAndGet();
-				}
-				
-			}).start();
-		}
-		while (counter.get() != 100) {
-			Thread.sleep(100);
-		}
-		final LuaClosure c2 = LuaCompiler.loadstring("print('x='..x)", "", state.getEnvironment());
-		state.pcall(c2);
 	}
 }
