@@ -349,12 +349,13 @@ public final class BaseLib implements JavaFunction {
 		Object toStringFun = state.tableGet(env, "tostring");
 		StringBuffer sb = new StringBuffer();
 		for (int i = 0; i < nArguments; i++) {
+            if (i > 0) {
+                sb.append("\t");
+            }
+
 			Object res = state.call(toStringFun, callFrame.get(i), null, null);
 
 			sb.append(res);
-			if (i < nArguments) {
-				sb.append("\t");
-			}
 		}
 		state.out.println(sb.toString());
 		return 0;
