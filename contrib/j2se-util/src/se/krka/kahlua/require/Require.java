@@ -46,7 +46,7 @@ public class Require implements JavaFunction {
 
     public int call(LuaCallFrame callFrame, int nArguments) {
         LuaTable env = callFrame.getEnvironment();
-        Map<String, Result> states = (Map<String, Result>) env.rawget(this);
+        Map<String, Result> states = (Map<String, Result>) callFrame.thread.state.tableGet(env, this);
 
         BaseLib.luaAssert(nArguments >= 1, "not enough args");
         String path = (String) callFrame.get(0);
