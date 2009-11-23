@@ -38,4 +38,20 @@ public class BaseAnnotationClass {
 	public String baseMethod2() {
 		return "Base";
 	}
+
+    @LuaMethod
+    @Desc("Method with varargs")
+    public String withVarargs(String joinWith, String... strings) {
+        StringBuilder stringBuilder = new StringBuilder();
+        boolean first = true;
+        for (String string : strings) {
+            if (first) {
+                first = false;
+            } else {
+                stringBuilder.append(joinWith);
+            }
+            stringBuilder.append(string);
+        }
+        return stringBuilder.toString();
+    }
 }

@@ -35,4 +35,8 @@ public interface Caller {
 	
 	boolean needsMultipleReturnValues();
 	boolean hasSelf();
+
+    Class<?> getVarargType();
+    boolean hasVararg();
+
 }

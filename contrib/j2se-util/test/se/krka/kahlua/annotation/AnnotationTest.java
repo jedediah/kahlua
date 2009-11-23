@@ -112,7 +112,7 @@ public class AnnotationTest {
 			fail();
 		} catch (Exception e) {
 			assertNotNull(e.getMessage());
-			assertEquals(e.getMessage(), "No conversion found from class java.lang.String to class java.lang.Integer at argument #2, imba");
+			assertEquals("No conversion found from class java.lang.String to class java.lang.Integer at argument #2, imba", e.getMessage());
 		}
 	}
 	
@@ -306,4 +306,48 @@ public class AnnotationTest {
 		printer.process();
 		String output = writer.getBuffer().toString();
 	}
+
+    @Test
+    public void testVarargs() throws IOException {
+        factory.exposeClass(InheritedAnnotationClass.class);
+        String testString = "foo = NewBase(); local s = foo:withVarargs('.', 'java', 'lang', 'String'); assert(s == 'java.lang.String')";
+        LuaClosure closure = LuaCompiler.loadstring(testString, "src", state.getEnvironment());
+        state.call(closure, null);
+    }
+
+    @Test
+    public void testVarargs2() throws IOException {
+        factory.exposeClass(InheritedAnnotationClass.class);
+        String testString = "foo = NewBase(); local s = foo:withVarargs('.'); assert(s == '')";
+        LuaClosure closure = LuaCompiler.loadstring(testString, "src", state.getEnvironment());
+        state.call(closure, null);
+    }
+
+    @Test
+    public void testVarargsFail() throws IOException {
+        factory.exposeClass(InheritedAnnotationClass.class);
+        String testString = "foo = NewBase(); local s = foo:withVarargs('.', {}); assert(s == '')";
+        LuaClosure closure = LuaCompiler.loadstring(testString, "src", state.getEnvironment());
+        try {
+            state.call(closure, null);
+            fail();
+        } catch (Exception e) {
+            assertEquals("No conversion found from class se.krka.kahlua.vm.LuaTableImpl to class java.lang.String at argument #2, strings", e.getMessage());
+        }
+    }
+
+    @Test
+    public void testVarargsFail2() throws IOException {
+        factory.exposeClass(InheritedAnnotationClass.class);
+        String testString = "foo = NewBase(); local s = foo:withVarargs(); assert(s == '')";
+        LuaClosure closure = LuaCompiler.loadstring(testString, "src", state.getEnvironment());
+        try {
+            state.call(closure, null);
+            fail();
+        } catch (Exception e) {
+            assertEquals("Expected 1 arguments but got 0. Correct syntax: obj:withVarargs(joinWith, strings)", e.getMessage());
+        }
+
+    }
+
 }

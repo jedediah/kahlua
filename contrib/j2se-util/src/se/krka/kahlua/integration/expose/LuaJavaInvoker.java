@@ -23,6 +23,8 @@
 package se.krka.kahlua.integration.expose;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Array;
+
 import se.krka.kahlua.converter.LuaConversionError;
 import se.krka.kahlua.converter.LuaConverterManager;
 import se.krka.kahlua.integration.expose.caller.Caller;
@@ -32,6 +34,24 @@ import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.vm.JavaFunction;
 import se.krka.kahlua.vm.LuaCallFrame;
 
+/**
+ * Various variants:
+ *
+ * Object method or static (from lua) function:
+ * --------------------------------
+ * obj:method() -> method.invoke(obj, args)
+ * obj.method() -> method.invoke(null, args)
+ *
+ * Multiple return values or not:
+ * ------------------------------
+ * local a, b, c = obj:method() -> obj = args[0]; rv = args[1]; method.invoke(obj, args[2:n])
+ * local a = obj:method() -> obj = args[0]; method.invoke(obj, args[1:n])
+ *
+ * Varargs or not:
+ * ---------------
+ * obj:method(a, b, c, [d, e, f]) -> varargs = {d, e, f}; method.invoke(obj, args[1:3] + {varargs}) 
+ *
+ */
 public class LuaJavaInvoker implements JavaFunction {
 	private final LuaJavaClassExposer exposer;
 	private final LuaConverterManager manager;
@@ -42,102 +62,125 @@ public class LuaJavaInvoker implements JavaFunction {
 	private final ReturnValues returnValues;
 	private final Class<?>[] parameterTypes;
 	private final int numMethodParams;
-	private final boolean needsReturnValues;
-	private final int actualMethodParams;
-	private final int methodParamStart;
-	private final boolean hasSelf;
-	private final int luaParamStart;
-	private final int luaParams;
+
+    private final Class<?> varargType;
+    private final boolean hasSelf;
+    private final boolean needsReturnValues;
+    private final boolean hasVarargs;
 
 
-	public LuaJavaInvoker(LuaJavaClassExposer exposer, LuaConverterManager manager, Class<?> clazz, String name, Caller caller) {
+    public LuaJavaInvoker(LuaJavaClassExposer exposer, LuaConverterManager manager, Class<?> clazz, String name, Caller caller) {
 		this.exposer = exposer;
 		this.manager = manager;
 		this.clazz = clazz;
 		this.name = name;
 		this.caller = caller;
 
-		returnValues = new ReturnValues(manager);
-		parameterTypes = caller.getParameterTypes();
-		numMethodParams = parameterTypes.length;
-		needsReturnValues = caller.needsMultipleReturnValues();		
-		if (needsReturnValues) {
-			actualMethodParams = numMethodParams - 1;
-			methodParamStart = 1;
-		} else {
-			actualMethodParams = numMethodParams;
-			methodParamStart = 0;
-		}
-		hasSelf = caller.hasSelf();
-		if (hasSelf) {
-			luaParams = actualMethodParams + 1;
-			luaParamStart = 1;
-		} else {
-			luaParams = actualMethodParams;
-			luaParamStart = 0;
-		}
+		this.returnValues = new ReturnValues(manager);
+
+		this.parameterTypes = caller.getParameterTypes();
+        this.varargType = caller.getVarargType();
+        this.hasSelf = caller.hasSelf();
+        this.needsReturnValues = caller.needsMultipleReturnValues();
+        this.hasVarargs = caller.hasVararg();
+		this.numMethodParams = parameterTypes.length + toInt(needsReturnValues) + toInt(hasVarargs);
 	}
-	
-	public int call(LuaCallFrame callFrame, int nArguments) {
-		if (nArguments != luaParams) {
-			String errorMessage;
-			if (hasSelf && nArguments <= 0) {
-				errorMessage = "Expected a method call but got a function call.";
-			} else {
-				int selfDecr = hasSelf ? 1 : 0;
-				int expected = luaParams - selfDecr;
-				int got = nArguments - selfDecr;
-				errorMessage = "Expected " + expected + " arguments but got " + got + ".";
-			}
-			String syntax = getFunctionSyntax();
-			if (syntax != null) {
-				errorMessage += " Correct syntax: " + syntax;
-			}
-			BaseLib.fail(errorMessage);
-		}
-		Object self = null;
-		if (hasSelf) {
-			self = callFrame.get(0);
-		}
-		returnValues.reset(callFrame);
-		Object[] params = buildParams(callFrame);
-		
-		try {
-			caller.call(self, returnValues, params);
-			return returnValues.getNArguments();
-		} catch (IllegalArgumentException e) {
-			throw new RuntimeException(e);
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException(e);
-		} catch (InvocationTargetException e) {
-			throw new RuntimeException(e.getCause());
-		} catch (LuaConversionError e) {
-			throw new RuntimeException(e);
-		} catch (InstantiationException e) {
-			throw new RuntimeException(e);
-		} finally {
-			returnValues.reset(null);
-		}
-	}
-	
-	private Object[] buildParams(LuaCallFrame callFrame) {
-		Object[] result = new Object[numMethodParams];
-		if (needsReturnValues) {
-			result[0] = returnValues;
-		}
-		for (int i = actualMethodParams - 1; i >= 0; i--) {
-			Object obj = callFrame.get(i + luaParamStart);
-			int resultIndex = i + methodParamStart;
-			try {
-				result[resultIndex] = manager.fromLuaToJava(obj, parameterTypes[resultIndex]); 
-			} catch (RuntimeException e) {
-				throw newError(i, e);
-			} catch (LuaConversionError e) {
-				throw newError(i, e);
-			}
-		}
-		return result;
-	}
+
+    private int toInt(boolean b) {
+        return b ? 1 : 0;
+    }
+
+    public int call(LuaCallFrame callFrame, int nArguments) {
+        final Object[] params = new Object[numMethodParams];
+
+        int javaParamCounter = 0;
+        int luaArgCounter = 0;
+
+        // First handle the self argument
+        int selfDecr = toInt(hasSelf);
+        final Object self;
+        if (hasSelf) {
+            if (nArguments <= 0) {
+                BaseLib.fail(syntaxErrorMessage("Expected a method call but got a function call."));
+                return 0;
+            }
+            self = callFrame.get(0);
+            luaArgCounter++;
+        } else {
+            self = null;
+        }
+
+        // Then handle the returnvalues parameter
+        if (needsReturnValues) {
+            params[javaParamCounter] = returnValues;
+            javaParamCounter++;
+        }
+
+        // Then handle regular arguments
+        if (nArguments - luaArgCounter < parameterTypes.length) {
+            int expected = parameterTypes.length;
+            int got = nArguments - selfDecr;
+
+            String errorMessage = "Expected " + expected + " arguments but got " + got + ".";
+            errorMessage = syntaxErrorMessage(errorMessage);
+            BaseLib.fail(errorMessage);
+        }
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Object o = callFrame.get(luaArgCounter + i);
+            params[javaParamCounter + i] = convert(luaArgCounter + i - selfDecr, o, parameterTypes[i]);
+        }
+        javaParamCounter += parameterTypes.length;
+        luaArgCounter += parameterTypes.length;
+
+        // Finally handle varargs
+        if (hasVarargs) {
+            int numVarargs = nArguments - luaArgCounter;
+            if (numVarargs < 0) {
+
+            }
+            Object[] varargs = (Object[]) Array.newInstance(varargType, numVarargs);
+            for (int i = 0; i < numVarargs; i++) {
+                varargs[i] = convert(luaArgCounter + i - selfDecr, callFrame.get(luaArgCounter + i), varargType);
+            }
+            params[javaParamCounter] = varargs;
+            javaParamCounter++;
+            luaArgCounter += numVarargs;
+        }
+
+        try {
+            returnValues.reset(callFrame);
+            caller.call(self, returnValues, params);
+            return returnValues.getNArguments();
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException(e.getCause());
+        } catch (LuaConversionError e) {
+            throw new RuntimeException(e);
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } finally {
+            returnValues.reset(null);
+        }
+    }
+
+    private Object convert(int parameterIndex, Object o, Class<?> parameterType) {
+        try {
+            return manager.fromLuaToJava(o, parameterType);
+        } catch (LuaConversionError luaConversionError) {
+            throw newError(parameterIndex, luaConversionError);
+        }
+    }
+
+    private String syntaxErrorMessage(String errorMessage) {
+        String syntax = getFunctionSyntax();
+        if (syntax != null) {
+            errorMessage += " Correct syntax: " + syntax;
+        }
+        return errorMessage;
+    }
 
 	private RuntimeException newError(int i, Exception e) {
 		int argumentIndex = i + 1;

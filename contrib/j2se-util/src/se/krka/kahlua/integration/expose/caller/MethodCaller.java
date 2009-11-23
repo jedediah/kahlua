@@ -26,33 +26,23 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import se.krka.kahlua.integration.expose.ReturnValues;
 
-public class MethodCaller implements Caller {
+public class MethodCaller extends AbstractCaller {
 
 	private final Method method;
-	private final Class[] parameterTypes;
-	private final boolean needsReturnValues;
-	private final boolean hasReturnValue;
 	private final Object owner;
 	private final boolean hasSelf;
-	
-	public MethodCaller(Method method, Object owner, boolean hasSelf) {
+    private final boolean hasReturnValue;
+
+    public MethodCaller(Method method, Object owner, boolean hasSelf) {
+        super(method.getParameterTypes());
 		this.method = method;
 		this.owner = owner;
 		this.hasSelf = hasSelf;
 		
 		hasReturnValue = !method.getReturnType().equals(Void.TYPE);
-		
-		parameterTypes = method.getParameterTypes();
-		boolean needsReturnValues = false;
-		if (parameterTypes.length > 0) {
-			if (parameterTypes[0].equals(ReturnValues.class)) {
-				if (hasReturnValue) {
-					throw new IllegalArgumentException("Must have a void return type if first argument is a ReturnValues: got: " + method.getReturnType());
-				}
-				needsReturnValues = true;
-			}
-		}
-		this.needsReturnValues = needsReturnValues;
+        if (hasReturnValue && needsMultipleReturnValues()) {
+            throw new IllegalArgumentException("Must have a void return type if first argument is a ReturnValues: got: " + method.getReturnType());
+        }
 	}
 	
 	@Override
@@ -60,28 +50,14 @@ public class MethodCaller implements Caller {
 		if (!hasSelf) {
 			self = owner;
 		}
-		if (needsReturnValues) {
-			method.invoke(self, params);
-		} else {
-			Object ret = method.invoke(self, params);
-			if (hasReturnValue) {
-				rv.push(ret);
-			}
+		Object ret = method.invoke(self, params);
+        if (hasReturnValue) {
+            rv.push(ret);
 		}
-	}
-	
-	@Override
-	public Class<?>[] getParameterTypes() {
-		return parameterTypes;
 	}
 
 	@Override
 	public boolean hasSelf() {
 		return hasSelf;
-	}
-
-	@Override
-	public boolean needsMultipleReturnValues() {
-		return needsReturnValues;
 	}
 }

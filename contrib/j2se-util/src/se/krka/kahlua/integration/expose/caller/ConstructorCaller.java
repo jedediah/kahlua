@@ -26,33 +26,26 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import se.krka.kahlua.integration.expose.ReturnValues;
 
-public class ConstructorCaller implements Caller {
+public class ConstructorCaller extends AbstractCaller {
 
 	private final Constructor<?> constructor;
-	private final Class<?>[] parameterTypes;
 
 	public ConstructorCaller(Constructor<?> constructor) {
+        super(constructor.getParameterTypes());
 		this.constructor = constructor;
-		parameterTypes = constructor.getParameterTypes();
+        if (needsMultipleReturnValues()) {
+            throw new RuntimeException("Constructor can not return multiple values");
+        }
 	}
 	
 	@Override
 	public void call(Object self, ReturnValues rv, Object[] params) throws IllegalArgumentException, InstantiationException, IllegalAccessException, InvocationTargetException {
-		rv.push(constructor.newInstance(params));
-	}
-
-	@Override
-	public Class<?>[] getParameterTypes() {
-		return parameterTypes;
-	}
-
-	@Override
-	public boolean needsMultipleReturnValues() {
-		return false;
+        rv.push(constructor.newInstance(params));
 	}
 
 	@Override
 	public boolean hasSelf() {
 		return false;
 	}
+
 }
