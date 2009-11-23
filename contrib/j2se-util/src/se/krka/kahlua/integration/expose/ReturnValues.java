@@ -28,17 +28,12 @@ import se.krka.kahlua.vm.LuaCallFrame;
 
 public class ReturnValues {
 	private final LuaConverterManager manager;
-	
-	private LuaCallFrame callFrame;
+	private final LuaCallFrame callFrame;
 	private int args;
 	
-	ReturnValues(LuaConverterManager manager) {
-		this.manager = manager;		
-	}
-	
-	void reset(LuaCallFrame callFrame) {
+	ReturnValues(LuaConverterManager manager, LuaCallFrame callFrame) {
+		this.manager = manager;
 		this.callFrame = callFrame;
-		args = 0;
 	}
 	
 	public ReturnValues push(Object o) {

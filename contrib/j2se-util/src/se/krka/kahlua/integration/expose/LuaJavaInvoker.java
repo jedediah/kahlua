@@ -59,7 +59,6 @@ public class LuaJavaInvoker implements JavaFunction {
 	private final String name;
 	private final Caller caller;
 
-	private final ReturnValues returnValues;
 	private final Class<?>[] parameterTypes;
 	private final int numMethodParams;
 
@@ -75,8 +74,6 @@ public class LuaJavaInvoker implements JavaFunction {
 		this.clazz = clazz;
 		this.name = name;
 		this.caller = caller;
-
-		this.returnValues = new ReturnValues(manager);
 
 		this.parameterTypes = caller.getParameterTypes();
         this.varargType = caller.getVarargType();
@@ -109,6 +106,8 @@ public class LuaJavaInvoker implements JavaFunction {
         } else {
             self = null;
         }
+
+		ReturnValues returnValues = new ReturnValues(manager, callFrame);
 
         // Then handle the returnvalues parameter
         if (needsReturnValues) {
@@ -148,7 +147,6 @@ public class LuaJavaInvoker implements JavaFunction {
         }
 
         try {
-            returnValues.reset(callFrame);
             caller.call(self, returnValues, params);
             return returnValues.getNArguments();
         } catch (IllegalArgumentException e) {
@@ -161,8 +159,6 @@ public class LuaJavaInvoker implements JavaFunction {
             throw new RuntimeException(e);
         } catch (InstantiationException e) {
             throw new RuntimeException(e);
-        } finally {
-            returnValues.reset(null);
         }
     }
 
