@@ -1,37 +1,3 @@
-do
-    local properties = {}
-    setmetatable(properties, {__mode = "k"})
-
-    function withproperties(obj)
-        local old = getmetatable(obj)
-        local function index(t, k)
-            local p = properties[t]
-            if p then
-                return p[k]
-            end
-            if old then
-                local oldindex = old.__index
-                if oldindex then
-                    if type(oldindex) == "function" then
-                        return oldindex(t, k)
-                    end
-                    return oldindex[k]
-                end
-            end
-        end
-        local function newindex(t, k, v)
-            local p = properties[t]
-            if not p then
-                p = {}
-                properties[t] = p
-            end
-            p[k] = v
-        end
-        setmetatable(obj, {__index = index, __newindex = newindex})
-        return obj
-    end
-end
-
 local x = newobject();
 local y = newobject();
 

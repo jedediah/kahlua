@@ -146,9 +146,6 @@ public class LuaJavaClassExposer {
         if (indexObject instanceof LuaTable) {
             return (LuaTable) indexObject;
         }
-        if (indexObject instanceof UserdataProperties.IndexFunction) {
-            return ((UserdataProperties.IndexFunction) indexObject).getFallBackIndex();
-        }
         return null;
     }
 
@@ -248,11 +245,11 @@ public class LuaJavaClassExposer {
 
         LuaTable metatable = new LuaTableImpl();
         LuaTable indexTable = new LuaTableImpl();
+		metatable.rawset("__index", indexTable);
+		if (superMetaTable != null) {
+			metatable.rawset("__newindex", superMetaTable.rawget("__newindex"));
+		}
         indexTable.setMetatable(superMetaTable);
-
-        UserdataProperties properties = new UserdataProperties(indexTable);
-        metatable.rawset("__index", properties.getIndexFunction());
-        metatable.rawset("__newindex", properties.getNewIndexFunction());
 
         state.setClassMetatable(clazz, metatable);
     }

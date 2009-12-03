@@ -230,3 +230,40 @@ function module(name, ...)
 	setfenv(2, t)
 end
 
+
+do
+	local properties = {}
+	setmetatable(properties, {__mode = "k"})
+
+	function withproperties(obj)
+		local old = getmetatable(obj)
+		local oldindex = old and old.__index
+		local oldisfun = type(oldindex) == "function"
+		local function index(t, k)
+			local p = properties[t]
+			if p then
+				local value = p[k]
+				if value then
+					return value
+				end
+			end
+			if oldindex then
+				if oldisfun then
+					return oldindex(t, k)
+				end
+				return oldindex[k]
+			end
+		end
+		local function newindex(t, k, v)
+			local p = properties[t]
+			if not p then
+				p = {}
+				properties[t] = p
+			end
+			p[k] = v
+		end
+		setmetatable(obj, {__index = index, __newindex = newindex})
+		return obj
+	end
+end
+
