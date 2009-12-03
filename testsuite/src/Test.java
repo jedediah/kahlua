@@ -29,10 +29,7 @@ import se.krka.kahlua.luaj.compiler.LuaCompiler;
 import se.krka.kahlua.stdlib.BaseLib;
 import se.krka.kahlua.stdlib.OsLib;
 import se.krka.kahlua.test.UserdataArray;
-import se.krka.kahlua.vm.LuaClosure;
-import se.krka.kahlua.vm.LuaState;
-import se.krka.kahlua.vm.LuaTable;
-import se.krka.kahlua.vm.LuaTableImpl;
+import se.krka.kahlua.vm.*;
 
 public class Test {
 	private static LuaState getState(File dir) throws FileNotFoundException, IOException {
@@ -41,6 +38,13 @@ public class Test {
 		UserdataArray.register(state);
 		OsLib.register(state);
 		LuaCompiler.register(state);
+
+        state.getEnvironment().rawset("newobject", new JavaFunction(){
+            @Override
+            public int call(LuaCallFrame callFrame, int nArguments) {
+                return callFrame.push(new Object());
+            }
+        });
 
 		//state = runLua(dir, state, new File(dir, "stdlib.lbc"));
 		File testhelper = new File(dir, "testhelper.lua");

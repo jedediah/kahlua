@@ -114,11 +114,12 @@ public class LuaState {
 	public LuaThread currentThread;
 
 	// Needed for Math lib - every state needs its own random
-	public Random random = new Random();
+	public final Random random = new Random();
 
-	public LuaTable userdataMetatables;
+	private final LuaTable userdataMetatables;
+    private final LuaTable classMetatables;
 
-	public PrintStream out;
+    protected final PrintStream out;
 
 	static final int MAX_INDEX_RECURSION = 100;
 
@@ -147,6 +148,14 @@ public class LuaState {
 	}
 	
 	protected LuaState(PrintStream stream, boolean callReset) {
+        // The userdataMetatables must be weak to avoid memory leaks
+        LuaTable weakKeyMetatable = new LuaTableImpl();
+        weakKeyMetatable.rawset("__mode", "k");
+        userdataMetatables = new LuaTableImpl();
+        userdataMetatables.setMetatable(weakKeyMetatable);
+
+        classMetatables = new LuaTableImpl();
+
 		out = stream;
 		if (callReset) {
 			reset();
@@ -166,7 +175,6 @@ public class LuaState {
 	protected final void reset() {
 		currentThread = new LuaThread(this, new LuaTableImpl());
 
-		userdataMetatables = new LuaTableImpl();
 		getEnvironment().rawset("_G", getEnvironment());
 		getEnvironment().rawset("_VERSION", "Lua 5.1 for CLDC 1.1");
 
@@ -1042,8 +1050,8 @@ public class LuaState {
 		return getMetaOp(b, meta_op);
 	}
 
-	public void setUserdataMetatable(Class type, LuaTable metatable) {
-		userdataMetatables.rawset(type, metatable);
+	private void setUserdataMetatable(Object obj, LuaTable metatable) {
+		userdataMetatables.rawset(obj, metatable);
 	}
 
 	private final Object getRegisterOrConstant(LuaCallFrame callFrame, int index, LuaPrototype prototype) {
@@ -1213,6 +1221,20 @@ public class LuaState {
 		throw new RuntimeException("loop in settable");
 	}
 
+    public void setClassMetatable(Class clazz, LuaTable metatable) {
+        classMetatables.rawset(clazz, metatable);
+    }
+
+    public void setmetatable(Object o, LuaTable metatable) {
+        BaseLib.luaAssert(o != null, "Can't set metatable for nil");
+        if (o instanceof LuaTable) {
+            LuaTable t = (LuaTable) o;
+            t.setMetatable(metatable);
+        } else {
+            userdataMetatables.rawset(o, metatable);
+        }
+    }
+
 	public Object getmetatable(Object o, boolean raw) {
 		if (o == null) {
 			return null;
@@ -1222,8 +1244,12 @@ public class LuaState {
 			LuaTable t = (LuaTable) o;
 			metatable = t.getMetatable();
 		} else {
-			metatable = (LuaTable) userdataMetatables.rawget(o.getClass());
+			metatable = (LuaTable) userdataMetatables.rawget(o);
 		}
+
+        if (metatable == null) {
+            metatable = (LuaTable) classMetatables.rawget(o.getClass());
+        }
 
 		if (!raw && metatable != null) {
 			Object meta2 = metatable.rawget("__metatable");
@@ -1358,4 +1384,12 @@ public class LuaState {
 	 */
 	public void unlock() {
 	}
+
+    public PrintStream getOut() {
+        return out;
+    }
+
+    public LuaTable getClassMetatable(Class clazz) {
+        return (LuaTable) classMetatables.rawget(clazz);
+    }
 }

@@ -113,10 +113,10 @@ public class ThreadSafeLuaState extends LuaState {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public void setUserdataMetatable(Class type, LuaTable metatable) {
+	public void setClassMetatable(Class type, LuaTable metatable) {
 		lock();
 		try {
-			super.setUserdataMetatable(type, metatable);
+			super.setClassMetatable(type, metatable);
 		} finally {
 			unlock();
 		}
@@ -171,6 +171,16 @@ public class ThreadSafeLuaState extends LuaState {
 			unlock();
 		}
 	}
+
+    @Override
+    public void setmetatable(Object o, LuaTable metatable) {
+        lock();
+        try {
+            super.setmetatable(o, metatable);
+        } finally {
+            unlock();
+        }
+    }
 
 	@Override
 	public LuaClosure loadByteCodeFromResource(String name, LuaTable environment) {
@@ -231,4 +241,5 @@ public class ThreadSafeLuaState extends LuaState {
 		final LuaClosure c2 = LuaCompiler.loadstring("print('x='..x)", "", state.getEnvironment());
 		state.pcall(c2);
 	}
+
 }

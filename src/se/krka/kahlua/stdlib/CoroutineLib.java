@@ -79,7 +79,7 @@ public class CoroutineLib implements JavaFunction {
 		}
 		
 		coroutine.rawset("__index", coroutine);
-		state.setUserdataMetatable(LUA_THREAD_CLASS, coroutine);
+		state.setClassMetatable(LUA_THREAD_CLASS, coroutine);
 	}
 	
 	public int call(LuaCallFrame callFrame, int nArguments) {

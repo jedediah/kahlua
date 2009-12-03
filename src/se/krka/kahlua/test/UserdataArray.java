@@ -55,7 +55,7 @@ public class UserdataArray implements JavaFunction {
 			metatable.rawset("push", new UserdataArray(PUSH));
 		}
 
-		state.setUserdataMetatable(VECTOR_CLASS, metatable);
+		state.setClassMetatable(VECTOR_CLASS, metatable);
 		state.getEnvironment().rawset("array", metatable);
 	}
 

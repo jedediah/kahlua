@@ -411,7 +411,7 @@ public final class LuaTableImpl implements LuaTable {
 		return System.identityHashCode(a);
 	}
 
-	public void updateWeakSettings(boolean k, boolean v) {
+	private void updateWeakSettings(boolean k, boolean v) {
 		keyIndexCacheKey = null;
 		keyIndexCacheValue = -1;
 		if (k != weakKeys) {
@@ -450,6 +450,16 @@ public final class LuaTableImpl implements LuaTable {
 
 	public void setMetatable(LuaTable metatable) {
 		this.metatable = metatable;
+        boolean weakKeys = false, weakValues = false;
+        if (metatable != null) {
+            Object modeObj = metatable.rawget(BaseLib.MODE_KEY);
+            if (modeObj != null && modeObj instanceof String) {
+                String mode = (String) modeObj;
+                weakKeys = (mode.indexOf('k') >= 0);
+                weakValues = (mode.indexOf('v') >= 0);
+            }
+        }
+        updateWeakSettings(weakKeys, weakValues);
 	}
 
 }

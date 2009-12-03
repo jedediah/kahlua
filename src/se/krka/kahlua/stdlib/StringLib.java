@@ -93,7 +93,7 @@ public final class StringLib implements JavaFunction {
 		}
 
 		string.rawset("__index", string);
-		state.setUserdataMetatable(STRING_CLASS, string);
+		state.setClassMetatable(STRING_CLASS, string);
 	}
 
 	public String toString() {
