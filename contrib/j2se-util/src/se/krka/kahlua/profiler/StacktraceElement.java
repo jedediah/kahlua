@@ -21,4 +21,29 @@ public class StacktraceElement {
 	public String getSource() {
 		return prototype.name;
 	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (!(o instanceof StacktraceElement)) return false;
+
+		StacktraceElement that = (StacktraceElement) o;
+
+		if (pc != that.pc) return false;
+		if (!prototype.equals(that.prototype)) return false;
+
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		int result = pc;
+		result = 31 * result + prototype.hashCode();
+		return result;
+	}
+
+	@Override
+	public String toString() {
+		return getSource() + ":" + getLine();
+	}
 }

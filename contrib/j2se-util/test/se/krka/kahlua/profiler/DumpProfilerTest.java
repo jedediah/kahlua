@@ -24,11 +24,11 @@ public class DumpProfilerTest {
 						"foo()",
 				"test.lua",
 				state.getEnvironment());
-		StringWriter writer = new StringWriter();
-		Sampler sampler = new Sampler(state, 1, new DumpProfiler(writer));
+		AggregatingProfiler profiler = new AggregatingProfiler();
+		Sampler sampler = new Sampler(state, 1, profiler);
 		sampler.start();
 		state.pcall(fun);
 		sampler.stop();
-		System.out.println(writer.getBuffer().toString());
+		profiler.prettyPrint();
 	}
 }
