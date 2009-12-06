@@ -26,6 +26,6 @@ public class AggregatingProfiler implements Profiler {
 	}
 
 	public void prettyPrint() {
-		root.prettyPrint("Total", "");
+		root.prettyPrint("Total", "", root.getTime(), root.getTime());
 	}
 }

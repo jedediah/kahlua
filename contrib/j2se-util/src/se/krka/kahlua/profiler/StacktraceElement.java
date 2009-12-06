@@ -29,7 +29,7 @@ public class StacktraceElement {
 
 		StacktraceElement that = (StacktraceElement) o;
 
-		if (pc != that.pc) return false;
+		if (getLine() != that.getLine()) return false;
 		if (!prototype.equals(that.prototype)) return false;
 
 		return true;
@@ -37,7 +37,7 @@ public class StacktraceElement {
 
 	@Override
 	public int hashCode() {
-		int result = pc;
+		int result = getLine();
 		result = 31 * result + prototype.hashCode();
 		return result;
 	}

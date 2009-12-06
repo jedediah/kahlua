@@ -13,15 +13,23 @@ public class DumpProfilerTest {
 	public void simpleTest() throws IOException {
 		LuaState state = new LuaState();
 		LuaClosure fun = LuaCompiler.loadstring(
-				"function bar(i)\n" +
-						"return i * 2\n" +
-						"end\n" +
-						"function foo()\n" +
-						"for i = 1, 10000 do\n" +
-						"bar(i)\n" +
-						"end\n" +
-						"end\n" +
-						"foo()",
+				"function bar(i)\n" +				// 1
+						"return i * 2\n" +			// 2
+						"end\n" +					// 3
+						"function foo()\n" +		// 4
+						"for i = 1, 1000000 do\n" +	// 5
+						"bar(i)\n" +				// 6
+						"bar(i)\n" +				// 7
+						"bar(i)\n" +				// 8
+						"bar(i)\n" +				// 9
+						"bar(i)\n" +				// 10
+						"bar(i)\n" +				// 11
+						"bar(i)\n" +				// 12
+						"bar(i)\n" +				// 13
+						"end\n" +					// 14
+						"end\n" +					// 15
+						"foo()\n" +					// 16
+						"foo()\n",					// 17
 				"test.lua",
 				state.getEnvironment());
 		AggregatingProfiler profiler = new AggregatingProfiler();
