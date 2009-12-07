@@ -7,8 +7,9 @@ import se.krka.kahlua.luaj.compiler.LuaCompiler;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.io.PrintWriter;
 
-public class DumpProfilerTest {
+public class ProfilerTest {
 	@Test
 	public void simpleTest() throws IOException {
 		LuaState state = new LuaState();
@@ -17,7 +18,7 @@ public class DumpProfilerTest {
 						"return i * 2\n" +			// 2
 						"end\n" +					// 3
 						"function foo()\n" +		// 4
-						"for i = 1, 1000000 do\n" +	// 5
+						"for i = 1, 100000 do\n" +	// 5
 						"bar(i)\n" +				// 6
 						"bar(i)\n" +				// 7
 						"bar(i)\n" +				// 8
@@ -32,11 +33,34 @@ public class DumpProfilerTest {
 						"foo()\n",					// 17
 				"test.lua",
 				state.getEnvironment());
-		AggregatingProfiler profiler = new AggregatingProfiler();
-		Sampler sampler = new Sampler(state, 1, profiler);
+
+        // Warmup to let the jvm optimize
+        /*
+        for (int i = 0; i < 10; i++) {
+            state.pcall(fun);
+        }
+        */
+
+        // Set up the sampler
+        BufferedProfiler bufferedProfiler = new BufferedProfiler();
+		Sampler sampler = new Sampler(state, 1, bufferedProfiler);
+
+        // Run the sampler and the code
 		sampler.start();
 		state.pcall(fun);
 		sampler.stop();
-		profiler.prettyPrint();
-	}
+
+        // Aggregate samples
+        AggregatingProfiler profiler = new AggregatingProfiler();
+        bufferedProfiler.sendTo(profiler);
+
+        // Generate tree
+        StacktraceNode stacktraceNode = profiler.toTree(2, 0.05, 10);
+
+        // Print the tree on standard output
+        PrintWriter writer = new PrintWriter(System.out);
+        stacktraceNode.output(writer);
+        writer.flush();
+        writer.close();
+    }
 }

@@ -1,31 +1,28 @@
 package se.krka.kahlua.profiler;
 
-import java.util.List;
-import java.util.Map;
-
 public class AggregatingProfiler implements Profiler {
 	private final StacktraceCounter root = new StacktraceCounter();
 
 	public AggregatingProfiler() {
 	}
 
-	public synchronized void getSample(List<StacktraceElement> list, long time) {
-		root.addTime(time);
+	public synchronized void getSample(Sample sample) {
+		root.addTime(sample.getTime());
 
 		StacktraceCounter counter = root;
-		int n = list.size() - 1;
+		int n = sample.getList().size() - 1;
 		while (n > 0) {
-			StacktraceElement childElement = list.get(n);
+			StacktraceElement childElement = sample.getList().get(n);
 			StacktraceCounter childCounter = counter.getOrCreateChild(childElement);
 
-			childCounter.addTime(time);
+			childCounter.addTime(sample.getTime());
 
 			counter = childCounter;
 			n--;
 		}
 	}
 
-	public void prettyPrint() {
-		root.prettyPrint("Total", "", root.getTime(), root.getTime());
-	}
+    public StacktraceNode toTree(int maxDepth, double minTimeRatio, int maxChildren) {
+        return StacktraceNode.createFrom(root, "Root", maxDepth, minTimeRatio, maxChildren);
+    }
 }
