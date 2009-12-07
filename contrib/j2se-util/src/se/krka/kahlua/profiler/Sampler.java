@@ -44,9 +44,12 @@ public class Sampler {
 
                 int pc = frame.pc - 1;
                 LuaClosure closure = frame.closure;
+				JavaFunction javaFunction = frame.javaFunction;
                 if (closure != null) {
-                    list.add(new StacktraceElement(pc, closure.prototype));
-                }
+                    list.add(new LuaStacktraceElement(pc, closure.prototype));
+                } else if (javaFunction != null) {
+					list.add(new JavaStacktraceElement(javaFunction));
+				}
             }
             thread = thread.parent;
         }

@@ -14,11 +14,11 @@ public class ProfilerTest {
 	public void simpleTest() throws IOException {
 		LuaState state = new LuaState();
 		LuaClosure fun = LuaCompiler.loadstring(
-				"function bar(i)\n" +				// 1
-						"return i * 2\n" +			// 2
+				"s='a';for i=1,10 do s=s..s;end;function bar(i)\n" +				// 1
+						"s:match('a*b')\n" +			// 2
 						"end\n" +					// 3
 						"function foo()\n" +		// 4
-						"for i = 1, 100000 do\n" +	// 5
+						"for i = 1, 10 do\n" +	// 5
 						"bar(i)\n" +				// 6
 						"bar(i)\n" +				// 7
 						"bar(i)\n" +				// 8
@@ -50,15 +50,20 @@ public class ProfilerTest {
 		state.pcall(fun);
 		sampler.stop();
 
+		PrintWriter writer = new PrintWriter(System.out);
+
+		// Simple output:
+		// DebugProfiler debugProfiler = new DebugProfiler(writer);
+		// bufferedProfiler.sendTo(debugProfiler);
+		
         // Aggregate samples
         AggregatingProfiler profiler = new AggregatingProfiler();
         bufferedProfiler.sendTo(profiler);
 
         // Generate tree
-        StacktraceNode stacktraceNode = profiler.toTree(2, 0.05, 10);
+        StacktraceNode stacktraceNode = profiler.toTree(10, 0, 10);
 
         // Print the tree on standard output
-        PrintWriter writer = new PrintWriter(System.out);
         stacktraceNode.output(writer);
         writer.flush();
         writer.close();

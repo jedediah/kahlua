@@ -29,6 +29,8 @@ public class LuaCallFrame {
 	}
 	
 	public LuaClosure closure;
+	public JavaFunction javaFunction;
+
 	public int pc;
 
 	public int localBase;
@@ -153,7 +155,7 @@ public class LuaCallFrame {
 			stackClear(index + nVarargs, index + n - 1);
 		}
 	}
-	
+
 	public LuaTable getEnvironment() {
 		if (isLua()) {
 			return closure.env;
@@ -170,9 +172,12 @@ public class LuaCallFrame {
 	}
 
 	public String toString() {
-		if (closure == null) {
-			return super.toString();
+		if (closure != null) {
+			return "Callframe at: " + closure.toString();
 		}
-		return "Callframe at: " + closure.toString();
+		if (javaFunction != null) {
+			return "Callframe at: " + javaFunction.toString();
+		}
+		return super.toString();
 	}
 }

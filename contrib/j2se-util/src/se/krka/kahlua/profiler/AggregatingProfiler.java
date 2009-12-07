@@ -11,7 +11,7 @@ public class AggregatingProfiler implements Profiler {
 
 		StacktraceCounter counter = root;
 		int n = sample.getList().size() - 1;
-		while (n > 0) {
+		while (n >= 0) {
 			StacktraceElement childElement = sample.getList().get(n);
 			StacktraceCounter childCounter = counter.getOrCreateChild(childElement);
 
@@ -23,6 +23,6 @@ public class AggregatingProfiler implements Profiler {
 	}
 
     public StacktraceNode toTree(int maxDepth, double minTimeRatio, int maxChildren) {
-        return StacktraceNode.createFrom(root, "Root", maxDepth, minTimeRatio, maxChildren);
+        return StacktraceNode.createFrom(root, new FakeStacktraceElement("Root", "root"), maxDepth, minTimeRatio, maxChildren);
     }
 }

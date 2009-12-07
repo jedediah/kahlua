@@ -58,7 +58,13 @@ public class LuaThread {
 		liveUpvalues = new Vector();		
 	}
 	
-	public final LuaCallFrame pushNewCallFrame(LuaClosure closure, int localBase, int returnBase, int nArguments, boolean fromLua, boolean insideCoroutine) {
+	public final LuaCallFrame pushNewCallFrame(LuaClosure closure,
+											   JavaFunction javaFunction,
+											   int localBase,
+											   int returnBase,
+											   int nArguments,
+											   boolean fromLua,
+											   boolean insideCoroutine) {
 		setCallFrameStackTop(callFrameTop + 1);
 		LuaCallFrame callFrame = currentCallFrame();
 		
@@ -68,6 +74,7 @@ public class LuaThread {
 		callFrame.fromLua = fromLua;
 		callFrame.insideCoroutine = insideCoroutine;
 		callFrame.closure = closure;
+		callFrame.javaFunction = javaFunction;
 		return callFrame;
 	}
 
@@ -108,6 +115,7 @@ public class LuaThread {
 			LuaCallFrame callFrame = callFrameStack[startIndex];
 			if (callFrame != null) {
 				callFrameStack[startIndex].closure = null;
+				callFrameStack[startIndex].javaFunction = null;
 			}
 		}
 	}
@@ -253,6 +261,8 @@ public class LuaThread {
 					return "at " + frame.closure.prototype + ":" + lines[pc] + "\n";
 				}
 			}
+		} else {
+			return "at " + frame.javaFunction;
 		}
 		return "";
 	}

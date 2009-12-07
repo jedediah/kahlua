@@ -205,7 +205,7 @@ public class CoroutineLib implements JavaFunction {
 		LuaClosure c = getFunction(callFrame, nArguments);
 
 		LuaThread newThread = new LuaThread(callFrame.thread.state, callFrame.thread.environment);
-		newThread.pushNewCallFrame(c, 0, 0, -1, true, true);
+		newThread.pushNewCallFrame(c, null, 0, 0, -1, true, true);
 		callFrame.push(newThread);
 		return 1;
 	}

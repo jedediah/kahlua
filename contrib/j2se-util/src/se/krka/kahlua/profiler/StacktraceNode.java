@@ -5,22 +5,24 @@ import java.io.PrintWriter;
 
 public class StacktraceNode {
     private final long time;
-    private final String name;
+	private final StacktraceElement element;
     private final List<StacktraceNode> children;
 
-    public StacktraceNode(String name, List<StacktraceNode> children, long time) {
-        this.name = name;
+    public StacktraceNode(StacktraceElement element, List<StacktraceNode> children, long time) {
+        this.element = element;
         this.children = children;
         this.time = time;
     }
 
     public static StacktraceNode createFrom(StacktraceCounter counter,
-                                            String name,
+                                            StacktraceElement element,
                                             int maxDepth,
                                             double minTimeRatio,
                                             int maxChildren) {
 
-        StacktraceNode returnValue = new StacktraceNode(name, new ArrayList<StacktraceNode>(), counter.getTime());
+        StacktraceNode returnValue = new StacktraceNode(element,
+				new ArrayList<StacktraceNode>(),
+				counter.getTime());
 
         if (maxDepth > 0) {
             Map<StacktraceElement,StacktraceCounter> map = counter.getChildren();
@@ -37,11 +39,11 @@ public class StacktraceNode {
             }
 
             for (Map.Entry<StacktraceElement, StacktraceCounter> entry : childArray) {
-                StacktraceElement element = entry.getKey();
+                StacktraceElement e = entry.getKey();
                 StacktraceCounter childCounter = entry.getValue();
 
                 if (childCounter.getTime() >= minTimeRatio * counter.getTime()) {
-                    StacktraceNode childNode = createFrom(childCounter, element.toString(),
+                    StacktraceNode childNode = createFrom(childCounter, e,
                             maxDepth - 1,
                             minTimeRatio,
                             maxChildren);
@@ -59,7 +61,7 @@ public class StacktraceNode {
 
     public void output(PrintWriter writer, String indent, long parentTime, long rootTime) {
         writer.println(String.format("%-40s   %4d ms   %5.1f%% of parent    %5.1f%% of total",
-                indent + name,
+                indent + element.name() + " (" + element.type() + ")",
                 time,
                 100.0 * time / parentTime,
                 100.0 * time / rootTime));

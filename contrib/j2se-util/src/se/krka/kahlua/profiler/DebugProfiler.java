@@ -12,8 +12,8 @@ public class DebugProfiler implements Profiler {
 
     public synchronized void getSample(Sample sample) {
 		output.println("Sample: " + sample.getTime() + " ms");
-		for (StacktraceElement stacktraceElement : sample.getList()) {
-			output.println("\t" + stacktraceElement.getSource() + ":" + stacktraceElement.getLine());
+		for (StacktraceElement element : sample.getList()) {
+			output.println("\t" + element.name() + "\t" + element.type() + "\t" + element.hashCode());
 		}
 	}
 }

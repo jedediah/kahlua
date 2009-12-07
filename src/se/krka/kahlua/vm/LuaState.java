@@ -210,7 +210,7 @@ public class LuaState {
 			throw new RuntimeException("tried to call a non-function");
 		}
 
-		LuaCallFrame callFrame = currentThread.pushNewCallFrame((LuaClosure) o,
+		LuaCallFrame callFrame = currentThread.pushNewCallFrame((LuaClosure) o, null,
 				base + 1, base, nArguments, false, false);
 		callFrame.init();
 
@@ -227,7 +227,7 @@ public class LuaState {
 			int nArguments) {
 		LuaThread thread = currentThread;
 
-		LuaCallFrame callFrame = thread.pushNewCallFrame(null, localBase,
+		LuaCallFrame callFrame = thread.pushNewCallFrame(null, f, localBase,
 				returnBase, nArguments, false, false);
 
 		int nReturnValues = f.call(callFrame, nArguments);
@@ -678,7 +678,7 @@ public class LuaState {
 
 					if (fun instanceof LuaClosure) {
 						LuaCallFrame newCallFrame = currentThread
-								.pushNewCallFrame((LuaClosure) fun, localBase2,
+								.pushNewCallFrame((LuaClosure) fun, null, localBase2,
 										returnBase2, nArguments2, true,
 										callFrame.insideCoroutine);
 						newCallFrame.init();
