@@ -213,6 +213,9 @@ public class LuaJavaInvoker implements JavaFunction {
 		}
 		return null;
 	}
-	
+
+	public String toString() {
+		return name;
+	}
 }
 
