@@ -173,9 +173,8 @@ public final class LuaPrototype {
 		stringData[1] = (byte) (iLen & 0xff);
 
 		// Remember to read the trailing 0 too
-		int bytesRead = in.read(stringData, 2, iLen + 1);
-		loadAssert(bytesRead == iLen + 1, "String loading 1");
-		loadAssert(stringData[2 + iLen] == 0, "String loading 2");
+		in.readFully(stringData, 2, iLen + 1);
+		loadAssert(stringData[2 + iLen] == 0, "String loading");
 
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(stringData));
 		String s = dis.readUTF();
